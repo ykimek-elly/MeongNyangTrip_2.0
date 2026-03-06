@@ -129,10 +129,10 @@ interface FeedState {
 export const useFeedStore = create<FeedState>()(
   persist(
     (set, get) => ({
-      // TODO: [DB 연동] INITIAL_POSTS 대신 Supabase에서 fetch → posts 테이블 SELECT
+      // TODO: [DB 연동] GET /api/posts → INITIAL_POSTS 대신 Spring Boot JPA posts 테이블 SELECT (PostgreSQL + QueryDSL)
       posts: INITIAL_POSTS,
       nextId: 4,
-      // TODO: [DB 연동] supabase.from('likes').upsert/delete → 낙관적 업데이트 후 서버 동기화
+      // TODO: [DB 연동] POST|DELETE /api/posts/{id}/likes → Spring Boot JPA likes 테이블 UPSERT/DELETE + 낙관적 업데이트
       toggleLike: (postId) =>
         set((state) => ({
           posts: state.posts.map((p) =>
@@ -148,7 +148,7 @@ export const useFeedStore = create<FeedState>()(
               : p
           ),
         })),
-      // TODO: [DB 연동] supabase.from('comments').insert → 실시간 구독(Realtime) 적용 가능
+      // TODO: [DB 연동] POST /api/posts/{id}/comments → Spring Boot JPA comments INSERT + WebSocket(STOMP) 실시간 구독 적용
       addComment: (postId, user, content) =>
         set((state) => ({
           posts: state.posts.map((p) =>
@@ -170,7 +170,7 @@ export const useFeedStore = create<FeedState>()(
               : p
           ),
         })),
-      // TODO: [DB 연동] supabase.from('dms').insert → 실시간 구독(Realtime) 적용 가능
+      // TODO: [DB 연동] POST /api/dms → Spring Boot JPA dms INSERT + WebSocket(STOMP) 실시간 구독 적용
       addDM: (postId, from, to, content) =>
         set((state) => ({
           posts: state.posts.map((p) =>
@@ -194,7 +194,7 @@ export const useFeedStore = create<FeedState>()(
               : p
           ),
         })),
-      // TODO: [DB 연동] supabase.from('posts').insert → 이미지는 Supabase Storage 업로드 후 URL 저장
+      // TODO: [DB 연동] POST /api/posts → Spring Boot JPA posts INSERT + 이미지는 AWS S3 업로드 후 URL 저장
       addPost: (postData) =>
         set((state) => ({
           nextId: state.nextId + 1,
@@ -216,19 +216,19 @@ export const useFeedStore = create<FeedState>()(
             ...state.posts,
           ],
         })),
-      // TODO: [DB 연동] supabase.from('posts').update({ is_hidden }) → 관리자 권한 체크(RLS) 필요
+      // TODO: [DB 연동] PATCH /api/admin/posts/{id}/hide → Spring Boot JPA posts UPDATE + Spring Security @PreAuthorize 관리자 권한 체크
       toggleHidePost: (postId) =>
         set((state) => ({
           posts: state.posts.map((p) =>
             p.id === postId ? { ...p, isHidden: !p.isHidden } : p
           ),
         })),
-      // TODO: [DB 연동] supabase.from('posts').delete → 관리자 권한 체크(RLS) 필요
+      // TODO: [DB 연동] DELETE /api/admin/posts/{id} → Spring Boot JPA posts DELETE + Spring Security @PreAuthorize 관리자 권한 체크
       deletePost: (postId) =>
         set((state) => ({
           posts: state.posts.filter((p) => p.id !== postId),
         })),
-      // TODO: [DB 연동] supabase.from('dms').update({ is_read: true })
+      // TODO: [DB 연동] PATCH /api/dms/{id}/read → Spring Boot JPA dms UPDATE is_read=true (PostgreSQL)
       markDMRead: (postId, dmId) =>
         set((state) => ({
           posts: state.posts.map((p) =>
@@ -242,14 +242,14 @@ export const useFeedStore = create<FeedState>()(
               : p
           ),
         })),
-      // TODO: [DB 연동] supabase.from('posts').update({ is_reported: true }) → 신고 누적 시 자동 숨김 로직 추가
+      // TODO: [DB 연동] POST /api/posts/{id}/report → Spring Boot JPA posts UPDATE is_reported + 신고 누적 시 자동 숨김 로직 (비즈니스 로직)
       reportPost: (postId) =>
         set((state) => ({
           posts: state.posts.map((p) =>
             p.id === postId ? { ...p, isReported: true } : p
           ),
         })),
-      // TODO: [DB 연동] supabase.from('posts').update({ content }) → 관리자 권한 체크(RLS) 필요
+      // TODO: [DB 연동] PUT /api/posts/{id} → Spring Boot JPA posts UPDATE content + Spring Security @PreAuthorize 작성자/관리자 권한 체크
       editPost: (postId, content) =>
         set((state) => ({
           posts: state.posts.map((p) =>
@@ -258,7 +258,7 @@ export const useFeedStore = create<FeedState>()(
         })),
     }),
     {
-      // TODO: [DB 연동] persist 미들웨어 제거 → Supabase 실시간 동기화로 대체
+      // TODO: [DB 연동] persist 미들웨어 제거 → WebSocket(STOMP) 실시간 동기화로 대체
       name: 'meongnyang-feed-storage',
     }
   )

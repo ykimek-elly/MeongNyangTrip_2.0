@@ -19,7 +19,7 @@ export interface ShareRecord {
   message?: string;
 }
 
-// TODO: [DB 연동] supabase.from('friends').select() → 초기 목업 대체
+// TODO: [DB 연동] GET /api/friends → Spring Boot JPA friends 테이블 SELECT (PostgreSQL) → 초기 목업 대체
 const INITIAL_FRIENDS: Friend[] = [
   {
     id: 'f1',
@@ -128,25 +128,25 @@ interface FriendState {
 export const useFriendStore = create<FriendState>()(
   persist(
     (set, get) => ({
-      // TODO: [DB 연동] supabase.from('friends').select() → 친구 목록 fetch
+      // TODO: [DB 연동] GET /api/friends → Spring Boot JPA friends 테이블 SELECT (PostgreSQL) → 친구 목록 fetch
       friends: INITIAL_FRIENDS,
       suggestedFriends: SUGGESTED_FRIENDS,
       shareRecords: [],
 
-      // TODO: [DB 연동] supabase.from('friends').insert → 상대방에게 알림 발송 로직 추가
+      // TODO: [DB 연동] POST /api/friends → Spring Boot JPA friends INSERT + 카카오 알림톡 발송 (Kakao API)
       addFriend: (friend) =>
         set((state) => ({
           friends: [...state.friends, friend],
           suggestedFriends: state.suggestedFriends.filter((f) => f.id !== friend.id),
         })),
 
-      // TODO: [DB 연동] supabase.from('friends').delete
+      // TODO: [DB 연동] DELETE /api/friends/{id} → Spring Boot JPA friends 테이블 DELETE (PostgreSQL)
       removeFriend: (friendId) =>
         set((state) => ({
           friends: state.friends.filter((f) => f.id !== friendId),
         })),
 
-      // TODO: [DB 연동] supabase.from('share_records').insert → DM 또는 푸시 알림 연동
+      // TODO: [DB 연동] POST /api/share-records → Spring Boot JPA share_records INSERT + 카카오 알림톡/WebSocket(STOMP) 푸시 연동
       sharePost: (postId, friendIds, message) =>
         set((state) => {
           const newRecords: ShareRecord[] = friendIds.map((fId) => ({
@@ -165,7 +165,7 @@ export const useFriendStore = create<FriendState>()(
       },
     }),
     {
-      // TODO: [DB 연동] persist 제거 → Supabase 실시간 동기화로 대체
+      // TODO: [DB 연동] persist 제거 → WebSocket(STOMP) 실시간 동기화로 대체
       name: 'meongnyang-friend-storage',
     }
   )

@@ -36,7 +36,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
   // 프로필 저장
   const handleSaveProfile = () => {
     if (!profileChanged) return;
-    // TODO: [DB 연동] supabase.from('users').update → 닉네임/이메일 서버 동기화
+    // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE 닉네임/이메일 (PostgreSQL)
     updateProfile({
       username: newNickname.trim(),
       email: newEmail.trim(),
@@ -48,7 +48,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
   // 비밀번호 변경
   const handleChangePassword = () => {
     if (!canChangePassword) return;
-    // TODO: [DB 연동] supabase.auth.updateUser → 비밀번호 변경 API 호출
+    // TODO: [DB 연동] PUT /api/auth/password → Spring Security 비밀번호 변경 (BCrypt 암호화)
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
@@ -271,7 +271,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
             계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
           </p>
           <button className="w-full py-3 rounded-2xl border border-red-200 text-destructive text-sm font-bold hover:bg-red-50 transition-colors active:scale-[0.98]">
-            {/* TODO: [DB 연동] 계정 삭제 확인 모달 + supabase.auth.admin.deleteUser */}
+            {/* TODO: [DB 연동] 계정 삭제 확인 모달 + DELETE /api/auth/account → Spring Security 회원 탈퇴 (JWT 무효화 + 데이터 삭제) */}
             회원 탈퇴
           </button>
         </motion.section>

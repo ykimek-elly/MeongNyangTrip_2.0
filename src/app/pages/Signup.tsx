@@ -20,14 +20,14 @@ export function Signup({ onNavigate }: SignupProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
-    // TODO: [DB 연동] supabase.auth.signUp → 이메일 인증 후 계정 생성
+    // TODO: [DB 연동] POST /api/auth/signup → Spring Security 회원가입 + JWT 발급
     login(nickname, email);
     // 가입 후 온보딩으로 이동
     onNavigate('onboarding');
   };
 
   const handleSocialLogin = (provider: string) => {
-    // TODO: [DB 연동] supabase.auth.signInWithOAuth → 소셜 로그인
+    // TODO: [DB 연동] GET /api/oauth2/{provider} → Spring Security OAuth2.0 소셜 로그인 (Google/Kakao)
     login(provider === 'google' ? '구글유저' : '카카오유저', `${provider}@example.com`);
     onNavigate('onboarding');
   };

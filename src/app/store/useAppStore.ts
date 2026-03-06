@@ -53,17 +53,17 @@ export const useAppStore = create<AppState>()(
       wishlist: [],
       savedRoutes: [],
 
-      // TODO: [DB 연동] supabase.auth.signIn → 세션 기반 인증으로 전환
+      // TODO: [DB 연동] POST /api/auth/login → Spring Security JWT 토큰 기반 인증으로 전환
       login: (username, email) => set({ 
         isLoggedIn: true, 
         username,
         email: email || '',
       }),
 
-      // TODO: [DB 연동] supabase.auth.signOut → 세션 정리
+      // TODO: [DB 연동] POST /api/auth/logout → JWT 토큰 블랙리스트(Redis) 처리 + 클라이언트 토큰 삭제
       logout: () => set({ isLoggedIn: false, username: '게스트', email: '', pet: null, hasCompletedOnboarding: false, wishlist: [] }),
 
-      // TODO: [DB 연동] supabase.from('users').update → 서버 프로필 수정
+      // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE (PostgreSQL)
       updateProfile: (data) => set((state) => ({
         username: data.username ?? state.username,
         email: data.email ?? state.email,
@@ -72,18 +72,18 @@ export const useAppStore = create<AppState>()(
       // TODO: [DB 연동] 온보딩 완료 플래그 서버 저장
       completeOnboarding: () => set({ hasCompletedOnboarding: true }),
 
-      // TODO: [DB 연동] supabase.from('pets').insert → 서버에 반려동물 정보 저장
+      // TODO: [DB 연동] POST /api/pets → Spring Boot JPA pets 테이블 INSERT (PostgreSQL)
       registerPet: (pet) => set({ pet }),
 
-      // TODO: [DB 연동] supabase.from('pets').update → 서버 반려동물 정보 수정
+      // TODO: [DB 연동] PUT /api/pets/{id} → Spring Boot JPA pets 테이블 UPDATE (PostgreSQL)
       updatePet: (partial) => set((state) => ({
         pet: state.pet ? { ...state.pet, ...partial } : null
       })),
 
-      // TODO: [DB 연동] supabase.from('pets').delete → 서버 반려동물 정보 삭제
+      // TODO: [DB 연동] DELETE /api/pets/{id} → Spring Boot JPA pets 테이블 DELETE (PostgreSQL)
       removePet: () => set({ pet: null }),
 
-      // TODO: [DB 연동] supabase.from('wishlists').upsert/delete → 낙관적 업데이트 후 서버 동기화
+      // TODO: [DB 연동] POST|DELETE /api/wishlists/{placeId} → Spring Boot JPA wishlists 테이블 UPSERT/DELETE + 낙관적 업데이트
       toggleWishlist: (id) => set((state) => {
         const isWished = state.wishlist.includes(id);
         if (isWished) {
@@ -93,17 +93,17 @@ export const useAppStore = create<AppState>()(
         }
       }),
 
-      // TODO: [DB 연동] supabase.from('wishlists').delete → 전체 찜 삭제
+      // TODO: [DB 연동] DELETE /api/wishlists → Spring Boot JPA wishlists 전체 삭제 (PostgreSQL)
       clearWishlist: () => set({ wishlist: [] }),
 
-      // TODO: [DB 연동] supabase.from('saved_routes').insert → 서버 저장
+      // TODO: [DB 연동] POST /api/saved-routes → Spring Boot JPA saved_routes 테이블 INSERT (PostgreSQL)
       addSavedRoute: (route) => set((state) => ({ savedRoutes: [route, ...state.savedRoutes] })),
 
-      // TODO: [DB 연동] supabase.from('saved_routes').delete → 서버에서도 삭제
+      // TODO: [DB 연동] DELETE /api/saved-routes/{id} → Spring Boot JPA saved_routes 테이블 DELETE (PostgreSQL)
       removeSavedRoute: (id) => set((state) => ({ savedRoutes: state.savedRoutes.filter(r => r.id !== id) })),
     }),
     {
-      // TODO: [DB 연동] persist 미들웨어 제거 → Supabase 실시간 동기화로 대체
+      // TODO: [DB 연동] persist 미들웨어 제거 → WebSocket(STOMP) 실시간 동기화로 대체
       name: 'meongnyang-storage',
     }
   )

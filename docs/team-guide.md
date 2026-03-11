@@ -4,18 +4,10 @@
 
 | **담당자** | **포지션** | **핵심 과제 및 책임** | **기술 스택 / 툴** |
 | --- | --- | --- | --- |
-| **팀원 A** | **인프라 & 보안** | - AWS 서버(EC2, RDS, S3) 환경 구축
-- CI/CD 자동화 배포 파이프라인 세팅
-- OAuth2.0 & JWT 기반 보안/인증 체계 수립 | AWS, Docker, Spring Security, GitHub Actions |
-| **팀원 B** | **코어 데이터 & BE** | - **PostGIS** 기반 고정밀 위치 검색 API 개발
-- 공공데이터/포털 데이터 교차 검증 로직 구현
-- Redis를 통한 데이터 조회 성능 최적화 | PostgreSQL, PostGIS, Redis, QueryDSL |
-| **팀원 C** | **AI & 연동** | - **Spring AI(Gemini)** 기반 맞춤형 코멘트 생성
-- pgvector 활용 중복 제거 및 AI 검색(RAG) 구축
-- 카카오 알림톡 기반 건강/날씨 알림 자동화 | Spring AI, Gemini API, pgvector, Kakao API |
-| **팀원 D** | **FE & 인터페이스** | - **Stitch/Figma** 기반 UI/UX 디자인 및 확정
-- 지도 인터랙션 및 프론트엔드 컴포넌트 구현
-- **전체 API 명세(Contract) 및 데이터 규격 확정** | React/Vue, Tailwind CSS, Kakao Map SDK |
+| **팀원 A** | **인프라 & 보안** | - AWS 서버(EC2, RDS, S3) 환경 구축<br>- CI/CD 자동화 배포 파이프라인 세팅<br>- OAuth2.0 & JWT 기반 보안/인증 체계 수립 | AWS, Docker, Spring Security, GitHub Actions |
+| **팀원 B** | **코어 데이터 & BE** | - **PostGIS** 기반 고정밀 위치 검색 API 개발<br>- 공공데이터/포털 데이터 교차 검증 로직 구현<br>- Redis를 통한 데이터 조회 성능 최적화 | PostgreSQL, PostGIS, Redis, QueryDSL |
+| **팀원 C** | **AI & 연동** | - **Spring AI(Gemini)** 기반 맞춤형 코멘트 생성<br>- pgvector 활용 중복 제거 및 AI 검색(RAG) 구축<br>- 카카오 알림톡 기반 건강/날씨 알림 자동화 | Spring AI, Gemini API, pgvector, Kakao API |
+| **팀원 D** | **FE & 인터페이스** | - **Stitch/Figma** 기반 UI/UX 디자인 및 확정<br>- 지도 인터랙션 및 프론트엔드 컴포넌트 구현<br>- **전체 API 명세(Contract) 및 데이터 규격 확정** | React/Vue, Tailwind CSS, Kakao Map SDK |
 
 ### 2. 핵심 협업 전략: "인터페이스 우선”
 

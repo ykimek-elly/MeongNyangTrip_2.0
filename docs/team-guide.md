@@ -37,9 +37,3 @@
     - AWS 실서버 환경 구축 및 로그인/보안 연동.
 - **4단계: 전체 통합 및 고도화** (전체 팀)
     - 프론트-백엔드 연동, 카카오 알림톡 자동화 및 최종 성능 테스트.
-
-[**프로젝트 목표**](https://www.notion.so/31b4bc0870b980909a5aedc4dbe47255?pvs=21)
-
-[로컬 데이터 교차 검증 및 전략](https://www.notion.so/31e4bc0870b980f2a5e3d04e66872606?pvs=21)
-
-[ERD](https://www.notion.so/ERD-31e4bc0870b980a7ab3ce2dd7ce6e847?pvs=21)

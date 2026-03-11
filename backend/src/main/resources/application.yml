@@ -47,3 +47,10 @@ jwt:
   secret: ${JWT_SECRET:dev-secret-key-change-in-production}
   expiration: ${JWT_EXPIRATION:3600000}
 
+# ==========================================
+# 📌 팀원 별 추가 설정 가이드 (작업 전 확인!)
+# ==========================================
+# TODO (팀원 A): 배포 시 application-prod.yml 파일 분리 및 AWS S3 설정 추가 필요
+# TODO (팀원 B): Redis 캐시 만료 시간 및 Connection Pool 세부 설정 필요 시 여기에 추가
+# TODO (팀원 C): Spring AI (Gemini) 연동을 위한 spring.ai.openai.api-key 설정 추가 필요
+

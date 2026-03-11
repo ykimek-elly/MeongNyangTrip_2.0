@@ -9,20 +9,19 @@ import { NEARBY_SPOTS } from '../data/places-mock';
  */
 export const setupMockApi = () => {
   // 환경변수가 없거나 MOCK을 안 쓴다면 그냥 리턴
-  if (import.meta.env.VITE_USE_MOCK !== 'true') return;
+  const isMock = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.VITE_USE_MOCK === process.env.VITE_USE_MOCK;
+  if (!isMock) return;
 
   console.log('🚧 axios Mocking is ENABLED 🚧');
 
-  // response 인터셉터 가로채기 (실제 네트워크 에러가 났을 때 Mock 데이터를 던져줌)
-  api.interceptors.response.use(
-    (response) => response, // 성공하면 그냥 넘김 (실제 백엔드가 살아있는 경우)
-    (error) => {
-      const config = error.config;
+  // request 인터셉터 가로채기 (실제 네트워크를 타기 전에 아예 응답을 던져버림으로써 백엔드 서버가 아예 꺼져있어도 ERR_CONNECTION_REFUSED를 발생시키지 않음)
+  api.interceptors.request.use((config) => {
+    if (config.url?.includes('/places') || config.url?.includes('/public-places')) {
+      console.warn(`[Mock API] Intercepted request to ${config.url}. Returning Mock Data instantly.`);
       
-      // /places 요청 실패 시 Mock Data 반환
-      if (config.url.includes('/places')) {
-        console.warn(`[Mock API] Intercepted failed request to ${config.url}. Returning Mock Data.`);
-        return Promise.resolve({
+      // Axios의 adapter를 덮어씌워 바로 Mock 데이터 반환
+      config.adapter = async () => {
+        return {
           data: {
             status: 200,
             message: 'SUCCESS (MOCK)',
@@ -32,10 +31,9 @@ export const setupMockApi = () => {
           statusText: 'OK',
           headers: {},
           config,
-        });
-      }
-
-      return Promise.reject(error);
+        };
+      };
     }
-  );
+    return config;
+  });
 };

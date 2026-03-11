@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { placeApi } from '../api/placeApi';
 import { PlaceDto } from '../api/types';
 import { useGeolocation } from '../hooks/useGeolocation';
+import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk';
 import { ArrowLeft, MapPin, Navigation, Star, Sun, Wind, Dog, X, PawPrint } from 'lucide-react';
 
 const mapImage = 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80';
@@ -22,6 +23,7 @@ type SpotType = PlaceDto & {
   categoryColor?: string;
   title?: string; // 하드코딩 호환용
   img?: string;   // 하드코딩 호환용
+  name?: string;  // 하드코딩 호환용
 };
 
 const FILTERS = [
@@ -77,47 +79,48 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
 
   return (
     <div className="relative w-full h-screen bg-gray-100 overflow-hidden flex flex-col">
-      {/* Map Background */}
-      {/* Fallback Image Map (Kakao Map SDK requires a real API key) */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-90"
-        style={{ 
-          backgroundImage: `url('${mapImage}')`,
-        }}
-      />
-      <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
-      
-      {/* Map Markers */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        {filteredSpots.map((spot) => (
-          <motion.div
-            key={spot.id}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.1 }}
-            className="absolute cursor-pointer pointer-events-auto flex flex-col items-center"
-            // 데모용 하드코딩 비율 위치 (실제로는 위경도 -> % 변환 로직 필요)
-            style={{ 
-              left: spot.id === 2 ? '40%' : spot.id === 3 ? '70%' : '25%', 
-              top: spot.id === 2 ? '30%' : spot.id === 3 ? '60%' : '75%' 
-            }}
-            onClick={() => setSelectedPlace(spot)}
-          >
-            <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
-              selectedPlace?.id === spot.id ? 'bg-primary scale-110 z-20' : 'bg-white text-primary hover:bg-gray-50'
-            }`}>
-              <PawPrint size={20} className={selectedPlace?.id === spot.id ? 'text-white' : 'text-primary'} fill={selectedPlace?.id === spot.id ? 'white' : 'currentColor'} />
-              {/* Ripple Effect */}
-              <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-20" />
-            </div>
-            <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm transition-opacity ${
-              selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
-            }`}>
-              {spot.name || spot.title}
-            </span>
-          </motion.div>
-        ))}
+      {/* Kakao Map Area */}
+      <div className="absolute inset-0 z-0">
+        <Map
+          center={{ lat: lat || 37.5665, lng: lng || 126.9780 }}   // 초기 중심좌표 (사용자 위치 없으면 서울시청)
+          style={{ width: "100%", height: "100%" }}
+          level={5} // 초기 확대 레벨
+        >
+          {filteredSpots.map((spot) => (
+            // spot.desc 등에서 lat, lng 추출이 필요하나 현재 Mock Data 형태이므로 임의의 좌표 처리 (기존 % 대신 실제 좌표 매핑 필요)
+            // 여기선 임시로 spot.id 값을 활용한 가벼운 오프셋 좌표로 보여줌
+            <CustomOverlayMap
+              key={spot.id}
+              position={{ 
+                lat: (lat || 37.5665) + (spot.id % 2 === 0 ? 0.002 : -0.002) + (spot.id * 0.0005), 
+                lng: (lng || 126.9780) + (spot.id % 3 === 0 ? 0.002 : -0.002) - (spot.id * 0.0005)
+              }}
+              clickable={true}
+            >
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                whileHover={{ scale: 1.1 }}
+                className="cursor-pointer flex flex-col items-center"
+                onClick={() => setSelectedPlace(spot)}
+              >
+                <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
+                  selectedPlace?.id === spot.id ? 'bg-primary scale-110 z-20' : 'bg-white text-primary hover:bg-gray-50'
+                }`}>
+                  <PawPrint size={20} className={selectedPlace?.id === spot.id ? 'text-white' : 'text-primary'} fill={selectedPlace?.id === spot.id ? 'white' : 'currentColor'} />
+                  {/* Ripple Effect */}
+                  <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-20" />
+                </div>
+                <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm transition-opacity ${
+                  selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
+                }`}>
+                  {spot.name || spot.title}
+                </span>
+              </motion.div>
+            </CustomOverlayMap>
+          ))}
+        </Map>
       </div>
 
       {/* Top UI */}

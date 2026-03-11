@@ -1,3 +1,7 @@
+/**
+ * TODO (팀원 D - FE): 백엔드 API 연동 후 삭제/대체할 더미 데이터 파일입니다.
+ * 장소 상세 정보(DETAIL_EXTRA) 및 리뷰(MOCK_REVIEWS)를 임시로 보여주기 위해 쓰입니다.
+ */
 import { Dog, Car } from 'lucide-react';
 
 export const MOCK_IMAGES = [

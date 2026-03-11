@@ -1,3 +1,7 @@
+/**
+ * TODO (팀원 D - FE): 향후 백엔드(Spring AI 등) API와 연동하여 실제 데이터를 받아오도록 수정 필요.
+ * 마이페이지 및 라운지에서 보여줄 체크리스트/건강지표/복약정보를 임시 생성하는 함수들입니다.
+ */
 import type { PetInfo } from '../store/useAppStore';
 
 // 체크리스트 아이템 타입

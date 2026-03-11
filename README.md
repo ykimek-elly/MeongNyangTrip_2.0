@@ -1,8 +1,8 @@
-# 🐾 멍냥트립 2.0 (MeongNyangTrip 2.0)
+# 멍냥트립 2.0 (MeongNyangTrip 2.0)
 
 > 반려동물과 함께하는 여행·산책·케어 플랫폼
 
-## 🛠️ 기술 스택
+## 기술 스택
 
 | 영역 | 기술 |
 |------|------|
@@ -13,7 +13,7 @@
 | **Infra** | AWS (EC2, RDS, S3), Docker, GitHub Actions |
 | **Security** | Spring Security, JWT, OAuth 2.0 |
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
 ```
 MeongNyangTrip_2.0/
@@ -30,7 +30,7 @@ MeongNyangTrip_2.0/
         └── erd.md          # ERD 데이터베이스 설계서
 ```
 
-## 🚀 로컬 실행 방법
+## 로컬 실행 방법
 
 ### 1. DB 컨테이너 실행
 ```bash
@@ -59,7 +59,7 @@ npm run dev
 # http://localhost:5173
 ```
 
-## 🌿 브랜치 전략
+## 브랜치 전략
 
 | 브랜치 | 담당 | 설명 |
 |--------|------|------|
@@ -75,10 +75,10 @@ git checkout feat/본인브랜치
 # 작업 후
 git add . && git commit -m "feat: 작업 내용"
 git push origin feat/본인브랜치
-# GitHub에서 PR 생성 → 리뷰 → Merge
+# GitHub에서 PR 생성 -> 리뷰 -> Merge
 ```
 
-## 👥 팀 구성
+## 팀 구성
 
 | 담당 | 포지션 | 주요 기술 |
 |------|--------|----------|
@@ -87,7 +87,7 @@ git push origin feat/본인브랜치
 | 팀원 C | AI & 연동 | Spring AI, Gemini, Kakao API |
 | 팀원 D | FE & 인터페이스 | React, Tailwind CSS, Kakao Map SDK |
 
-## 📖 관련 문서
+## 관련 문서
 
 - [팀 협업 가이드](docs/team-guide.md)
 - [코어 인프라 명세서](docs/specs/core-setup.md)

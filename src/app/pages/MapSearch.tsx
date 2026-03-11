@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, MapPin, Navigation, Star, Sun, Wind, Dog, X, PawPrint } from 'lucide-react';
-import mapImage from 'figma:asset/03276d170f9d262b946946446d960a2575a76f0f.png';
+// 지도 배경 이미지 (Figma 에셋 대신 placeholder 사용)
+const mapImage = 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80';
 
 interface MapSearchProps {
   onNavigate: (page: string, params?: any) => void;

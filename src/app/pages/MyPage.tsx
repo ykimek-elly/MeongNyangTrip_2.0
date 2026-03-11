@@ -226,9 +226,9 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 className="bg-white p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
                 onClick={() => onNavigate('detail', { id: p.id })}
               >
-                <img src={p.img} className="w-full aspect-square rounded-2xl mb-2 object-cover bg-gray-100" alt={p.title} />
+                <img src={p.imageUrl || ""} className="w-full aspect-square rounded-2xl mb-2 object-cover bg-gray-100" alt={p.title} />
                 <h6 className="font-bold text-gray-900 text-sm truncate px-1">{p.title}</h6>
-                <span className="text-gray-400 text-[10px] px-1">{p.loc}</span>
+                <span className="text-gray-400 text-[10px] px-1">{p.address}</span>
               </div>
             ))}
           </div>

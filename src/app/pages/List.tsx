@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, MapPin, Search, LayoutGrid, List as ListIcon } from 'lucide-react';
-import { places } from '../data/places';
+import { useAppStore } from '../store/useAppStore';
 import { motion } from 'motion/react';
 
 interface ListProps {
@@ -9,6 +9,7 @@ interface ListProps {
 }
 
 export function List({ onNavigate, initialParams }: ListProps) {
+  const places = useAppStore((s) => s.places);
   const [activeFilter, setActiveFilter] = useState('all');
   const [filteredPlaces, setFilteredPlaces] = useState(places);
   const [searchMsg, setSearchMsg] = useState('');
@@ -19,8 +20,8 @@ export function List({ onNavigate, initialParams }: ListProps) {
       const { region = '', date, category = 'all' } = initialParams;
       
       const filtered = places.filter(p => {
-        const matchRegion = region === '' || p.loc.toLowerCase().includes(region.toLowerCase()) || p.title.toLowerCase().includes(region.toLowerCase());
-        const matchCategory = category === 'all' || p.cat === category;
+        const matchRegion = region === '' || p.address.toLowerCase().includes(region.toLowerCase()) || p.title.toLowerCase().includes(region.toLowerCase());
+        const matchCategory = category === 'all' || p.category === category;
         return matchRegion && matchCategory;
       });
 
@@ -36,7 +37,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
     } else {
       setFilteredPlaces(places);
     }
-  }, [initialParams]);
+  }, [initialParams, places]);
 
   const handleFilterClick = (cat: string) => {
     setActiveFilter(cat);
@@ -44,7 +45,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
     if (cat === 'all') {
       setFilteredPlaces(places);
     } else {
-      setFilteredPlaces(places.filter(p => p.cat === cat));
+      setFilteredPlaces(places.filter(p => p.category === cat));
     }
   };
 
@@ -100,7 +101,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
                 onClick={() => onNavigate('detail', { id: place.id })}
               >
                 <img 
-                  src={place.img} 
+                  src={place.imageUrl || ""} 
                   className="w-[90px] h-[90px] rounded-2xl object-cover bg-gray-100" 
                   alt={place.title} 
                 />
@@ -112,10 +113,10 @@ export function List({ onNavigate, initialParams }: ListProps) {
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                    <MapPin size={10} /> {place.loc}
+                    <MapPin size={10} /> {place.address}
                   </p>
                   <span className="inline-block bg-primary/10 text-primary border border-primary/30 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                    {place.cat.toUpperCase()}
+                    {place.category.toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -127,7 +128,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
                 className="bg-white border border-gray-100 p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer flex flex-col"
               >
                 <img 
-                  src={place.img} 
+                  src={place.imageUrl || ""} 
                   className="w-full aspect-square rounded-2xl object-cover bg-gray-100 mb-2.5" 
                   alt={place.title} 
                 />
@@ -139,11 +140,11 @@ export function List({ onNavigate, initialParams }: ListProps) {
                     </span>
                   </div>
                   <p className="text-[10px] text-gray-500 mb-2 flex items-center gap-1 truncate">
-                    <MapPin size={10} className="flex-shrink-0" /> {place.loc}
+                    <MapPin size={10} className="flex-shrink-0" /> {place.address}
                   </p>
                   <div className="mt-auto">
                     <span className="inline-block bg-primary/10 text-primary border border-primary/30 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                      {place.cat.toUpperCase()}
+                      {place.category.toUpperCase()}
                     </span>
                   </div>
                 </div>

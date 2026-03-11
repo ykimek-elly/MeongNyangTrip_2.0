@@ -3,7 +3,7 @@ import {
   ArrowLeft, Heart, Share2, MapPin, Star, ChevronRight, 
   Instagram, X, Copy, ExternalLink, Navigation
 } from 'lucide-react';
-import { places } from '../data/places';
+// 더미 데이터 제거
 import { AMENITIES, DETAIL_EXTRA, MOCK_REVIEWS, type Review } from '../data/detail-mock';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
@@ -15,6 +15,7 @@ interface DetailProps {
 }
 
 export function Detail({ id, onNavigate }: DetailProps) {
+  const places = useAppStore((s) => s.places);
   const place = places.find(p => p.id === id);
   const [showShare, setShowShare] = useState(false);
   const [showMapSheet, setShowMapSheet] = useState(false);
@@ -32,7 +33,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
   if (!place) return null;
 
   const extra = DETAIL_EXTRA[id] || {
-    address: `${place.loc} 상세 주소`,
+    address: `${place.address} 상세 주소`,
     tags: ['#반려동물', '#여행'],
     description: `${place.title}은 반려동물과 함께 특별한 시간을 보낼 수 있는 곳입니다.`,
     instagram: '@meongnyang_trip',
@@ -90,7 +91,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
         {/* 메인 이미지 */}
         <div className="w-full aspect-[4/3] bg-gray-100 overflow-hidden">
           <img 
-            src={place.img} 
+            src={place.imageUrl || ""} 
             alt={place.title} 
             className="w-full h-full object-cover" 
           />
@@ -271,7 +272,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
         isOpen={showShare}
         onClose={() => setShowShare(false)}
         postId={id}
-        postImage={place.img}
+        postImage={place.imageUrl || ""}
         postUser={place.title}
       />
 
@@ -339,7 +340,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 <div className="flex items-start gap-3">
                   <MapPin size={18} className="text-primary shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-gray-800 mb-0.5">{place.loc}</p>
+                    <p className="text-xs font-bold text-gray-800 mb-0.5">{place.address}</p>
                     <p className="text-[12px] text-gray-500">{extra.address}</p>
                   </div>
                 </div>

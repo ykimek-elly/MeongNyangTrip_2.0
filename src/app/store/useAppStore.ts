@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { PlaceDto } from '../api/types';
+import { placeApi } from '../api/placeApi';
 
 export interface PetInfo {
   name: string;
@@ -40,6 +42,11 @@ interface AppState {
   clearWishlist: () => void;
   addSavedRoute: (route: SavedRoute) => void;
   removeSavedRoute: (id: string) => void;
+
+  // 공공API 장소 목록 데이터
+  places: PlaceDto[];
+  isLoadingPlaces: boolean;
+  fetchPlaces: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>()(
@@ -52,6 +59,8 @@ export const useAppStore = create<AppState>()(
       hasCompletedOnboarding: false,
       wishlist: [],
       savedRoutes: [],
+      places: [],
+      isLoadingPlaces: false,
 
       // TODO: [DB 연동] POST /api/auth/login → Spring Security JWT 토큰 기반 인증으로 전환
       login: (username, email) => set({ 
@@ -101,10 +110,25 @@ export const useAppStore = create<AppState>()(
 
       // TODO: [DB 연동] DELETE /api/saved-routes/{id} → Spring Boot JPA saved_routes 테이블 DELETE (PostgreSQL)
       removeSavedRoute: (id) => set((state) => ({ savedRoutes: state.savedRoutes.filter(r => r.id !== id) })),
+
+      // 공공API 장소 목록 연동
+      fetchPlaces: async () => {
+        set({ isLoadingPlaces: true });
+        try {
+          const data = await placeApi.getPublicPlaces(1, 40); // 임시 40개 조회
+          set({ places: data, isLoadingPlaces: false });
+        } catch (error) {
+          console.error("Failed to fetch places", error);
+          set({ isLoadingPlaces: false });
+        }
+      },
     }),
     {
       // TODO: [DB 연동] persist 미들웨어 제거 → WebSocket(STOMP) 실시간 동기화로 대체
       name: 'meongnyang-storage',
+      partialize: (state) => Object.fromEntries(
+        Object.entries(state).filter(([key]) => !['places', 'isLoadingPlaces'].includes(key))
+      ),
     }
   )
 );

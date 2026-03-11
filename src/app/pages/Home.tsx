@@ -3,7 +3,7 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Search, MapPin, Calendar, Layers, TreeDeciduous, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, ShieldCheck, Camera, X, LogIn, PawPrint, Navigation } from 'lucide-react';
-import { places } from '../data/places';
+// 더미 데이터 제거
 import { motion, AnimatePresence } from 'motion/react';
 import { CategoryBestRanking } from '../components/CategoryBestRanking';
 import { DatePickerPopup } from '../components/DatePickerPopup';
@@ -19,6 +19,7 @@ export function Home({ onNavigate }: HomeProps) {
   const [searchCategory, setSearchCategory] = React.useState('all');
   const [showSignupPrompt, setShowSignupPrompt] = React.useState(false);
   const isLoggedIn = useAppStore((s) => s.isLoggedIn);
+  const places = useAppStore((s) => s.places);
 
   const handleBannerClick = (page: string) => {
     if (isLoggedIn) {
@@ -200,7 +201,7 @@ export function Home({ onNavigate }: HomeProps) {
                 <div className="absolute top-2 left-2 bg-primary text-white w-6 h-6 flex items-center justify-center rounded-md font-bold text-xs shadow-md z-10">
                   {idx + 1}
                 </div>
-                <img src={place.img} className="w-full aspect-square object-cover rounded-2xl bg-gray-100" alt={place.title} />
+                <img src={place.imageUrl || ""} className="w-full aspect-square object-cover rounded-2xl bg-gray-100" alt={place.title} />
               </div>
               <h6 className="text-gray-800 truncate text-[15px] font-bold">{place.title}</h6>
               <div className="text-xs text-gray-500 flex items-center gap-1">

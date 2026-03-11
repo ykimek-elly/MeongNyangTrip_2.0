@@ -18,7 +18,7 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
   const [activeCategory, setActiveCategory] = useState('place');
 
   const filteredPlaces = places
-    .filter(p => p.cat === activeCategory)
+    .filter(p => p.category === activeCategory)
     .sort((a, b) => b.rating - a.rating);
 
   return (
@@ -78,7 +78,7 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
                     {idx + 1}
                   </div>
                   <img 
-                    src={place.img} 
+                    src={place.imageUrl || ""} 
                     alt={place.title}
                     className="w-full h-full object-cover" 
                   />
@@ -88,7 +88,7 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
                 <div className="flex-1 flex flex-col justify-between py-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded uppercase tracking-tight">
-                      {place.cat}
+                      {place.category}
                     </span>
                     <span className="text-xs text-gray-400">후기 {place.reviewCount}개</span>
                   </div>
@@ -97,7 +97,7 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
                   
                   <div className="flex items-center justify-between mt-auto">
                     <span className="flex items-center gap-1 text-xs text-gray-500 truncate max-w-[120px]">
-                      <MapPin size={12} className="text-gray-400" /> {place.loc}
+                      <MapPin size={12} className="text-gray-400" /> {place.address}
                     </span>
                     <span className="flex items-center gap-1 font-bold text-sm text-gray-800">
                       <Star size={14} className="text-brand-point fill-brand-point" /> {place.rating}

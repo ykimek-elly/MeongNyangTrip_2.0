@@ -15,11 +15,12 @@ import {
   Trash2,
   Search,
 } from "lucide-react";
-import { places } from "../data/places";
+// 더미 데이터 제거
 import {
   useFeedStore,
   type FeedPost,
 } from "../store/useFeedStore";
+import { useAppStore } from "../store/useAppStore";
 import { ShareSheet } from "../components/ShareSheet";
 
 interface LoungeProps {
@@ -82,6 +83,7 @@ export function Lounge({ onNavigate }: LoungeProps) {
   const [isWriteModalOpen, setIsWriteModalOpen] =
     useState(false);
   const { posts, addPost } = useFeedStore();
+  const places = useAppStore((s) => s.places);
 
   const handleCreatePost = (
     content: string,
@@ -197,12 +199,13 @@ function WriteModal({
   const [selectedPlaceId, setSelectedPlaceId] = useState<
     number | undefined
   >(undefined);
+  const places = useAppStore((s) => s.places);
 
   const filteredPlaces = placeQuery.trim()
     ? places.filter(
         (p) =>
           p.title.includes(placeQuery) ||
-          p.loc.includes(placeQuery),
+          p.address.includes(placeQuery),
       )
     : places;
 
@@ -282,7 +285,7 @@ function WriteModal({
                     {selectedPlace.title}
                   </span>
                   <span className="text-[11px] text-gray-400">
-                    {selectedPlace.loc}
+                    {selectedPlace.address}
                   </span>
                 </div>
                 <X size={14} className="text-gray-400" />
@@ -345,7 +348,7 @@ function WriteModal({
                         >
                           <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
                             <img
-                              src={place.img}
+                              src={place.imageUrl || ""}
                               alt={place.title}
                               className="w-full h-full object-cover"
                             />
@@ -355,7 +358,7 @@ function WriteModal({
                               {place.title}
                             </div>
                             <div className="text-[11px] text-gray-400">
-                              {place.loc}
+                              {place.address}
                             </div>
                           </div>
                         </button>
@@ -395,6 +398,7 @@ function FeedView({
 }) {
   const { toggleLike, addComment, deletePost, editPost } =
     useFeedStore();
+  const places = useAppStore((s) => s.places);
   const [commentingPostId, setCommentingPostId] = useState<
     number | null
   >(null);

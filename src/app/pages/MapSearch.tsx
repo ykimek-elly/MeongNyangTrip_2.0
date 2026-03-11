@@ -1,63 +1,28 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
+import { placeApi } from '../api/placeApi';
+import { PlaceDto } from '../api/types';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { ArrowLeft, MapPin, Navigation, Star, Sun, Wind, Dog, X, PawPrint } from 'lucide-react';
-// 지도 배경 이미지 (Figma 에셋 대신 placeholder 사용)
+
 const mapImage = 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80';
 
-interface MapSearchProps {
+export interface MapSearchProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
-// Mock Data for "Emotional Spots"
-const NEARBY_SPOTS = [
-  {
-    id: 2,
-    title: '서울숲 반려동물 구역',
-    tag: '햇살맛집',
-    desc: '따스한 햇살이 가득한 반려동물 전용 구역',
-    rating: 4.9,
-    distance: '0.8km',
-    x: '40%',
-    y: '30%',
-    lat: 37.5665,
-    lng: 126.9780,
-    img: 'https://images.unsplash.com/photo-1597633425046-08f5110420b5?w=600&q=80',
-    categoryIcon: Sun,
-    categoryColor: 'text-orange-500 bg-orange-50'
-  },
-  {
-    id: 3,
-    title: '남양주 물의정원',
-    tag: '조용한산책',
-    desc: '사람이 적고 한적한 힐링 스팟',
-    rating: 4.8,
-    distance: '1.2km',
-    x: '70%',
-    y: '60%',
-    lat: 37.5650,
-    lng: 126.9800,
-    img: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&q=80',
-    categoryIcon: Wind,
-    categoryColor: 'text-green-600 bg-green-50'
-  },
-  {
-    id: 4,
-    title: '하늘공원 산책로',
-    tag: '뛰뛰가능',
-    desc: '목줄 없이 자유롭게 뛰노는 운동장',
-    rating: 4.7,
-    distance: '2.5km',
-    x: '25%',
-    y: '75%',
-    lat: 37.5680,
-    lng: 126.9750,
-    img: 'https://images.unsplash.com/photo-1571570776991-b3b4d4982a0d?w=600&q=80',
-    categoryIcon: Dog,
-    categoryColor: 'text-blue-500 bg-blue-50'
-  }
-];
+// 확장된(Tag, Desc 포함) UI 사용용 임시 타입 단언
+type SpotType = PlaceDto & { 
+  tag?: string; 
+  desc?: string; 
+  rating?: number; 
+  distance?: string;
+  categoryIcon?: React.ElementType;
+  categoryColor?: string;
+  title?: string; // 하드코딩 호환용
+  img?: string;   // 하드코딩 호환용
+};
 
 const FILTERS = [
   { id: 'all', label: '전체' },
@@ -71,7 +36,8 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
   const { lat, lng, address, error, isLoading, getLocation } = useGeolocation();
   
   const [activeFilter, setActiveFilter] = useState('all');
-  const [selectedPlace, setSelectedPlace] = useState<typeof NEARBY_SPOTS[0] | null>(null);
+  const [places, setPlaces] = useState<SpotType[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<SpotType | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
   const handleLocate = async () => {
@@ -92,9 +58,22 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
     }
   }, [error]);
 
+  // API를 통해 장소 데이터 받아오기 (Mock Interceptor가 가로챔)
+  React.useEffect(() => {
+    const fetchPlaces = async () => {
+      try {
+        const data = await placeApi.getPlaces();
+        setPlaces(data as SpotType[]);
+      } catch (error) {
+        console.error('Failed to fetch places:', error);
+      }
+    };
+    fetchPlaces();
+  }, []);
+
   const filteredSpots = activeFilter === 'all' 
-    ? NEARBY_SPOTS 
-    : NEARBY_SPOTS.filter(s => s.tag === activeFilter);
+    ? places 
+    : places.filter(s => s.tag === activeFilter);
 
   return (
     <div className="relative w-full h-screen bg-gray-100 overflow-hidden flex flex-col">
@@ -118,7 +97,11 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
             exit={{ scale: 0, opacity: 0 }}
             whileHover={{ scale: 1.1 }}
             className="absolute cursor-pointer pointer-events-auto flex flex-col items-center"
-            style={{ left: spot.x, top: spot.y }}
+            // 데모용 하드코딩 비율 위치 (실제로는 위경도 -> % 변환 로직 필요)
+            style={{ 
+              left: spot.id === 2 ? '40%' : spot.id === 3 ? '70%' : '25%', 
+              top: spot.id === 2 ? '30%' : spot.id === 3 ? '60%' : '75%' 
+            }}
             onClick={() => setSelectedPlace(spot)}
           >
             <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
@@ -131,7 +114,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
             <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm transition-opacity ${
               selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
             }`}>
-              {spot.title}
+              {spot.name || spot.title}
             </span>
           </motion.div>
         ))}
@@ -201,16 +184,22 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
               
               <div className="flex gap-4">
                 <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100">
-                  <img src={selectedPlace.img} alt={selectedPlace.title} className="w-full h-full object-cover" />
+                  <img src={selectedPlace.imageUrl || selectedPlace.img} alt={selectedPlace.name || selectedPlace.title} className="w-full h-full object-cover" />
                 </div>
                 
                 <div className="flex-1 min-w-0 pt-1">
                   <div className="flex items-start justify-between mb-1">
                     <div>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded mb-1 ${selectedPlace.categoryColor}`}>
-                        <selectedPlace.categoryIcon size={10} /> {selectedPlace.tag}
-                      </span>
-                      <h3 className="font-bold text-gray-900 text-lg truncate">{selectedPlace.title}</h3>
+                      {selectedPlace.categoryIcon ? (
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded mb-1 ${selectedPlace.categoryColor}`}>
+                          <selectedPlace.categoryIcon size={10} /> {selectedPlace.tag}
+                        </span>
+                      ) : (
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded mb-1 bg-gray-100 text-gray-600`}>
+                          {selectedPlace.tag || '#추천'}
+                        </span>
+                      )}
+                      <h3 className="font-bold text-gray-900 text-lg truncate">{selectedPlace.name || selectedPlace.title}</h3>
                     </div>
                   </div>
                   

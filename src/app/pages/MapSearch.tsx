@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAppStore } from '../store/useAppStore';
+import { useGeolocation } from '../hooks/useGeolocation';
 import { ArrowLeft, MapPin, Navigation, Star, Sun, Wind, Dog, X, PawPrint } from 'lucide-react';
 // 지도 배경 이미지 (Figma 에셋 대신 placeholder 사용)
 const mapImage = 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80';
@@ -65,17 +67,30 @@ const FILTERS = [
 ];
 
 export function MapSearch({ onNavigate }: MapSearchProps) {
+  const setUserLocation = useAppStore(state => state.setUserLocation);
+  const { lat, lng, address, error, isLoading, getLocation } = useGeolocation();
+  
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedPlace, setSelectedPlace] = useState<typeof NEARBY_SPOTS[0] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
-  const handleLocate = () => {
-    setIsLocating(true);
-    setTimeout(() => {
-      setIsLocating(false);
-      alert('현재 위치를 갱신했습니다!');
-    }, 1500);
+  const handleLocate = async () => {
+    getLocation();
   };
+
+  // 위치 정보 받아오면 상태 업데이트
+  React.useEffect(() => {
+    if (lat && lng) {
+      setUserLocation({ lat, lng, address });
+    }
+  }, [lat, lng, address, setUserLocation]);
+
+  // 에러 알림
+  React.useEffect(() => {
+    if (error) {
+      alert(error);
+    }
+  }, [error]);
 
   const filteredSpots = activeFilter === 'all' 
     ? NEARBY_SPOTS 
@@ -160,9 +175,11 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       {/* Current Location Button */}
       <button 
         onClick={handleLocate}
-        className="absolute right-4 bottom-24 z-10 bg-white p-3 rounded-full shadow-lg text-gray-700 hover:text-primary active:scale-95 transition-all"
+        className={`absolute right-4 bottom-24 z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-all ${
+          lat && lng ? 'text-primary' : 'text-gray-700'
+        }`}
       >
-        <Navigation size={24} className={isLocating ? "animate-spin" : ""} />
+        <Navigation size={24} className={isLoading ? "animate-spin" : ""} />
       </button>
 
       {/* Place Summary Card */}

@@ -33,19 +33,9 @@ jobs:
           aws-region: ap-northeast-2
 
       - name: Deploy to EC2 via SSM
-        uses: aws-actions/aws-ssm-send-command@v1
-        with:
-          aws-region: ap-northeast-2
-          instance-ids: i-007364ef8c4161ab4
-          command: |
-            cd ~/MeongNyangTrip_2.0/backend
-            git pull origin main
-            docker build -t meongnyang-backend .
-            docker stop meongnyang-app || true
-            docker rm meongnyang-app || true
-            docker run -d --name meongnyang-app \
-              -p 8080:8080 \
-              -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              meongnyang-backend
+        run: |
+          aws ssm send-command \
+            --instance-ids "i-007364ef8c4161ab4" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["cd /home/ec2-user/MeongNyangTrip_2.0/backend && git pull origin main && docker build -t meongnyang-backend . && docker stop meongnyang-app || true && docker rm meongnyang-app || true && docker run -d --name meongnyang-app -p 8080:8080 -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e SPRING_PROFILES_ACTIVE=prod meongnyang-backend"]' \
+            --region ap-northeast-2

@@ -23,6 +23,12 @@ export interface SavedRoute {
   routes: Array<{ name: string; distance: string; type: string }>;
 }
 
+export interface UserLocation {
+  lat: number | null;
+  lng: number | null;
+  address: string | null;
+}
+
 interface AppState {
   isLoggedIn: boolean;
   username: string;
@@ -31,6 +37,8 @@ interface AppState {
   hasCompletedOnboarding: boolean;  // 온보딩 완료 여부
   wishlist: number[];
   savedRoutes: SavedRoute[];
+  userLocation: UserLocation; // 현재 내 위치
+
   login: (username: string, email?: string) => void;
   logout: () => void;
   updateProfile: (data: { username?: string; email?: string }) => void;  // 회원정보 수정
@@ -42,6 +50,7 @@ interface AppState {
   clearWishlist: () => void;
   addSavedRoute: (route: SavedRoute) => void;
   removeSavedRoute: (id: string) => void;
+  setUserLocation: (location: UserLocation) => void;
 
   // 공공API 장소 목록 데이터
   places: PlaceDto[];
@@ -59,6 +68,7 @@ export const useAppStore = create<AppState>()(
       hasCompletedOnboarding: false,
       wishlist: [],
       savedRoutes: [],
+      userLocation: { lat: null, lng: null, address: null },
       places: [],
       isLoadingPlaces: false,
 
@@ -110,6 +120,8 @@ export const useAppStore = create<AppState>()(
 
       // TODO: [DB 연동] DELETE /api/saved-routes/{id} → Spring Boot JPA saved_routes 테이블 DELETE (PostgreSQL)
       removeSavedRoute: (id) => set((state) => ({ savedRoutes: state.savedRoutes.filter(r => r.id !== id) })),
+
+      setUserLocation: (location) => set({ userLocation: location }),
 
       // 공공API 장소 목록 연동
       fetchPlaces: async () => {

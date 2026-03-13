@@ -233,19 +233,6 @@ export function ShareSheet({ isOpen, onClose, postId, postImage, postUser }: Sha
                   {/* Quick share options row */}
                   <div className="flex items-center justify-center gap-1 px-2 py-3 overflow-x-auto">
                     <QuickShareButton
-                      icon={<BookmarkPlus size={22} />}
-                      label="스토리에 추가"
-                      onClick={() => alert('스토리에 추가되었습니다! (데모)')}
-                    />
-                    <QuickShareButton
-                      icon={<Send size={22} />}
-                      label="공유 대상..."
-                      onClick={() => {
-                        setShowAddFriend(false);
-                        searchRef.current?.focus();
-                      }}
-                    />
-                    <QuickShareButton
                       icon={linkCopied ? <Check size={22} className="text-primary" /> : <Link2 size={22} />}
                       label={linkCopied ? '복사됨!' : '링크 복사'}
                       onClick={handleCopyLink}

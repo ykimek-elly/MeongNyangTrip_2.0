@@ -1,13 +1,41 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, Heart, Share2, MapPin, Star, ChevronRight, 
-  Instagram, X, Copy, ExternalLink, Navigation
+  Instagram, X, Copy, ExternalLink, Navigation, Car, Dog
 } from 'lucide-react';
-// 더미 데이터 제거
-import { AMENITIES, DETAIL_EXTRA, MOCK_REVIEWS, type Review } from '../data/detail-mock';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { ShareSheet } from '../components/ShareSheet';
+
+export interface Review {
+  id: number;
+  author: string;
+  date: string;
+  rating: number;
+  content: string;
+}
+
+const AMENITIES = [
+  { icon: Dog, label: "반려동물 동반" },
+  { icon: Car, label: "주차가능" },
+];
+
+const MOCK_REVIEWS: Review[] = [
+  {
+    id: 1,
+    author: "멍냥이맘",
+    date: "2025.07.08",
+    rating: 5,
+    content: "사장님이 친절하시고 반려동물이 뛰어놀기 너무 좋았습니다.",
+  },
+  {
+    id: 2,
+    author: "초코아빠",
+    date: "2025.07.08",
+    rating: 4,
+    content: "주변 공간이 넓어서 자유롭습니다. 간식 자판기가 더 있으면 좋겠습니다.",
+  },
+];
 
 interface DetailProps {
   id: number;
@@ -32,10 +60,12 @@ export function Detail({ id, onNavigate }: DetailProps) {
 
   if (!place) return null;
 
-  const extra = DETAIL_EXTRA[id] || {
+  const displayTitle = (place as any).name || place.title || '이름 없음';
+  
+  const extra = {
     address: `${place.address} 상세 주소`,
-    tags: ['#반려동물', '#여행'],
-    description: `${place.title}은 반려동물과 함께 특별한 시간을 보낼 수 있는 곳입니다.`,
+    tags: place.tags ? place.tags.split(',') : ((place as any).tag ? [(place as any).tag] : ['#반려동물', '#여행']),
+    description: place.description || (place as any).desc || `${displayTitle}은(는) 반려동물과 함께 특별한 시간을 보낼 수 있는 곳입니다.`,
     instagram: '@meongnyang_trip',
   };
 
@@ -70,7 +100,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-[15px] font-bold text-gray-900 truncate max-w-[200px]">{place.title}</h1>
+        <h1 className="text-[15px] font-bold text-gray-900 truncate max-w-[200px]">{displayTitle}</h1>
         <div className="flex gap-0.5">
           <button 
             onClick={() => toggleWishlist(id)}
@@ -91,8 +121,8 @@ export function Detail({ id, onNavigate }: DetailProps) {
         {/* 메인 이미지 */}
         <div className="w-full aspect-[4/3] bg-gray-100 overflow-hidden">
           <img 
-            src={place.imageUrl || ""} 
-            alt={place.title} 
+            src={place.imageUrl || (place as any).img || ""} 
+            alt={displayTitle} 
             className="w-full h-full object-cover" 
           />
         </div>
@@ -100,7 +130,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
         <div className="px-5">
           {/* 제목 + 평점 */}
           <div className="pt-5 pb-4 border-b border-gray-100">
-            <h2 className="text-[20px] font-bold text-gray-900 mb-1.5">{place.title}</h2>
+            <h2 className="text-[20px] font-bold text-gray-900 mb-1.5">{displayTitle}</h2>
             <div className="flex items-center gap-1.5">
               <Star size={14} className="text-brand-point fill-brand-point" />
               <span className="text-xs font-bold text-gray-900">{place.rating}</span>
@@ -272,8 +302,8 @@ export function Detail({ id, onNavigate }: DetailProps) {
         isOpen={showShare}
         onClose={() => setShowShare(false)}
         postId={id}
-        postImage={place.imageUrl || ""}
-        postUser={place.title}
+        postImage={place.imageUrl || (place as any).img || ""}
+        postUser={displayTitle}
       />
 
       {/* 위치 바텀시트 */}
@@ -331,7 +361,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                   <div className="w-2 h-2 bg-primary/40 rounded-full mt-1" />
                 </div>
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
-                  <span className="text-[11px] font-bold text-gray-800">{place.title}</span>
+                  <span className="text-[11px] font-bold text-gray-800">{displayTitle}</span>
                 </div>
               </div>
 

@@ -5,19 +5,17 @@ import { placeApi } from '../api/placeApi';
 import { PlaceDto } from '../api/types';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk';
-import { ArrowLeft, MapPin, Navigation, Star, Sun, Wind, Dog, X, PawPrint } from 'lucide-react';
-
-const mapImage = 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80';
+import { ArrowLeft, MapPin, Navigation, Star, X, PawPrint } from 'lucide-react';
 
 export interface MapSearchProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
 // 확장된(Tag, Desc 포함) UI 사용용 임시 타입 단언
-type SpotType = PlaceDto & { 
-  tag?: string; 
-  desc?: string; 
-  rating?: number; 
+type SpotType = PlaceDto & {
+  tag?: string;
+  desc?: string;
+  rating?: number;
   distance?: string;
   categoryIcon?: React.ElementType;
   categoryColor?: string;
@@ -31,17 +29,16 @@ const FILTERS = [
   { id: '햇살맛집', label: '#햇살맛집' },
   { id: '조용한산책', label: '#조용한산책' },
   { id: '뛰뛰가능', label: '#뛰뛰가능' },
+  { id: '동물병원', label: '#동물병원' },
 ];
 
 export function MapSearch({ onNavigate }: MapSearchProps) {
   const setUserLocation = useAppStore(state => state.setUserLocation);
   const { lat, lng, address, error, isLoading, getLocation } = useGeolocation();
-  
+
   const [activeFilter, setActiveFilter] = useState('all');
   const [places, setPlaces] = useState<SpotType[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<SpotType | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
-
   const handleLocate = async () => {
     getLocation();
   };
@@ -73,8 +70,8 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
     fetchPlaces();
   }, []);
 
-  const filteredSpots = activeFilter === 'all' 
-    ? places 
+  const filteredSpots = activeFilter === 'all'
+    ? places
     : places.filter(s => s.tag === activeFilter);
 
   return (
@@ -91,8 +88,8 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
             // 여기선 임시로 spot.id 값을 활용한 가벼운 오프셋 좌표로 보여줌
             <CustomOverlayMap
               key={spot.id}
-              position={{ 
-                lat: (lat || 37.5665) + (spot.id % 2 === 0 ? 0.002 : -0.002) + (spot.id * 0.0005), 
+              position={{
+                lat: (lat || 37.5665) + (spot.id % 2 === 0 ? 0.002 : -0.002) + (spot.id * 0.0005),
                 lng: (lng || 126.9780) + (spot.id % 3 === 0 ? 0.002 : -0.002) - (spot.id * 0.0005)
               }}
               clickable={true}
@@ -105,16 +102,14 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                 className="cursor-pointer flex flex-col items-center"
                 onClick={() => setSelectedPlace(spot)}
               >
-                <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
-                  selectedPlace?.id === spot.id ? 'bg-primary scale-110 z-20' : 'bg-white text-primary hover:bg-gray-50'
-                }`}>
+                <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${selectedPlace?.id === spot.id ? 'bg-primary scale-110 z-20' : 'bg-white text-primary hover:bg-gray-50'
+                  }`}>
                   <PawPrint size={20} className={selectedPlace?.id === spot.id ? 'text-white' : 'text-primary'} fill={selectedPlace?.id === spot.id ? 'white' : 'currentColor'} />
                   {/* Ripple Effect */}
                   <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-20" />
                 </div>
-                <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm transition-opacity ${
-                  selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
-                }`}>
+                <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm transition-opacity ${selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
+                  }`}>
                   {spot.name || spot.title}
                 </span>
               </motion.div>
@@ -126,8 +121,8 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       {/* Top UI */}
       <div className="relative z-10 pt-4 px-4 pb-2">
         <div className="flex items-center gap-2 mb-4">
-          <button 
-            onClick={() => onNavigate('home')} 
+          <button
+            onClick={() => onNavigate('home')}
             className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-white transition-colors"
           >
             <ArrowLeft size={20} className="text-gray-700" />
@@ -146,11 +141,10 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                 setActiveFilter(filter.id);
                 setSelectedPlace(null);
               }}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${
-                activeFilter === filter.id
-                  ? 'bg-primary text-white'
-                  : 'bg-white/90 text-gray-600 hover:bg-white'
-              }`}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id
+                ? 'bg-primary text-white'
+                : 'bg-white/90 text-gray-600 hover:bg-white'
+                }`}
             >
               {filter.label}
             </button>
@@ -159,11 +153,10 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       </div>
 
       {/* Current Location Button */}
-      <button 
+      <button
         onClick={handleLocate}
-        className={`absolute right-4 bottom-24 z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-all ${
-          lat && lng ? 'text-primary' : 'text-gray-700'
-        }`}
+        className={`absolute right-4 bottom-36 z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-all ${lat && lng ? 'text-primary' : 'text-gray-700'
+          }`}
       >
         <Navigation size={24} className={isLoading ? "animate-spin" : ""} />
       </button>
@@ -175,21 +168,21 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
-            className="absolute bottom-0 left-0 w-full z-20 p-4 pb-24" // pb-24 for bottom nav space
+            className="absolute bottom-[100px] left-0 w-full z-20 p-4"
           >
             <div className="bg-white rounded-3xl shadow-[0_-5px_30px_rgba(0,0,0,0.1)] p-4 relative overflow-hidden">
-              <button 
+              <button
                 onClick={() => setSelectedPlace(null)}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 p-1 bg-white/50 rounded-full"
               >
                 <X size={20} />
               </button>
-              
+
               <div className="flex gap-4">
                 <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100">
                   <img src={selectedPlace.imageUrl || selectedPlace.img} alt={selectedPlace.name || selectedPlace.title} className="w-full h-full object-cover" />
                 </div>
-                
+
                 <div className="flex-1 min-w-0 pt-1">
                   <div className="flex items-start justify-between mb-1">
                     <div>
@@ -205,9 +198,9 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                       <h3 className="font-bold text-gray-900 text-lg truncate">{selectedPlace.name || selectedPlace.title}</h3>
                     </div>
                   </div>
-                  
+
                   <p className="text-xs text-gray-500 mb-3 truncate">{selectedPlace.desc}</p>
-                  
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-xs font-medium">
                       <span className="flex items-center gap-1 text-brand-point">
@@ -218,8 +211,8 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                         <MapPin size={12} /> {selectedPlace.distance}
                       </span>
                     </div>
-                    
-                    <button 
+
+                    <button
                       onClick={() => onNavigate('detail', { id: selectedPlace.id })} // Mock ID, usually needs real ID
                       className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md active:scale-95 transition-transform"
                     >

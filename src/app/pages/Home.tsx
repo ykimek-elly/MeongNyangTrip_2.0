@@ -2,7 +2,7 @@ import React from 'react';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { Search, MapPin, Calendar, Layers, TreeDeciduous, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, ShieldCheck, Camera, X, LogIn, PawPrint, Navigation } from 'lucide-react';
+import { Search, MapPin, Calendar, Layers, TreeDeciduous, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
 // 더미 데이터 제거
 import { motion, AnimatePresence } from 'motion/react';
 import { CategoryBestRanking } from '../components/CategoryBestRanking';
@@ -219,7 +219,7 @@ export function Home({ onNavigate }: HomeProps) {
       <CategoryBestRanking places={places} onNavigate={onNavigate} />
 
       {/* 프로모션 배너 */}
-      <div className="px-4 grid grid-cols-3 gap-2.5">
+      <div className="px-4 grid grid-cols-2 gap-2.5">
         <div 
           className="bg-primary/10 rounded-2xl p-3.5 flex flex-col items-start cursor-pointer hover:bg-primary/20 transition-colors active:scale-[0.98]"
           onClick={() => handleBannerClick('lounge')}
@@ -231,17 +231,6 @@ export function Home({ onNavigate }: HomeProps) {
           <p className="m-0 text-[10px] text-gray-500 leading-snug">산책 인증샷 올리면 간식 쿠폰 100% 증정!</p>
         </div>
 
-        {/* 펫케어 시스템 배너 */}
-        <div 
-          className="bg-green-50 rounded-2xl p-3.5 flex flex-col items-start cursor-pointer hover:bg-green-100 transition-colors active:scale-[0.98]"
-          onClick={() => handleBannerClick('senior-pet')}
-        >
-          <div className="w-full flex justify-end mb-2">
-            <ShieldCheck size={28} className="text-green-500 opacity-60" />
-          </div>
-          <h6 className="font-bold text-green-600 text-xs mb-1">펫 케어 시스템</h6>
-          <p className="m-0 text-[10px] text-gray-500 leading-snug">건강 체크부터 맞춤 케어 플랜까지!</p>
-        </div>
 
         {/* 방문인증센터 배너 */}
         <div 

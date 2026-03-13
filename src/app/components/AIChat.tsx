@@ -1,12 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, Bot } from 'lucide-react';
+import { X, Send, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-interface AIChatProps {
-  onNavigate?: (page: string, params?: any) => void;
-}
-
-export function AIChat({ onNavigate }: AIChatProps = {}) {
+export function AIChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ id: number; text: string; isBot: boolean }[]>([
     { id: 1, text: "안녕하세요! 🐶🐱\n반려동물과의 완벽한 여행을 도와드릴게요.\n\"경기도 가평 캠핑장 추천해줘\" 처럼 물어보세요!", isBot: true }
@@ -52,7 +48,20 @@ export function AIChat({ onNavigate }: AIChatProps = {}) {
 
   return (
     <>
-
+      {/* 전역 AI 챗봇 버튼 — 컨테이너 우측 외부 고정 */}
+      <div className="fixed bottom-24 inset-x-0 flex justify-center pointer-events-none z-50">
+        <div className="relative w-full max-w-[600px]">
+          <div className="absolute bottom-0 left-full pl-3">
+            <button
+              onClick={() => setIsOpen(true)}
+              className="w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform pointer-events-auto"
+              title="AI 챗봇"
+            >
+              <Bot size={22} />
+            </button>
+          </div>
+        </div>
+      </div>
 
       <AnimatePresence>
         {isOpen && (

@@ -1,13 +1,12 @@
 import React from 'react';
-import { Dog, Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, BarChart3, PawPrint, Pencil, Plus, X } from 'lucide-react';
+import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, PawPrint, Pencil, Plus, Star, Smile, Meh, Frown } from 'lucide-react';
 import { places } from '../data/places';
 import { useAppStore } from '../store/useAppStore';
 import { useFeedStore } from '../store/useFeedStore';
 import { PetProfileForm } from '../components/PetProfileForm';
-import { getAgeGroupLabel, getCheckupCycleLabel } from '../data/pet-care-helpers';
+import { getAgeGroupLabel } from '../data/pet-care-helpers';
 import type { PetInfo } from '../store/useAppStore';
 import { AnimatePresence } from 'motion/react';
-
 import { motion } from 'motion/react';
 
 interface MyPageProps {
@@ -15,11 +14,14 @@ interface MyPageProps {
 }
 
 export function MyPage({ onNavigate }: MyPageProps) {
-  const { username, wishlist, savedRoutes, removeSavedRoute, pet, registerPet, updatePet, removePet } = useAppStore();
+  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet } = useAppStore();
   const { posts } = useFeedStore();
+
   const [showPetForm, setShowPetForm] = React.useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  
+  const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
+  const [deleteTargetIndex, setDeleteTargetIndex] = React.useState<number | null>(null);
+  const [petMood, setPetMood] = React.useState<'good' | 'normal' | 'bad' | null>(null);
+
   const wishItems = places.filter(p => wishlist.includes(p.id));
 
   // Admin overview stats
@@ -39,83 +41,168 @@ export function MyPage({ onNavigate }: MyPageProps) {
     { label: '숨김', value: hiddenPosts, icon: EyeOff, color: 'bg-gray-100 text-gray-600' },
   ];
 
+  const handlePetSubmit = (petData: PetInfo) => {
+    if (editingIndex !== null) {
+      updatePet(editingIndex, petData);
+    } else {
+      addPet(petData);
+    }
+    setShowPetForm(false);
+    setEditingIndex(null);
+  };
+
+  const openEdit = (index: number) => {
+    setEditingIndex(index);
+    setShowPetForm(true);
+  };
+
+  const openAdd = () => {
+    setEditingIndex(null);
+    setShowPetForm(true);
+  };
+
+  const confirmDelete = (index: number) => {
+    setDeleteTargetIndex(index);
+  };
+
+  const executeDelete = () => {
+    if (deleteTargetIndex !== null) {
+      removePet(deleteTargetIndex);
+      setDeleteTargetIndex(null);
+    }
+  };
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       className="min-h-screen bg-gray-50 pb-24"
     >
       {/* Profile Header */}
       <div className="bg-white p-6 pb-8 rounded-b-[40px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] mb-6">
-        {/* 반려동물 프로필 영역 */}
-        {pet ? (
-          <div className="mb-8 mt-4">
-            <div className="flex items-center gap-4">
-              <div className="w-[70px] h-[70px] bg-primary/10 rounded-full flex items-center justify-center shadow-inner text-3xl shrink-0">
-                {pet.type === '강아지' ? '🐶' : '🐱'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-bold text-xl text-gray-900">{pet.name}</h4>
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    {getAgeGroupLabel(pet.age)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500">
-                  {pet.breed} · {pet.age}살 · {pet.gender}
-                </p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                    {pet.size === 'SMALL' ? '소형' : pet.size === 'MEDIUM' ? '중형' : '대형'}
-                  </span>
-                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                    활동량 {pet.activity === 'LOW' ? '적음' : pet.activity === 'NORMAL' ? '보통' : '많음'}
-                  </span>
-                  {pet.weight && (
-                    <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {pet.weight}kg
-                    </span>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPetForm(true)}
-                className="p-2.5 text-gray-400 hover:text-primary transition-colors bg-gray-50 rounded-full shrink-0"
-              >
-                <Pencil size={16} />
-              </button>
-            </div>
 
-            {/* 검진 주기 배너 */}
-            <div className="mt-4 bg-amber-50 border border-amber-100 rounded-2xl p-3 flex items-center gap-2">
-              <Calendar size={14} className="text-amber-500 shrink-0" />
-              <span className="text-xs text-amber-800">
-                권장 검진 주기: <span className="font-bold">{getCheckupCycleLabel(pet.age)}</span>
+        {/* 반려동물 섹션 헤더 */}
+        <div className="flex items-center justify-between mb-4 mt-4">
+          <div className="flex items-center gap-2">
+            <PawPrint size={18} className="text-primary" />
+            <h4 className="font-bold text-gray-800">내 반려동물</h4>
+            {pets.length > 0 && (
+              <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                {pets.length}마리
               </span>
+            )}
+          </div>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-full shadow-md active:scale-95 transition-all"
+          >
+            <Plus size={12} /> 추가
+          </button>
+        </div>
+
+        {/* 펫 카드 목록 */}
+        {pets.length === 0 ? (
+          <div className="flex items-center gap-4 py-4 px-2 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
+              <PawPrint size={24} className="text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-500">반려동물을 등록해주세요</p>
+              <p className="text-xs text-gray-400 mt-0.5">등록하면 맞춤 케어와 알림을 받을 수 있어요!</p>
             </div>
           </div>
         ) : (
-          <div className="mb-8 mt-4">
-            <div className="flex items-center gap-4">
-              <div className="w-[70px] h-[70px] bg-gray-100 rounded-full flex items-center justify-center shadow-inner">
-                <PawPrint size={28} className="text-gray-300" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-gray-900 mb-1">반려동물을 등록해주세요</h4>
-                <p className="text-xs text-gray-400">등록하면 맞춤 케어 플랜을 받을 수 있어요!</p>
-              </div>
-              <button
-                onClick={() => setShowPetForm(true)}
-                className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-full shadow-md active:scale-95 transition-all shrink-0 flex items-center gap-1"
+          <div className="space-y-3">
+            {pets.map((pet, index) => (
+              <motion.div
+                key={index}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`relative flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-colors ${
+                  pet.isRepresentative
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-100 bg-white'
+                }`}
               >
-                <Plus size={12} />
-                등록
-              </button>
-            </div>
+                {/* 대표 뱃지 */}
+                {pet.isRepresentative && (
+                  <div className="absolute -top-2 left-3 flex items-center gap-1 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    <Star size={9} className="fill-white" /> 대표
+                  </div>
+                )}
+
+                {/* 아바타 */}
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shrink-0 ${
+                  pet.isRepresentative ? 'bg-primary/15' : 'bg-gray-100'
+                }`}>
+                  {pet.type === '강아지' ? '🐶' : '🐱'}
+                </div>
+
+                {/* 정보 */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="font-bold text-gray-900">{pet.name}</span>
+                    <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-medium">
+                      {getAgeGroupLabel(pet.age)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {pet.breed} · {pet.age}살 · {pet.gender}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                      {pet.size === 'SMALL' ? '소형' : pet.size === 'MEDIUM' ? '중형' : '대형'}
+                    </span>
+                    <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                      활동량 {pet.activity === 'LOW' ? '적음' : pet.activity === 'NORMAL' ? '보통' : '많음'}
+                    </span>
+                    {pet.weight && (
+                      <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                        {pet.weight}kg
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 액션 버튼 */}
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  {/* 대표 설정 버튼 */}
+                  {!pet.isRepresentative && (
+                    <button
+                      onClick={() => setRepresentativePet(index)}
+                      className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 hover:bg-primary/10 hover:text-primary px-2 py-1 rounded-lg transition-colors"
+                    >
+                      <Star size={10} /> 대표설정
+                    </button>
+                  )}
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => openEdit(index)}
+                      className="p-2 text-gray-400 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-colors"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => confirmDelete(index)}
+                      className="p-2 text-gray-400 hover:text-destructive bg-gray-50 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* 알림 안내 */}
+            <p className="text-[11px] text-gray-400 text-center mt-1">
+              ★ 대표 동물로 설정된 반려동물 기준으로 알림이 발송됩니다
+            </p>
           </div>
         )}
-        
-        <div className="grid grid-cols-2 gap-3">
+
+
+        <div className="grid grid-cols-2 gap-3 mt-6">
           <div className="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
             <span className="text-gray-500 text-xs font-medium block mb-1">나의 찜</span>
             <h5 className="font-bold text-primary text-xl">{wishlist.length}</h5>
@@ -134,15 +221,43 @@ export function MyPage({ onNavigate }: MyPageProps) {
           개인 맞춤 서비스
         </h6>
         <div className="flex gap-3">
-          <button
-            onClick={() => onNavigate('senior-pet')}
-            className="flex-1 flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm active:scale-[0.98] transition-all"
-          >
-            <span className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center">
-              <Heart className="text-amber-500 fill-amber-100" size={24} />
-            </span>
-            <span className="text-sm font-bold text-gray-800">펫 케어 시스템</span>
-          </button>
+          <div className="flex-1 flex flex-col gap-2 bg-primary/5 border border-primary/15 rounded-3xl p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-8 h-8 bg-primary/15 rounded-full flex items-center justify-center shrink-0">
+                <Smile className="text-primary" size={16} />
+              </span>
+              <span className="text-sm font-bold text-gray-800">오늘 기분 어때?</span>
+            </div>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setPetMood('good')}
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                  petMood === 'good' ? 'bg-green-500 text-white' : 'bg-white text-gray-500 border border-gray-100'
+                }`}
+              >
+                <Smile size={14} />
+                좋아요
+              </button>
+              <button
+                onClick={() => setPetMood('normal')}
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                  petMood === 'normal' ? 'bg-amber-400 text-white' : 'bg-white text-gray-500 border border-gray-100'
+                }`}
+              >
+                <Meh size={14} />
+                그냥요
+              </button>
+              <button
+                onClick={() => setPetMood('bad')}
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                  petMood === 'bad' ? 'bg-red-400 text-white' : 'bg-white text-gray-500 border border-gray-100'
+                }`}
+              >
+                <Frown size={14} />
+                힘들어요
+              </button>
+            </div>
+          </div>
           <button
             onClick={() => onNavigate('visit-checkin')}
             className="flex-1 flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm active:scale-[0.98] transition-all"
@@ -158,7 +273,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
       {/* Admin Overview Summary */}
       <div className="px-6 mb-8">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 pt-4 pb-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
@@ -176,8 +290,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
               상세보기 <ChevronRight size={14} />
             </button>
           </div>
-
-          {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-2 px-4 py-3">
             {overviewStats.map((s, i) => (
               <div key={i} className="bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100">
@@ -189,8 +301,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
               </div>
             ))}
           </div>
-
-          {/* Alert Banner (if needed) */}
           {(reportedPosts > 0 || unreadDMs > 0) && (
             <div className="mx-4 mb-4 bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2.5">
               <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
@@ -212,7 +322,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
           <Leaf className="text-primary" size={18} />
           찜한 장소 목록
         </h6>
-        
         {wishItems.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-3xl border border-gray-100 text-gray-400">
             <Leaf size={32} className="mx-auto mb-2 opacity-50" />
@@ -221,8 +330,8 @@ export function MyPage({ onNavigate }: MyPageProps) {
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {wishItems.map(p => (
-              <div 
-                key={p.id} 
+              <div
+                key={p.id}
                 className="bg-white p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
                 onClick={() => onNavigate('detail', { id: p.id })}
               >
@@ -241,12 +350,11 @@ export function MyPage({ onNavigate }: MyPageProps) {
           <Navigation className="text-primary" size={18} />
           저장된 AI 추천 경로
         </h6>
-
         {(!savedRoutes || savedRoutes.length === 0) ? (
           <div className="text-center py-10 bg-white rounded-3xl border border-gray-100 text-gray-400">
             <Navigation size={32} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">저장된 추천 경로가 없습니다.</p>
-            <button 
+            <button
               onClick={() => onNavigate('ai-walk-guide')}
               className="mt-4 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-bold"
             >
@@ -257,13 +365,12 @@ export function MyPage({ onNavigate }: MyPageProps) {
           <div className="space-y-4">
             {savedRoutes.map(route => (
               <div key={route.id} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative">
-                <button 
+                <button
                   onClick={() => removeSavedRoute(route.id)}
                   className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 transition-colors bg-gray-50 rounded-full"
                 >
                   <Trash2 size={16} />
                 </button>
-                
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
                   <Calendar size={14} />
                   <span>{route.date}</span>
@@ -271,7 +378,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   <Clock size={14} />
                   <span>{route.bestTime}</span>
                 </div>
-                
                 <div className="space-y-2 mt-4">
                   {route.routes.map((r, idx) => (
                     <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-xl">
@@ -300,30 +406,24 @@ export function MyPage({ onNavigate }: MyPageProps) {
       <AnimatePresence>
         {showPetForm && (
           <PetProfileForm
-            initialData={pet}
-            onClose={() => setShowPetForm(false)}
-            onSubmit={(petData) => {
-              if (pet) {
-                updatePet(petData);
-              } else {
-                registerPet(petData);
-              }
-              setShowPetForm(false);
-            }}
+            initialData={editingIndex !== null ? pets[editingIndex] : null}
+            hasExistingPets={editingIndex === null && pets.length > 0}
+            onClose={() => { setShowPetForm(false); setEditingIndex(null); }}
+            onSubmit={handlePetSubmit}
           />
         )}
       </AnimatePresence>
 
       {/* 반려동물 삭제 확인 모달 */}
       <AnimatePresence>
-        {showDeleteConfirm && (
+        {deleteTargetIndex !== null && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowDeleteConfirm(false)}
+              onClick={() => setDeleteTargetIndex(null)}
             />
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }}
@@ -337,18 +437,20 @@ export function MyPage({ onNavigate }: MyPageProps) {
               </div>
               <h3 className="font-bold text-gray-800 mb-2">반려동물 정보 삭제</h3>
               <p className="text-sm text-gray-500 mb-5">
-                {pet?.name}의 정보를 삭제하시겠습니까?<br />
-                펫 케어 데이터도 초기화됩니다.
+                <span className="font-bold">{deleteTargetIndex !== null ? pets[deleteTargetIndex]?.name : ''}</span>의 정보를 삭제하시겠습니까?
+                {pets[deleteTargetIndex ?? -1]?.isRepresentative && pets.length > 1 && (
+                  <><br /><span className="text-amber-600 text-xs mt-1 block">다음 등록 동물이 대표로 자동 설정됩니다.</span></>
+                )}
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowDeleteConfirm(false)}
+                  onClick={() => setDeleteTargetIndex(null)}
                   className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-sm hover:bg-gray-200 transition-colors"
                 >
                   취소
                 </button>
                 <button
-                  onClick={() => { removePet(); setShowDeleteConfirm(false); }}
+                  onClick={executeDelete}
                   className="flex-1 py-3 rounded-xl bg-destructive text-white font-bold text-sm hover:bg-destructive/90 active:scale-95 transition-all"
                 >
                   삭제

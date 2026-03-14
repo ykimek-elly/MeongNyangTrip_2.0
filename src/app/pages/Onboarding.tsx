@@ -28,7 +28,8 @@ type Personality = 'ACTIVE' | 'SHY' | 'SENSITIVE';
 type PreferredPlace = 'NATURE' | 'URBAN' | 'PLAYGROUND';
 
 export function Onboarding({ onNavigate }: OnboardingProps) {
-  const { username, pet, registerPet, completeOnboarding } = useAppStore();
+  const { username, pets, addPet, completeOnboarding } = useAppStore();
+  const pet = pets.find(p => p.isRepresentative) ?? pets[0] ?? null;
 
   // 온보딩 단계: welcome → pet → preference → complete
   const [phase, setPhase] = useState<'welcome' | 'pet' | 'preference' | 'complete'>('welcome');
@@ -38,7 +39,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
 
   // 반려동물 등록 완료 핸들러
   const handlePetSubmit = (petData: PetInfo) => {
-    registerPet(petData);
+    addPet(petData);
     setShowPetForm(false);
     setPhase('preference');
   };

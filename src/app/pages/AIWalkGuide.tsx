@@ -54,7 +54,8 @@ const MOCK_RECOMMENDATIONS = {
 };
 
 export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
-  const { isLoggedIn, pet, addSavedRoute } = useAppStore();
+  const { isLoggedIn, getRepresentativePet, addSavedRoute } = useAppStore();
+  const pet = getRepresentativePet();
   const [isLoading, setIsLoading] = useState(false);
   const [showRecommendation, setShowRecommendation] = useState(false);
   const [showPopup, setShowPopup] = useState(false);

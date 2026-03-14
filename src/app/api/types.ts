@@ -31,6 +31,53 @@ export interface PlaceDto {
 }
 
 /**
+ * 인증 응답 타입.
+ * 백엔드 AuthResponse와 1:1 매핑.
+ */
+export interface AuthResponseDto {
+  token: string;
+  userId: number;
+  email: string;
+  nickname: string;
+}
+
+/**
+ * 반려동물 응답 타입.
+ * 백엔드 PetResponseDto와 1:1 매핑.
+ */
+export interface PetDto {
+  petId: number;
+  petName: string;
+  petType: '강아지' | '고양이';
+  petBreed: string;
+  petGender: '남아' | '여아';
+  petSize: 'SMALL' | 'MEDIUM' | 'LARGE';
+  petAge: number;
+  petWeight?: number | null;
+  petActivity: 'LOW' | 'NORMAL' | 'HIGH';
+  personality?: string | null;
+  preferredPlace?: string | null;
+  isRepresentative: boolean;
+}
+
+/**
+ * 반려동물 등록/수정 요청 타입.
+ * 백엔드 PetRequestDto와 1:1 매핑.
+ */
+export interface PetRequest {
+  petName: string;
+  petType: '강아지' | '고양이';
+  petBreed: string;
+  petGender: '남아' | '여아';
+  petSize: 'SMALL' | 'MEDIUM' | 'LARGE';
+  petAge: number;
+  petWeight?: number;
+  petActivity: 'LOW' | 'NORMAL' | 'HIGH';
+  personality?: string;
+  preferredPlace?: string;
+}
+
+/**
  * 장소 등록/수정 요청 타입.
  * 백엔드 PlaceRequestDto와 1:1 매핑.
  */

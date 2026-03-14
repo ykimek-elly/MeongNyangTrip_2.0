@@ -9,7 +9,7 @@ import { NEARBY_SPOTS } from '../data/places-mock';
  */
 export const setupMockApi = () => {
   // 환경변수가 없거나 MOCK을 안 쓴다면 그냥 리턴
-  const isMock = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.VITE_USE_MOCK === process.env.VITE_USE_MOCK;
+  const isMock = import.meta.env.VITE_USE_MOCK === 'true';
   if (!isMock) return;
 
   console.log('🚧 axios Mocking is ENABLED 🚧');

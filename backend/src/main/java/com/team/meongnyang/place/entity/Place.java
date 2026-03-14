@@ -37,7 +37,7 @@ public class Place {
     private Integer version;
 
     /** Kakao Local API 교차검증 통과 여부 */
-    @Column(name = "is_verified", nullable = false)
+    @Column(name = "is_verified", nullable = false, columnDefinition = "boolean not null default false")
     @Builder.Default
     private Boolean isVerified = false;
 

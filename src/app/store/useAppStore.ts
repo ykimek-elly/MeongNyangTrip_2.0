@@ -1,7 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { PlaceDto } from '../api/types';
+import { PlaceDto, PetRequest } from '../api/types';
 import { placeApi } from '../api/placeApi';
+import { petApi } from '../api/petApi';
+
+/** PetInfo(FE) → PetRequest(BE) 변환 헬퍼 */
+const toPetRequest = (pet: PetInfo): PetRequest => ({
+  petName: pet.name,
+  petType: pet.type,
+  petBreed: pet.breed,
+  petGender: pet.gender,
+  petSize: pet.size,
+  petAge: pet.age,
+  petWeight: pet.weight,
+  petActivity: pet.activity,
+  personality: pet.personality,
+  preferredPlace: pet.preferredPlace,
+});
 
 /**
  * PET 테이블 매핑 인터페이스 (2026-03-13 협의 확정)
@@ -54,6 +69,7 @@ export interface UserLocation {
 
 interface AppState {
   isLoggedIn: boolean;
+  userId: number | null;   // DB user_id — JWT 완성 후 로그인 시 설정됨
   username: string;
   email: string;
   pets: PetInfo[];                  // 다중 등록 (2026-03-13 확정)
@@ -62,7 +78,7 @@ interface AppState {
   savedRoutes: SavedRoute[];
   userLocation: UserLocation;
 
-  login: (username: string, email?: string) => void;
+  login: (username: string, email?: string, userId?: number) => void;
   logout: () => void;
   updateProfile: (data: { username?: string; email?: string }) => void;
   completeOnboarding: () => void;
@@ -89,6 +105,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       isLoggedIn: false,
+      userId: null,
       username: '게스트',
       email: '',
       pets: [],
@@ -99,15 +116,16 @@ export const useAppStore = create<AppState>()(
       places: [],
       isLoadingPlaces: false,
 
-      // TODO: [DB 연동] POST /api/auth/login → Spring Security JWT 토큰 기반 인증으로 전환
-      login: (username, email) => set({
+      // TODO: [DB 연동] POST /api/auth/login → Step 4에서 JWT 토큰 기반으로 전환 (userId 자동 세팅)
+      login: (username, email, userId) => set({
         isLoggedIn: true,
         username,
         email: email || '',
+        userId: userId ?? null,
       }),
 
       // TODO: [DB 연동] POST /api/auth/logout → JWT 토큰 블랙리스트(Redis) 처리 + 클라이언트 토큰 삭제
-      logout: () => set({ isLoggedIn: false, username: '게스트', email: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
+      logout: () => set({ isLoggedIn: false, userId: null, username: '게스트', email: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
 
       // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE (PostgreSQL)
       updateProfile: (data) => set((state) => ({
@@ -118,39 +136,75 @@ export const useAppStore = create<AppState>()(
       // TODO: [DB 연동] 온보딩 완료 플래그 서버 저장
       completeOnboarding: () => set({ hasCompletedOnboarding: true }),
 
-      // TODO: [DB 연동] POST /api/pets → Spring Boot JPA pets 테이블 INSERT (PostgreSQL)
-      // 첫 번째 등록 시 자동으로 대표 동물 설정
-      addPet: (pet) => set((state) => {
-        const isFirst = state.pets.length === 0;
-        const setAsRep = isFirst || !!pet.isRepresentative;
-        const updatedExisting = setAsRep
-          ? state.pets.map(p => ({ ...p, isRepresentative: false }))
-          : state.pets;
-        return {
-          pets: [...updatedExisting, { ...pet, isRepresentative: setAsRep }],
-        };
-      }),
-
-      // TODO: [DB 연동] PUT /api/pets/{id} → Spring Boot JPA pets 테이블 UPDATE (PostgreSQL)
-      updatePet: (tempId, partial) => set((state) => ({
-        pets: state.pets.map((p, i) => i === tempId ? { ...p, ...partial } : p),
-      })),
-
-      // TODO: [DB 연동] DELETE /api/pets/{id} → Spring Boot JPA pets 테이블 DELETE (PostgreSQL)
-      // 대표 동물 삭제 시 다음 동물을 자동으로 대표로 승격
-      removePet: (tempId) => set((state) => {
-        const removed = state.pets[tempId];
-        const remaining = state.pets.filter((_, i) => i !== tempId);
-        if (removed?.isRepresentative && remaining.length > 0) {
-          remaining[0] = { ...remaining[0], isRepresentative: true };
+      // POST /api/v1/pets — DB 저장 후 로컬 상태 동기화
+      addPet: (pet) => {
+        const { userId } = get();
+        // 로컬 상태 즉시 반영 (낙관적 업데이트)
+        set((state) => {
+          const isFirst = state.pets.length === 0;
+          const setAsRep = isFirst || !!pet.isRepresentative;
+          const updatedExisting = setAsRep
+            ? state.pets.map(p => ({ ...p, isRepresentative: false }))
+            : state.pets;
+          return { pets: [...updatedExisting, { ...pet, isRepresentative: setAsRep }] };
+        });
+        // DB 저장 (userId 있을 때만)
+        if (userId) {
+          petApi.addPet(userId, toPetRequest(pet))
+            .then((saved) => set((state) => ({
+              pets: state.pets.map(p =>
+                p.name === saved.petName && p.id == null
+                  ? { ...p, id: saved.petId }
+                  : p
+              ),
+            })))
+            .catch((err) => console.error('[Pet] addPet API 실패:', err));
         }
-        return { pets: remaining };
-      }),
+      },
 
-      // TODO: [DB 연동] PATCH /api/pets/{id}/representative → is_representative 단독 업데이트
-      setRepresentativePet: (tempId) => set((state) => ({
-        pets: state.pets.map((p, i) => ({ ...p, isRepresentative: i === tempId })),
-      })),
+      // PUT /api/v1/pets/{id} — DB 업데이트 후 로컬 상태 동기화
+      updatePet: (tempId, partial) => {
+        const { userId, pets } = get();
+        set((state) => ({
+          pets: state.pets.map((p, i) => i === tempId ? { ...p, ...partial } : p),
+        }));
+        const pet = pets[tempId];
+        if (userId && pet?.id) {
+          const updated = { ...pet, ...partial };
+          petApi.updatePet(pet.id, userId, toPetRequest(updated))
+            .catch((err) => console.error('[Pet] updatePet API 실패:', err));
+        }
+      },
+
+      // DELETE /api/v1/pets/{id} — DB 삭제 후 로컬 상태 동기화
+      removePet: (tempId) => {
+        const { userId, pets } = get();
+        const removed = pets[tempId];
+        set((state) => {
+          const remaining = state.pets.filter((_, i) => i !== tempId);
+          if (removed?.isRepresentative && remaining.length > 0) {
+            remaining[0] = { ...remaining[0], isRepresentative: true };
+          }
+          return { pets: remaining };
+        });
+        if (userId && removed?.id) {
+          petApi.deletePet(removed.id, userId)
+            .catch((err) => console.error('[Pet] deletePet API 실패:', err));
+        }
+      },
+
+      // PATCH /api/v1/pets/{id}/representative — 대표 동물 변경
+      setRepresentativePet: (tempId) => {
+        const { userId, pets } = get();
+        set((state) => ({
+          pets: state.pets.map((p, i) => ({ ...p, isRepresentative: i === tempId })),
+        }));
+        const pet = pets[tempId];
+        if (userId && pet?.id) {
+          petApi.setRepresentative(pet.id, userId)
+            .catch((err) => console.error('[Pet] setRepresentative API 실패:', err));
+        }
+      },
 
       // 대표 동물 getter — 알림/AI 가이드 등 단일 pet이 필요한 곳에서 사용
       getRepresentativePet: () => {

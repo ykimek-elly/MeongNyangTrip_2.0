@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDateTime;
 
@@ -22,6 +23,23 @@ public class Place {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** 공공데이터 원본 ID (upsert 기준키) */
+    @Column(name = "content_id", unique = true)
+    private String contentId;
+
+    /** PostGIS 공간 좌표 (SRID:4326) — ST_DWithin 검색용 */
+    @Column(columnDefinition = "geometry(Point,4326)")
+    private Point geom;
+
+    /** Optimistic Lock — 리뷰/평점 동시 갱신 제어 */
+    @Version
+    private Integer version;
+
+    /** Kakao Local API 교차검증 통과 여부 */
+    @Column(name = "is_verified", nullable = false)
+    @Builder.Default
+    private Boolean isVerified = false;
 
     /** 장소명 */
     @Column(nullable = false, length = 100)
@@ -74,7 +92,7 @@ public class Place {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    /** 장소 정보 수정 */
+    /** 장소 정보 수정 (관리자용) */
     public void update(String title, String description, String address,
                        Double latitude, Double longitude, String category,
                        String imageUrl, String phone, String tags) {
@@ -87,5 +105,20 @@ public class Place {
         this.imageUrl = imageUrl;
         this.phone = phone;
         this.tags = tags;
+    }
+
+    /** 배치 Upsert — 공공데이터 + Kakao 교차검증 결과 반영 */
+    public void upsertFromBatch(String title, String address, Double latitude, Double longitude,
+                                Point geom, String category, String imageUrl, String phone,
+                                boolean isVerified) {
+        this.title = title;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.geom = geom;
+        this.category = category;
+        this.imageUrl = imageUrl;
+        this.phone = phone;
+        this.isVerified = isVerified;
     }
 }

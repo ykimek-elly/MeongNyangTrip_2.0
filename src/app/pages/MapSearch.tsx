@@ -5,7 +5,20 @@ import { placeApi } from '../api/placeApi';
 import { PlaceDto } from '../api/types';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk';
-import { ArrowLeft, MapPin, Navigation, Star, X, PawPrint } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Star, X, PawPrint, Stethoscope, Phone, ExternalLink } from 'lucide-react';
+
+// 카카오 로컬 API 응답 타입
+interface KakaoVet {
+  id: string;
+  place_name: string;
+  address_name: string;
+  road_address_name: string;
+  phone: string;
+  x: string; // 경도
+  y: string; // 위도
+  place_url: string;
+  distance: string; // 미터
+}
 
 export interface MapSearchProps {
   onNavigate: (page: string, params?: any) => void;
@@ -39,6 +52,12 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
   const [activeFilter, setActiveFilter] = useState('all');
   const [places, setPlaces] = useState<SpotType[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<SpotType | null>(null);
+
+  // 동물병원 전용 상태
+  const [vetPlaces, setVetPlaces] = useState<KakaoVet[]>([]);
+  const [selectedVet, setSelectedVet] = useState<KakaoVet | null>(null);
+  const [vetLoading, setVetLoading] = useState(false);
+
   const handleLocate = async () => {
     getLocation();
   };
@@ -56,6 +75,28 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       alert(error);
     }
   }, [error]);
+
+  // 동물병원 필터 활성 시 카카오 로컬 API 호출
+  React.useEffect(() => {
+    if (activeFilter !== '동물병원') {
+      setVetPlaces([]);
+      setSelectedVet(null);
+      return;
+    }
+    if (!lat || !lng) return;
+
+    const REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
+    setVetLoading(true);
+
+    fetch(
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=동물병원&x=${lng}&y=${lat}&radius=3000&sort=distance&size=15`,
+      { headers: { Authorization: `KakaoAK ${REST_KEY}` } }
+    )
+      .then(r => r.json())
+      .then(data => setVetPlaces(data.documents ?? []))
+      .catch(e => console.error('카카오 로컬 API 오류:', e))
+      .finally(() => setVetLoading(false));
+  }, [activeFilter, lat, lng]);
 
   // API를 통해 장소 데이터 받아오기 (Mock Interceptor가 가로챔)
   React.useEffect(() => {
@@ -75,7 +116,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
     : places.filter(s => s.tag === activeFilter);
 
   return (
-    <div className="relative w-full h-screen bg-gray-100 overflow-hidden flex flex-col">
+    <div className="relative w-full h-full bg-gray-100 overflow-hidden flex flex-col">
       {/* Kakao Map Area */}
       <div className="absolute inset-0 z-0">
         <Map
@@ -83,6 +124,34 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
           style={{ width: "100%", height: "100%" }}
           level={5} // 초기 확대 레벨
         >
+          {/* 동물병원 마커 */}
+          {vetPlaces.map((vet) => (
+            <CustomOverlayMap
+              key={`vet-${vet.id}`}
+              position={{ lat: parseFloat(vet.y), lng: parseFloat(vet.x) }}
+              clickable={true}
+            >
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="cursor-pointer flex flex-col items-center"
+                onClick={() => { setSelectedVet(vet); setSelectedPlace(null); }}
+              >
+                <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
+                  selectedVet?.id === vet.id ? 'bg-blue-500 scale-110 z-20' : 'bg-white hover:bg-blue-50'
+                }`}>
+                  <Stethoscope size={18} className={selectedVet?.id === vet.id ? 'text-white' : 'text-blue-500'} />
+                  <div className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-20" />
+                </div>
+                <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm max-w-[80px] truncate ${
+                  selectedVet?.id === vet.id ? 'bg-blue-500 text-white' : 'bg-white/90 text-gray-800'
+                }`}>
+                  {vet.place_name}
+                </span>
+              </motion.div>
+            </CustomOverlayMap>
+          ))}
+
           {filteredSpots.map((spot) => (
             // spot.desc 등에서 lat, lng 추출이 필요하나 현재 Mock Data 형태이므로 임의의 좌표 처리 (기존 % 대신 실제 좌표 매핑 필요)
             // 여기선 임시로 spot.id 값을 활용한 가벼운 오프셋 좌표로 보여줌
@@ -140,6 +209,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
               onClick={() => {
                 setActiveFilter(filter.id);
                 setSelectedPlace(null);
+                setSelectedVet(null);
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id
                 ? 'bg-primary text-white'
@@ -155,11 +225,91 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       {/* Current Location Button */}
       <button
         onClick={handleLocate}
-        className={`absolute right-4 bottom-36 z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-all ${lat && lng ? 'text-primary' : 'text-gray-700'
+        className={`absolute right-4 bottom-[82px] z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-all ${lat && lng ? 'text-primary' : 'text-gray-700'
           }`}
       >
         <Navigation size={24} className={isLoading ? "animate-spin" : ""} />
       </button>
+
+      {/* 동물병원 로딩 인디케이터 */}
+      {vetLoading && (
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 z-20 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-md flex items-center gap-2 text-sm font-bold text-blue-500">
+          <Stethoscope size={14} className="animate-pulse" />
+          주변 동물병원 검색 중...
+        </div>
+      )}
+
+      {/* 동물병원 위치 요청 안내 */}
+      {activeFilter === '동물병원' && !lat && !vetLoading && (
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 z-20 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-md flex items-center gap-2 text-sm font-bold text-gray-600">
+          <MapPin size={14} className="text-primary" />
+          위치 버튼을 눌러 주변 병원을 찾아보세요
+        </div>
+      )}
+
+      {/* 동물병원 팝업 */}
+      <AnimatePresence>
+        {selectedVet && (
+          <motion.div
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            className="absolute bottom-[60px] left-0 w-full z-20 p-4"
+          >
+            <div className="bg-white rounded-3xl shadow-[0_-5px_30px_rgba(0,0,0,0.1)] p-4 relative">
+              <button
+                onClick={() => setSelectedVet(null)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 p-1 bg-white/50 rounded-full"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0">
+                  <Stethoscope size={20} className="text-blue-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">#동물병원</span>
+                  <h3 className="font-bold text-gray-900 text-base mt-0.5 truncate">{selectedVet.place_name}</h3>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                    {selectedVet.road_address_name || selectedVet.address_name}
+                  </p>
+                  {selectedVet.phone && (
+                    <a
+                      href={`tel:${selectedVet.phone}`}
+                      className="text-xs text-primary flex items-center gap-1 mt-0.5"
+                    >
+                      <Phone size={10} /> {selectedVet.phone}
+                    </a>
+                  )}
+                </div>
+                <span className="text-xs text-gray-400 shrink-0">
+                  {Math.round(parseInt(selectedVet.distance))}m
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={selectedVet.place_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-white text-xs font-bold rounded-xl hover:bg-yellow-500 active:scale-95 transition-all"
+                >
+                  <ExternalLink size={13} /> 카카오맵
+                </a>
+                <a
+                  href={`https://map.naver.com/v5/search/${encodeURIComponent(selectedVet.place_name + ' ' + (selectedVet.road_address_name || selectedVet.address_name))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl hover:bg-green-600 active:scale-95 transition-all"
+                >
+                  <ExternalLink size={13} /> 네이버맵
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Place Summary Card */}
       <AnimatePresence>
@@ -168,7 +318,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
-            className="absolute bottom-[100px] left-0 w-full z-20 p-4"
+            className="absolute bottom-[60px] left-0 w-full z-20 p-4"
           >
             <div className="bg-white rounded-3xl shadow-[0_-5px_30px_rgba(0,0,0,0.1)] p-4 relative overflow-hidden">
               <button

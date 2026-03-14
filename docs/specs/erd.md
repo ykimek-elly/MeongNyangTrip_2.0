@@ -12,7 +12,7 @@
 
 ```mermaid
 erDiagram
-    USER ||--o{ DOG : "owns"
+    USER ||--o{ PET : "owns"
     USER ||--o{ REVIEW : "writes"
     USER ||--o{ WISHLIST : "adds"
     USER ||--o{ FEED : "posts"
@@ -70,17 +70,23 @@ erDiagram
 | `reg_date` | DATETIME | 자동 저장 (JPA Auditing) | 가입일시 |
 | `updated_at` | DATETIME | 자동 갱신 (JPA Auditing) | 회원 정보 수정일시 |
 
-🐕 DOG (반려견)
+🐾 PET (반려동물 통합)
 
 | **컬럼명** | **데이터 타입** | **제약 조건 및 유효성 검사** | **설명** |
 | --- | --- | --- | --- |
-| `dog_id` | BIGINT | PK, AUTO_INCREMENT | 반려견 고유 식별자 |
+| `pet_id` | BIGINT | PK, AUTO_INCREMENT | 반려동물 고유 식별자 |
 | `user_id` | BIGINT | FK (USER), 필수 | 소유 회원 ID |
-| `dog_name` | VARCHAR | 필수, 1~20자 | 반려견 이름 |
-| `dog_size` | ENUM | 필수 (`SMALL`, `MEDIUM`, `LARGE`) | 소/중/대형견 분류 |
-| `dog_breed` | VARCHAR | 필수, 1~50자 | 견종 |
-| `personality` | VARCHAR | 선택, 최대 100자 | 성격 |
-| `preferred_place` | VARCHAR | 선택, 최대 50자 | 선호 장소 유형 |
+| `pet_name` | VARCHAR(20) | 필수, 1~20자 | 반려동물 이름 |
+| `pet_type` | VARCHAR | 필수 (`강아지`, `고양이`) | 반려동물 종류 |
+| `pet_breed` | VARCHAR(50) | 필수, 1~50자 | 품종 |
+| `pet_gender` | VARCHAR | 필수 (`남아`, `여아`) | 성별 |
+| `pet_size` | ENUM | 필수 (`SMALL`, `MEDIUM`, `LARGE`) | 소/중/대형 분류 |
+| `pet_age` | INT | 필수, 양수 | 나이 (년) |
+| `pet_weight` | DECIMAL | 선택, 양수 | 체중 (kg) |
+| `pet_activity` | ENUM | 필수 (`LOW`, `NORMAL`, `HIGH`) | 활동량 |
+| `personality` | VARCHAR(100) | 선택, 최대 100자 | 성격 |
+| `preferred_place` | VARCHAR(50) | 선택, 최대 50자 | 선호 장소 유형 |
+| `is_representative` | BOOLEAN | 기본값 `false` | 대표 동물 여부 (첫 등록 시 자동 `true`) |
 | `reg_date` | DATETIME | 자동 저장 (JPA Auditing) | 등록일시 |
 | `updated_at` | DATETIME | 자동 갱신 (JPA Auditing) | 정보 수정일시 |
 

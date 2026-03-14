@@ -8,6 +8,10 @@ build/
 # environment
 .env
 .env.local
+
+# local docs (작업 메모, 가이드라인 — 로컬 전용)
+src/imports/*.md
+!src/imports/fe-dev-guidelines.md
 .env.*.local
 
 # IDE

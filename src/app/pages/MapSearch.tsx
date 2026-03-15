@@ -39,9 +39,9 @@ type SpotType = PlaceDto & {
 
 const FILTERS = [
   { id: 'all', label: '전체' },
-  { id: '햇살맛집', label: '#햇살맛집' },
-  { id: '조용한산책', label: '#조용한산책' },
-  { id: '뛰뛰가능', label: '#뛰뛰가능' },
+  { id: 'PLACE', label: '#명소' },
+  { id: 'STAY', label: '#숙박' },
+  { id: 'DINING', label: '#맛집' },
   { id: '동물병원', label: '#동물병원' },
 ];
 
@@ -113,7 +113,9 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
 
   const filteredSpots = activeFilter === 'all'
     ? places
-    : places.filter(s => s.tag === activeFilter);
+    : activeFilter === '동물병원'
+      ? []
+      : places.filter(s => s.category === activeFilter);
 
   return (
     <div className="relative w-full h-full bg-gray-100 overflow-hidden flex flex-col">
@@ -153,13 +155,11 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
           ))}
 
           {filteredSpots.map((spot) => (
-            // spot.desc 등에서 lat, lng 추출이 필요하나 현재 Mock Data 형태이므로 임의의 좌표 처리 (기존 % 대신 실제 좌표 매핑 필요)
-            // 여기선 임시로 spot.id 값을 활용한 가벼운 오프셋 좌표로 보여줌
             <CustomOverlayMap
               key={spot.id}
               position={{
-                lat: (lat || 37.5665) + (spot.id % 2 === 0 ? 0.002 : -0.002) + (spot.id * 0.0005),
-                lng: (lng || 126.9780) + (spot.id % 3 === 0 ? 0.002 : -0.002) - (spot.id * 0.0005)
+                lat: spot.latitude,
+                lng: spot.longitude,
               }}
               clickable={true}
             >

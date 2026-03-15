@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  ArrowLeft, Heart, Share2, MapPin, Star, ChevronRight, 
-  Instagram, X, Copy, ExternalLink, Navigation, Car, Dog
+import {
+  ArrowLeft, Heart, Share2, MapPin, Star, ChevronRight,
+  Globe, Phone, Dog
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { ShareSheet } from '../components/ShareSheet';
+import { PlaceImage } from '../components/PlaceImage';
 
 export interface Review {
   id: number;
@@ -15,10 +16,11 @@ export interface Review {
   content: string;
 }
 
-const AMENITIES = [
-  { icon: Dog, label: "반려동물 동반" },
-  { icon: Car, label: "주차가능" },
-];
+const CATEGORY_TAG: Record<string, string> = {
+  PLACE: '#반려동물명소',
+  STAY: '#반려동물숙박',
+  DINING: '#반려동물식당',
+};
 
 const MOCK_REVIEWS: Review[] = [
   {
@@ -46,9 +48,6 @@ export function Detail({ id, onNavigate }: DetailProps) {
   const places = useAppStore((s) => s.places);
   const place = places.find(p => p.id === id);
   const [showShare, setShowShare] = useState(false);
-  const [showMapSheet, setShowMapSheet] = useState(false);
-  const [addressCopied, setAddressCopied] = useState(false);
-  const [showReserved, setShowReserved] = useState(false);
   // 리뷰 관련 상태
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
@@ -62,11 +61,52 @@ export function Detail({ id, onNavigate }: DetailProps) {
 
   const displayTitle = (place as any).name || place.title || '이름 없음';
   
+  // 주소: addr2 있으면 합산
+  const fullAddress = place.addr2
+    ? `${place.address} ${place.addr2}`.trim()
+    : place.address;
+
+  // 시설정보 태그: 공공데이터 기반만 표시
+  const facilityTags: { icon: React.ElementType; label: string }[] = [];
+  if (place.chkPetInside === 'Y') facilityTags.push({ icon: Dog, label: '실내 동반가능' });
+  if (place.chkPetInside === 'N') facilityTags.push({ icon: Dog, label: '실외 동반' });
+  if (place.accomCountPet?.trim()) facilityTags.push({ icon: Dog, label: `수용 ${place.accomCountPet}` });
+
+  // 소개 태그: place.tags(DB) 우선, 없으면 카테고리 기반 1개
+  const descTags: string[] = place.tags
+    ? place.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+    : [CATEGORY_TAG[place.category] ?? '#반려동물여행'];
+
   const extra = {
-    address: `${place.address} 상세 주소`,
-    tags: place.tags ? place.tags.split(',') : ((place as any).tag ? [(place as any).tag] : ['#반려동물', '#여행']),
-    description: place.description || (place as any).desc || `${displayTitle}은(는) 반려동물과 함께 특별한 시간을 보낼 수 있는 곳입니다.`,
-    instagram: '@meongnyang_trip',
+    address: fullAddress,
+    overview: place.overview || null,
+    petTurnAdroose: place.petTurnAdroose || null,
+  };
+
+  // 좌표: PlaceDto(latitude/longitude) 또는 mock 데이터(lat/lng) 모두 처리
+  const placeLat: number | undefined = place.latitude ?? (place as any).lat;
+  const placeLng: number | undefined = place.longitude ?? (place as any).lng;
+  const hasCoords = typeof placeLat === 'number' && typeof placeLng === 'number';
+
+  // 하단 버튼 로직: homepage > phone (카카오맵 검색 폴백 비활성)
+  const bottomButton = place.homepage
+    ? { label: '홈페이지 방문', action: () => window.open(place.homepage!, '_blank') }
+    : place.phone
+      ? { label: '전화 문의', action: () => window.open(`tel:${place.phone}`) }
+      : null; // { label: '카카오맵에서 검색', action: () => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(displayTitle)}`, '_blank') }
+
+  // 지도 앱 바로가기 URL
+  const mapLinks = {
+    // 좌표 있으면 정확한 핀, 없으면 상호명 검색 (주소 제외 — 주소 포함 시 "결과 없음" 가능)
+    kakao: hasCoords
+      ? `https://map.kakao.com/link/map/${encodeURIComponent(displayTitle)},${placeLat},${placeLng}`
+      : `https://map.kakao.com/link/search/${encodeURIComponent(displayTitle)}`,
+    naver: hasCoords
+      ? `https://map.naver.com/v5/search/${encodeURIComponent(displayTitle)}?c=${placeLng},${placeLat},15,0,0,0,dh`
+      : `https://map.naver.com/v5/search/${encodeURIComponent(displayTitle)}`,
+    google: hasCoords
+      ? `https://www.google.com/maps/search/${encodeURIComponent(displayTitle)}/@${placeLat},${placeLng},15z`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayTitle)}`,
   };
 
   // 리뷰 등록 핸들러
@@ -119,11 +159,13 @@ export function Detail({ id, onNavigate }: DetailProps) {
 
       <div className="max-w-[600px] mx-auto">
         {/* 메인 이미지 */}
-        <div className="w-full aspect-[4/3] bg-gray-100 overflow-hidden">
-          <img 
-            src={place.imageUrl || (place as any).img || ""} 
-            alt={displayTitle} 
-            className="w-full h-full object-cover" 
+        <div className="w-full aspect-[4/3] overflow-hidden">
+          <PlaceImage
+            imageUrl={place.imageUrl ?? (place as any).img ?? null}
+            category={place.category}
+            className="w-full h-full object-cover"
+            iconSize={52}
+            alt={displayTitle}
           />
         </div>
 
@@ -139,63 +181,112 @@ export function Detail({ id, onNavigate }: DetailProps) {
           </div>
 
           {/* 시설 정보 */}
-          <div className="py-4 border-b border-gray-100">
-            <h3 className="text-[15px] font-bold text-gray-900 mb-3">시설 정보</h3>
-            <div className="flex flex-wrap gap-2">
-              {AMENITIES.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-                  <item.icon size={13} className="text-gray-400" />
-                  <span className="text-[12px] text-gray-600">{item.label}</span>
-                </div>
-              ))}
+          {facilityTags.length > 0 && (
+            <div className="py-4 border-b border-gray-100">
+              <h3 className="text-[15px] font-bold text-gray-900 mb-3">시설 정보</h3>
+              <div className="flex flex-wrap gap-2">
+                {facilityTags.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                    <item.icon size={13} className="text-gray-400" />
+                    <span className="text-[12px] text-gray-600">{item.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 소개 */}
           <div className="py-4 border-b border-gray-100">
             <h3 className="text-[15px] font-bold text-gray-900 mb-3">소개</h3>
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {extra.tags.map((tag, idx) => (
+              {descTags.map((tag, idx) => (
                 <span key={idx} className="text-[12px] text-primary font-medium">{tag}</span>
               ))}
             </div>
-            {showFullDesc ? (
-              <p className="text-xs text-gray-600 leading-relaxed">{extra.description}</p>
-            ) : null}
-            <button
-              onClick={() => setShowFullDesc(!showFullDesc)}
-              className="text-primary text-xs font-bold mt-1 flex items-center gap-0.5 hover:underline"
-            >
-              {showFullDesc ? '접기' : '더보기'} <ChevronRight size={13} className={showFullDesc ? 'rotate-90' : ''} />
-            </button>
+            {(extra.overview || extra.petTurnAdroose) && (
+              <>
+                {showFullDesc && (
+                  <div className="space-y-3">
+                    {extra.overview && (
+                      <p className="text-xs text-gray-600 leading-relaxed">{extra.overview}</p>
+                    )}
+                    {extra.petTurnAdroose && (
+                      <div className="bg-primary/5 border border-primary/10 rounded-xl p-3">
+                        <p className="text-[11px] font-bold text-primary mb-1">🐾 반려동물 동반 안내</p>
+                        <p className="text-xs text-gray-600 leading-relaxed">{extra.petTurnAdroose}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowFullDesc(!showFullDesc)}
+                  className="text-primary text-xs font-bold mt-1 flex items-center gap-0.5 hover:underline"
+                >
+                  {showFullDesc ? '접기' : '더보기'} <ChevronRight size={13} className={showFullDesc ? 'rotate-90' : ''} />
+                </button>
+              </>
+            )}
           </div>
 
-          {/* 주소 + 지도보기 */}
+          {/* 오시는길 */}
           <div className="py-4 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <MapPin size={16} className="text-gray-400 shrink-0" />
-                <span className="text-xs text-gray-600 truncate">{extra.address}</span>
-              </div>
-              <button 
-                onClick={() => setShowMapSheet(true)}
-                className="text-primary text-xs font-bold whitespace-nowrap flex items-center gap-0.5 ml-2 hover:underline"
+            <h3 className="text-[15px] font-bold text-gray-900 mb-3">오시는길</h3>
+            <div className="flex items-start gap-2 mb-3">
+              <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
+              <span className="text-xs text-gray-600 leading-relaxed">{extra.address}</span>
+            </div>
+            <div className="flex gap-2">
+              <a
+                href={mapLinks.kakao}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-2 text-[11px] font-bold rounded-lg bg-[#FEE500] text-gray-900 active:scale-95 transition-transform"
               >
-                지도보기 <ChevronRight size={13} />
-              </button>
+                카카오맵
+              </a>
+              <a
+                href={mapLinks.naver}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-2 text-[11px] font-bold rounded-lg bg-[#03C75A] text-white active:scale-95 transition-transform"
+              >
+                네이버맵
+              </a>
+              <a
+                href={mapLinks.google}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-2 text-[11px] font-bold rounded-lg bg-[#4285F4] text-white active:scale-95 transition-transform"
+              >
+                구글맵
+              </a>
             </div>
           </div>
 
-          {/* 인스타그램 */}
-          {extra.instagram && (
-            <div className="py-5 border-b border-gray-100">
-              <button 
-                onClick={() => alert(`인스타그램: ${extra.instagram}\n(데모용 정보입니다)`)}
-                className="w-full flex flex-col items-center gap-2 py-2 hover:bg-gray-50 rounded-xl transition-colors"
-              >
-                <Instagram size={24} className="text-gray-500" />
-                <span className="text-xs text-gray-600">인스타그램</span>
-              </button>
+          {/* 연락처 */}
+          {(place.homepage || place.phone) && (
+            <div className="py-4 border-b border-gray-100">
+              <h3 className="text-[15px] font-bold text-gray-900 mb-3">연락처</h3>
+              <div className="flex gap-3">
+                {place.homepage && (
+                  <button
+                    onClick={() => window.open(place.homepage!, '_blank')}
+                    className="flex-1 flex flex-col items-center gap-1.5 py-3 bg-primary/5 rounded-2xl border border-primary/10 hover:bg-primary/10 active:scale-95 transition-all"
+                  >
+                    <Globe size={20} className="text-primary" />
+                    <span className="text-[11px] font-bold text-primary">홈페이지</span>
+                  </button>
+                )}
+                {place.phone && (
+                  <button
+                    onClick={() => window.open(`tel:${place.phone}`)}
+                    className="flex-1 flex flex-col items-center gap-1.5 py-3 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-gray-100 active:scale-95 transition-all"
+                  >
+                    <Phone size={20} className="text-gray-600" />
+                    <span className="text-[11px] font-bold text-gray-600">{place.phone}</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -284,18 +375,17 @@ export function Detail({ id, onNavigate }: DetailProps) {
         </div>
       </div>
 
-      {/* 고정 하단 바 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 pb-5 z-50 max-w-[600px] mx-auto">
-        <button
-          onClick={() => {
-            setShowReserved(true);
-            setTimeout(() => setShowReserved(false), 2500);
-          }}
-          className="w-full bg-primary text-white font-bold text-[15px] py-3.5 rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all"
-        >
-          {showReserved ? '✅ 예약 요청이 접수되었습니다!' : '예약 / 문의하기'}
-        </button>
-      </div>
+      {/* 고정 하단 바 (홈페이지 또는 전화 있을 때만 노출) */}
+      {bottomButton && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 pb-5 z-50 max-w-[600px] mx-auto">
+          <button
+            onClick={bottomButton.action}
+            className="w-full bg-primary text-white font-bold text-[15px] py-3.5 rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all"
+          >
+            {bottomButton.label}
+          </button>
+        </div>
+      )}
 
       {/* 공유 시트 */}
       <ShareSheet
@@ -306,127 +396,6 @@ export function Detail({ id, onNavigate }: DetailProps) {
         postUser={displayTitle}
       />
 
-      {/* 위치 바텀시트 */}
-      <AnimatePresence>
-        {showMapSheet && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowMapSheet(false)}
-            />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-              className="relative z-10 bg-white w-full max-w-[600px] rounded-t-3xl shadow-2xl overflow-hidden"
-            >
-              {/* 핸들바 */}
-              <div className="flex justify-center pt-3 pb-1">
-                <div className="w-10 h-1 bg-gray-300 rounded-full" />
-              </div>
-
-              {/* 헤더 */}
-              <div className="flex items-center justify-between px-5 pb-3">
-                <h3 className="text-[15px] font-bold text-gray-900">위치 정보</h3>
-                <button
-                  onClick={() => setShowMapSheet(false)}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* 지도 미리보기 영역 */}
-              <div className="mx-5 mb-4 relative h-[180px] rounded-2xl overflow-hidden bg-green-50 border border-gray-100">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-blue-50 to-green-50">
-                  <div className="absolute inset-0 opacity-[0.15]">
-                    <div className="absolute top-[20%] left-0 w-full h-px bg-gray-500" />
-                    <div className="absolute top-[40%] left-[10%] w-[80%] h-px bg-gray-500" />
-                    <div className="absolute top-[60%] left-0 w-full h-px bg-gray-500" />
-                    <div className="absolute top-[80%] left-[5%] w-[70%] h-px bg-gray-500" />
-                    <div className="absolute top-0 left-[30%] w-px h-full bg-gray-500" />
-                    <div className="absolute top-0 left-[55%] w-px h-full bg-gray-500" />
-                    <div className="absolute top-0 left-[80%] w-px h-full bg-gray-500" />
-                  </div>
-                  <div className="absolute top-[30%] left-[40%] w-[25%] h-[30%] bg-blue-200/40 rounded-full blur-sm" />
-                </div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center">
-                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-white">
-                    <MapPin size={20} className="text-white" />
-                  </div>
-                  <div className="w-2 h-2 bg-primary/40 rounded-full mt-1" />
-                </div>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
-                  <span className="text-[11px] font-bold text-gray-800">{displayTitle}</span>
-                </div>
-              </div>
-
-              {/* 주소 정보 */}
-              <div className="mx-5 mb-4 bg-gray-50 rounded-2xl p-4">
-                <div className="flex items-start gap-3">
-                  <MapPin size={18} className="text-primary shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-gray-800 mb-0.5">{place.address}</p>
-                    <p className="text-[12px] text-gray-500">{extra.address}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 액션 버튼들 */}
-              <div className="px-5 pb-3 grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(extra.address);
-                    setAddressCopied(true);
-                    setTimeout(() => setAddressCopied(false), 2000);
-                  }}
-                  className="flex flex-col items-center gap-1.5 py-3 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-gray-100 active:scale-95 transition-all"
-                >
-                  {addressCopied ? (
-                    <>
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-green-600 text-xs">✓</span>
-                      </div>
-                      <span className="text-[11px] font-bold text-green-600">복사됨!</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Copy size={15} className="text-gray-600" />
-                      </div>
-                      <span className="text-[11px] font-bold text-gray-600">주소 복사</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(extra.address)}`, '_blank')}
-                  className="flex flex-col items-center gap-1.5 py-3 bg-yellow-50 rounded-2xl border border-yellow-100 hover:bg-yellow-100 active:scale-95 transition-all"
-                >
-                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <ExternalLink size={15} className="text-yellow-700" />
-                  </div>
-                  <span className="text-[11px] font-bold text-yellow-700">카카오맵</span>
-                </button>
-                <button
-                  onClick={() => window.open(`https://map.naver.com/v5/search/${encodeURIComponent(extra.address)}`, '_blank')}
-                  className="flex flex-col items-center gap-1.5 py-3 bg-green-50 rounded-2xl border border-green-100 hover:bg-green-100 active:scale-95 transition-all"
-                >
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <Navigation size={15} className="text-green-700" />
-                  </div>
-                  <span className="text-[11px] font-bold text-green-700">네이버지도</span>
-                </button>
-              </div>
-
-              <div className="h-6" />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }

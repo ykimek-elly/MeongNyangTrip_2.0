@@ -85,6 +85,29 @@ public class Place {
     @Column(columnDefinition = "TEXT")
     private String tags;
 
+    /** 상세 주소 (건물명 등) — 공공데이터 addr2 */
+    private String addr2;
+
+    /** 장소 소개 (공공데이터 detailCommon2 overview) */
+    @Column(columnDefinition = "TEXT")
+    private String overview;
+
+    /** 실내 반려동물 동반 가능 여부 (Y/N) — detailPetTour2 */
+    @Column(name = "chk_pet_inside", length = 10)
+    private String chkPetInside;
+
+    /** 반려동물 동반 수용 가능 수 — detailPetTour2 */
+    @Column(name = "accom_count_pet", length = 50)
+    private String accomCountPet;
+
+    /** 반려동물 동반 관광 상세정보 — detailPetTour2 */
+    @Column(name = "pet_turn_adroose", columnDefinition = "TEXT")
+    private String petTurnAdroose;
+
+    /** 홈페이지 URL — detailCommon2 */
+    @Column(columnDefinition = "TEXT")
+    private String homepage;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -107,18 +130,52 @@ public class Place {
         this.tags = tags;
     }
 
+    /**
+     * Google Places API 속성 보강 (3단계 교차검증).
+     * allowsDogs=true 시 tags에 "반려동물 동반 가능" 추가.
+     * isClosed=true 시 tags에 "폐업" 추가.
+     * 실행 후 isVerified=true 처리.
+     */
+    public void enrichFromGoogle(boolean allowsDogs, boolean isClosed) {
+        if (allowsDogs) {
+            this.tags = (this.tags != null && !this.tags.isBlank())
+                    ? this.tags + ",반려동물 동반 가능"
+                    : "반려동물 동반 가능";
+        }
+        if (isClosed) {
+            this.tags = (this.tags != null && !this.tags.isBlank())
+                    ? this.tags + ",폐업"
+                    : "폐업";
+        }
+        this.isVerified = true;
+    }
+
+    /** 네이버 지역 검색 API 이미지 보강 */
+    public void enrichImageFromNaver(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     /** 배치 Upsert — 공공데이터 + Kakao 교차검증 결과 반영 */
-    public void upsertFromBatch(String title, String address, Double latitude, Double longitude,
+    public void upsertFromBatch(String title, String address, String addr2,
+                                Double latitude, Double longitude,
                                 Point geom, String category, String imageUrl, String phone,
-                                boolean isVerified) {
+                                String overview, String homepage,
+                                String chkPetInside, String accomCountPet,
+                                String petTurnAdroose, boolean isVerified) {
         this.title = title;
         this.address = address;
+        this.addr2 = addr2;
         this.latitude = latitude;
         this.longitude = longitude;
         this.geom = geom;
         this.category = category;
         this.imageUrl = imageUrl;
         this.phone = phone;
+        this.overview = overview;
+        this.homepage = homepage;
+        this.chkPetInside = chkPetInside;
+        this.accomCountPet = accomCountPet;
+        this.petTurnAdroose = petTurnAdroose;
         this.isVerified = isVerified;
     }
 }

@@ -3,6 +3,8 @@ package com.team.meongnyang.batch;
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.place.repository.PlaceRepository;
 import com.team.meongnyang.place.service.KakaoLocalVerifyService;
+import com.team.meongnyang.pettour.dto.DetailCommonResponse;
+import com.team.meongnyang.pettour.dto.DetailPetTourResponse;
 import com.team.meongnyang.pettour.dto.PetTourApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -125,7 +127,7 @@ public class PlaceDataBatchService {
     }
 
     /**
-     * 단건 처리: 교차검증 → Upsert
+     * 단건 처리: 교차검증 → 상세정보 수집 → Upsert
      * @return true=저장, false=건너뜀
      */
     @SuppressWarnings("null")
@@ -147,37 +149,141 @@ public class PlaceDataBatchService {
         // PostGIS Point 생성 (경도, 위도 순서)
         Point geom = geometryFactory.createPoint(new Coordinate(result.lng(), result.lat()));
 
+        // 반려동물 상세정보 수집 (detailPetTour2)
+        DetailPetTourResponse.Item petDetail = fetchDetailPetTour(item.getContentid());
+        String chkPetInside   = petDetail != null ? petDetail.getChkpetinside()   : null;
+        String accomCountPet  = petDetail != null ? petDetail.getAccomcountpet()  : null;
+        String petTurnAdroose = petDetail != null ? petDetail.getPetturnadroose() : null;
+
+        // 소개글 + 홈페이지 수집 (detailCommon2)
+        CommonDetail commonDetail = fetchCommonDetail(item.getContentid());
+        String overview = commonDetail.overview();
+        String homepage = commonDetail.homepage();
+
+        // addr1 + addr2 합산
+        String fullAddress = item.getAddr1();
+        if (item.getAddr2() != null && !item.getAddr2().isBlank()) {
+            fullAddress = item.getAddr1() + " " + item.getAddr2().trim();
+        }
+        final String finalAddress = fullAddress;
+        final String finalAddr2 = item.getAddr2();
+
         // Upsert: contentId 기준
         String category = determineCategory(item.getContenttypeid());
+        final String finalChkPetInside = chkPetInside;
+        final String finalAccomCountPet = accomCountPet;
+        final String finalPetTurnAdroose = petTurnAdroose;
+        final String finalOverview = overview;
+        final String finalHomepage = homepage;
+
         placeRepository.findByContentId(item.getContentid()).ifPresentOrElse(
             existing -> existing.upsertFromBatch(
                 item.getTitle(),
-                item.getAddr1(),
+                finalAddress,
+                finalAddr2,
                 result.lat(),
                 result.lng(),
                 geom,
                 category,
                 item.getFirstimage(),
                 item.getTel(),
+                finalOverview,
+                finalHomepage,
+                finalChkPetInside,
+                finalAccomCountPet,
+                finalPetTurnAdroose,
                 true
             ),
             () -> {
                 Place newPlace = Place.builder()
                     .contentId(item.getContentid())
                     .title(item.getTitle())
-                    .address(item.getAddr1())
+                    .address(finalAddress)
+                    .addr2(finalAddr2)
                     .latitude(result.lat())
                     .longitude(result.lng())
                     .geom(geom)
                     .category(category)
                     .imageUrl(item.getFirstimage())
                     .phone(item.getTel())
+                    .overview(finalOverview)
+                    .homepage(finalHomepage)
+                    .chkPetInside(finalChkPetInside)
+                    .accomCountPet(finalAccomCountPet)
+                    .petTurnAdroose(finalPetTurnAdroose)
                     .isVerified(true)
                     .build();
                 placeRepository.save(newPlace);
             }
         );
         return true;
+    }
+
+    /** detailPetTour2 API 호출 — 반려동물 동반 상세정보 */
+    private DetailPetTourResponse.Item fetchDetailPetTour(String contentId) {
+        try {
+            URI uri = UriComponentsBuilder.fromUriString(BASE_URL + "/detailPetTour2")
+                    .queryParam("serviceKey", serviceKey)
+                    .queryParam("contentId", contentId)
+                    .queryParam("MobileOS", "ETC")
+                    .queryParam("MobileApp", "MeongNyangTrip")
+                    .queryParam("_type", "json")
+                    .build(true)
+                    .toUri();
+
+            DetailPetTourResponse response = restClient.get()
+                    .uri(uri)
+                    .retrieve()
+                    .body(DetailPetTourResponse.class);
+
+            if (response == null || response.getResponse() == null
+                    || response.getResponse().getBody() == null
+                    || response.getResponse().getBody().getItems() == null
+                    || response.getResponse().getBody().getItems().getItem() == null
+                    || response.getResponse().getBody().getItems().getItem().isEmpty()) {
+                return null;
+            }
+            return response.getResponse().getBody().getItems().getItem().get(0);
+        } catch (Exception e) {
+            log.warn("[detailPetTour2 오류] contentId={} — {}", contentId, e.getMessage());
+            return null;
+        }
+    }
+
+    /** detailCommon2 API 호출 — overview(소개글) + homepage(홈페이지) 수집 */
+    private record CommonDetail(String overview, String homepage) {}
+
+    private CommonDetail fetchCommonDetail(String contentId) {
+        try {
+            URI uri = UriComponentsBuilder.fromUriString(BASE_URL + "/detailCommon2")
+                    .queryParam("serviceKey", serviceKey)
+                    .queryParam("contentId", contentId)
+                    .queryParam("overviewYN", "Y")
+                    .queryParam("homepageYN", "Y")
+                    .queryParam("MobileOS", "ETC")
+                    .queryParam("MobileApp", "MeongNyangTrip")
+                    .queryParam("_type", "json")
+                    .build(true)
+                    .toUri();
+
+            DetailCommonResponse response = restClient.get()
+                    .uri(uri)
+                    .retrieve()
+                    .body(DetailCommonResponse.class);
+
+            if (response == null || response.getResponse() == null
+                    || response.getResponse().getBody() == null
+                    || response.getResponse().getBody().getItems() == null
+                    || response.getResponse().getBody().getItems().getItem() == null
+                    || response.getResponse().getBody().getItems().getItem().isEmpty()) {
+                return new CommonDetail(null, null);
+            }
+            DetailCommonResponse.Item item = response.getResponse().getBody().getItems().getItem().get(0);
+            return new CommonDetail(item.getOverview(), item.getHomepage());
+        } catch (Exception e) {
+            log.warn("[detailCommon2 오류] contentId={} — {}", contentId, e.getMessage());
+            return new CommonDetail(null, null);
+        }
     }
 
     private String determineCategory(String contentTypeId) {

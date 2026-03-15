@@ -1,38 +1,40 @@
 import React, { useState } from 'react';
-import { Place } from '../data/places';
+import { PlaceDto } from '../api/types';
 import { Star, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { PlaceImage } from './PlaceImage';
 
 interface CategoryBestRankingProps {
-  places: Place[];
+  places: PlaceDto[];
   onNavigate: (page: string, params?: any) => void;
 }
 
 const CATEGORIES = [
-  { id: 'place', label: '멍냥플레이스' },
-  { id: 'stay', label: '멍냥스테이' },
-  { id: 'dining', label: '멍냥다이닝' },
+  { id: 'PLACE', label: '멍냥플레이스' },
+  { id: 'STAY', label: '멍냥스테이' },
+  { id: 'DINING', label: '멍냥다이닝' },
 ];
 
 export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingProps) {
-  const [activeCategory, setActiveCategory] = useState('place');
+  const [activeCategory, setActiveCategory] = useState('PLACE');
 
   const filteredPlaces = places
     .filter(p => p.category === activeCategory)
-    .sort((a, b) => b.rating - a.rating);
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 4);
 
   return (
     <div className="mb-10 px-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800">카테고리별 베스트 👍</h3>
-        <button 
+        <button
           onClick={() => onNavigate('list', { category: activeCategory })}
           className="text-xs text-gray-400 flex items-center gap-1 hover:text-gray-600 transition-colors"
         >
           더보기 <span className="text-[10px]">›</span>
         </button>
       </div>
-      
+
       {/* 카테고리 탭 */}
       <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
         {CATEGORIES.map((cat) => (
@@ -54,17 +56,8 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
       <div className="flex flex-col gap-3">
         <AnimatePresence mode="popLayout">
           {filteredPlaces.length > 0 ? (
-            (() => {
-              // 데모: 5개 미만이면 반복 채워서 표시
-              const displayList = [...filteredPlaces];
-              while (displayList.length < 5) {
-                const source = filteredPlaces[displayList.length % filteredPlaces.length];
-                displayList.push({ ...source, id: source.id * 1000 + displayList.length });
-              }
-              return displayList;
-            })()
-            .slice(0, 5).map((place, idx) => (
-              <motion.div 
+            filteredPlaces.map((place, idx) => (
+              <motion.div
                 key={place.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -74,13 +67,15 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
               >
                 {/* 이미지 & 순위 */}
                 <div className="relative w-[80px] h-[80px] flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
-                   <div className="absolute top-2 left-2 bg-primary text-white w-6 h-6 flex items-center justify-center rounded-md font-bold text-xs z-10 shadow-sm">
+                  <div className="absolute top-2 left-2 bg-primary text-white w-6 h-6 flex items-center justify-center rounded-md font-bold text-xs z-10 shadow-sm">
                     {idx + 1}
                   </div>
-                  <img 
-                    src={place.imageUrl || ""} 
+                  <PlaceImage
+                    imageUrl={place.imageUrl}
+                    category={place.category}
+                    className="w-full h-full object-cover"
+                    iconSize={24}
                     alt={place.title}
-                    className="w-full h-full object-cover" 
                   />
                 </div>
 
@@ -92,9 +87,9 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
                     </span>
                     <span className="text-xs text-gray-400">후기 {place.reviewCount}개</span>
                   </div>
-                  
+
                   <h4 className="font-bold text-gray-800 truncate text-[15px] px-[0px] py-[3px]">{place.title}</h4>
-                  
+
                   <div className="flex items-center justify-between mt-auto">
                     <span className="flex items-center gap-1 text-xs text-gray-500 truncate max-w-[120px]">
                       <MapPin size={12} className="text-gray-400" /> {place.address}

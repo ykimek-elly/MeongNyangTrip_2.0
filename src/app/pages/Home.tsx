@@ -3,6 +3,7 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Search, MapPin, Calendar, Layers, TreeDeciduous, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
+import { PlaceImage } from '../components/PlaceImage';
 // 더미 데이터 제거
 import { motion, AnimatePresence } from 'motion/react';
 import { CategoryBestRanking } from '../components/CategoryBestRanking';
@@ -66,8 +67,8 @@ export function Home({ onNavigate }: HomeProps) {
         <div className="relative h-[280px] rounded-[2rem] overflow-hidden shadow-xl mb-6 bg-black [&_.slick-slider]:!mb-0 [&_.slick-slider]:h-full [&_.slick-list]:h-full [&_.slick-track]:flex [&_.slick-track]:h-full [&_.slick-slide>div]:h-full [&_.slick-slide]:h-full">
           <Slider {...sliderSettings} className="h-full">
             {/* 슬라이드 1: 플레이스 */}
-            <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'place' })}>
-              <img 
+            <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'PLACE' })}>
+              <img
                 src="https://images.unsplash.com/photo-1759914915081-b206224de813?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjBmcmllbmRseSUyMHBhcmslMjBkb2d8ZW58MXx8fHwxNzcyNjgxMzU0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" 
                 className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                 alt="멍냥플레이스" 
@@ -84,8 +85,8 @@ export function Home({ onNavigate }: HomeProps) {
             </div>
 
             {/* 슬라이드 2: 스테이 */}
-            <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'stay' })}>
-              <img 
+            <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'STAY' })}>
+              <img
                 src="https://images.unsplash.com/photo-1620937003051-b1749b6a6cb5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjBmcmllbmRseSUyMGhvdGVsJTIwZG9nfGVufDF8fHx8MTc3MjY4MTM1NHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" 
                 className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                 alt="멍냥스테이" 
@@ -102,8 +103,8 @@ export function Home({ onNavigate }: HomeProps) {
             </div>
 
             {/* 슬라이드 3: 다이닝 */}
-            <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'dining' })}>
-              <img 
+            <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'DINING' })}>
+              <img
                 src="https://images.unsplash.com/photo-1712746438761-f8604b6d867b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjBmcmllbmRseSUyMGNhZmUlMjBkb2d8ZW58MXx8fHwxNzcyNjgxMzU0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" 
                 className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                 alt="멍냥다이닝" 
@@ -160,9 +161,9 @@ export function Home({ onNavigate }: HomeProps) {
               className="[&>div]:!bg-green-50 [&>div]:!text-green-500 [&>span]:!text-gray-800 [&>span]:!font-bold"
             />
           </div>
-          <div className="snap-start shrink-0"><CategoryItem icon={TreeDeciduous} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'place' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Bed} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'stay' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Coffee} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'dining' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={TreeDeciduous} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'PLACE' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={Bed} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={Coffee} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Map} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={MessageCircle} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
         </div>
@@ -201,7 +202,7 @@ export function Home({ onNavigate }: HomeProps) {
                 <div className="absolute top-2 left-2 bg-primary text-white w-6 h-6 flex items-center justify-center rounded-md font-bold text-xs shadow-md z-10">
                   {idx + 1}
                 </div>
-                <img src={place.imageUrl || ""} className="w-full aspect-square object-cover rounded-2xl bg-gray-100" alt={place.title} />
+                <PlaceImage imageUrl={place.imageUrl} category={place.category} className="w-full aspect-square object-cover rounded-2xl" iconSize={32} alt={place.title} />
               </div>
               <h6 className="text-gray-800 truncate text-[15px] font-bold">{place.title}</h6>
               <div className="text-xs text-gray-500 flex items-center gap-1">

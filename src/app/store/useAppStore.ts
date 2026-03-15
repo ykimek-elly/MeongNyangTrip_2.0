@@ -237,7 +237,7 @@ export const useAppStore = create<AppState>()(
       fetchPlaces: async () => {
         set({ isLoadingPlaces: true });
         try {
-          const data = await placeApi.getPublicPlaces(1, 40);
+          const data = await placeApi.getPlaces();
           set({ places: data, isLoadingPlaces: false });
         } catch (error) {
           console.error("Failed to fetch places", error);

@@ -18,6 +18,7 @@ export interface PlaceDto {
   title: string;
   description: string | null;
   address: string;
+  addr2: string | null;
   latitude: number;
   longitude: number;
   category: string;
@@ -26,6 +27,11 @@ export interface PlaceDto {
   imageUrl: string | null;
   phone: string | null;
   tags: string | null;
+  overview: string | null;
+  chkPetInside: string | null;
+  accomCountPet: string | null;
+  petTurnAdroose: string | null;
+  homepage: string | null;
   createdAt: string;
   updatedAt: string;
 }

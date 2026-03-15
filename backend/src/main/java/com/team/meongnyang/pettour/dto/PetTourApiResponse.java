@@ -51,6 +51,7 @@ public class PetTourApiResponse {
         private String contentid;
         private String title;
         private String addr1;
+        private String addr2;
         private String mapx;
         private String mapy;
         private String firstimage;

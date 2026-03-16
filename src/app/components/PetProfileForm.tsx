@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, PawPrint, Check } from 'lucide-react';
+import { X, PawPrint, Check, Star } from 'lucide-react';
 import type { PetInfo } from '../store/useAppStore';
 
 interface PetProfileFormProps {
   /** 수정 모드일 때 기존 pet 정보 */
   initialData?: PetInfo | null;
+  /** 기존 등록 동물이 있을 때 true → 대표 동물 설정 토글 표시 */
+  hasExistingPets?: boolean;
   onSubmit: (pet: PetInfo) => void;
   onClose: () => void;
 }
 
 const PET_TYPES = [
-  { id: '강아지', emoji: '🐶', label: '강아지' },
-  { id: '고양이', emoji: '🐱', label: '고양이' },
+  { id: '강아지' as const, emoji: '🐶', label: '강아지' },
+  { id: '고양이' as const, emoji: '🐱', label: '고양이' },
 ];
 
 const SIZES = [
@@ -38,11 +40,11 @@ const BREEDS: Record<string, string[]> = {
   '고양이': ['코리안숏헤어', '페르시안', '스코티시폴드', '러시안블루', '브리티시숏헤어', '먼치킨', '랙돌', '벵갈', '기타'],
 };
 
-export function PetProfileForm({ initialData, onSubmit, onClose }: PetProfileFormProps) {
+export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose }: PetProfileFormProps) {
   const isEdit = !!initialData;
 
   const [name, setName] = useState(initialData?.name || '');
-  const [type, setType] = useState(initialData?.type || '강아지');
+  const [type, setType] = useState<'강아지' | '고양이'>(initialData?.type || '강아지');
   const [breed, setBreed] = useState(initialData?.breed || '');
   const [gender, setGender] = useState<'남아' | '여아'>(initialData?.gender || '남아');
   const [size, setSize] = useState<'SMALL' | 'MEDIUM' | 'LARGE'>(initialData?.size || 'MEDIUM');
@@ -50,6 +52,9 @@ export function PetProfileForm({ initialData, onSubmit, onClose }: PetProfileFor
   const [age, setAge] = useState(initialData?.age?.toString() || '');
   const [weight, setWeight] = useState(initialData?.weight?.toString() || '');
   const [step, setStep] = useState(1); // 2단계 폼 (1: 기본 정보, 2: 상세 정보)
+  const [setAsRepresentative, setSetAsRepresentative] = useState(false);
+
+  const showRepresentativeToggle = !isEdit && !!hasExistingPets;
 
   const canProceed = name.trim() && type && breed;
   const canSubmit = canProceed && age;
@@ -65,6 +70,7 @@ export function PetProfileForm({ initialData, onSubmit, onClose }: PetProfileFor
       activity,
       age: parseInt(age),
       weight: weight ? parseFloat(weight) : undefined,
+      isRepresentative: setAsRepresentative,
     });
   };
 
@@ -281,6 +287,30 @@ export function PetProfileForm({ initialData, onSubmit, onClose }: PetProfileFor
                     ))}
                   </div>
                 </div>
+
+                {/* 대표 동물 설정 토글 — 추가 등록 시에만 표시 */}
+                {showRepresentativeToggle && (
+                  <button
+                    type="button"
+                    onClick={() => setSetAsRepresentative(prev => !prev)}
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all ${
+                      setAsRepresentative
+                        ? 'border-primary bg-primary/5'
+                        : 'border-gray-100 bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Star
+                        size={16}
+                        className={setAsRepresentative ? 'text-primary fill-primary' : 'text-gray-400'}
+                      />
+                      <span className={`text-sm font-bold ${setAsRepresentative ? 'text-primary' : 'text-gray-600'}`}>
+                        대표 동물로 설정
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">알림 수신 기준</span>
+                  </button>
+                )}
 
                 {/* 등록/수정 버튼 */}
                 <button

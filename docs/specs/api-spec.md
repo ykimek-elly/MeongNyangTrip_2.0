@@ -39,7 +39,6 @@
 
 | API ID | API 이름 | 주요 용도 | 참고 링크 |
 |--------|---------|----------|----------|
-| DATA-001 | 행정안전부 동물병원 | 원천 데이터 (동물병원 목록) | [링크](https://www.data.go.kr/data/15045050/fileData.do) |
 | DATA-002 | 한국관광공사 반려동물 동반여행 서비스 | 속성 데이터 보강 (동반 가능 시설) | [링크](https://www.data.go.kr/iim/api/selectAPIAcountView.do) |
 
 ## 2.5 속성 데이터 보강

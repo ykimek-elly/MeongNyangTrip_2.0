@@ -63,7 +63,8 @@ const SENIOR_PLACES = [
 ];
 
 export function SeniorPetDashboard({ onNavigate }: SeniorPetDashboardProps) {
-  const { isLoggedIn, pet } = useAppStore();
+  const { isLoggedIn, getRepresentativePet } = useAppStore();
+  const pet = getRepresentativePet();
 
   // pet 기반 동적 데이터 생성 (메모이제이션)
   const initialChecklist = useMemo(() => pet ? generateChecklist(pet) : [], [pet]);

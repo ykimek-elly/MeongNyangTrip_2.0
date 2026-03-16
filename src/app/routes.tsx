@@ -11,7 +11,6 @@ import { MapSearch } from './pages/MapSearch';
 import { Lounge } from './pages/Lounge';
 import { MyPage } from './pages/MyPage';
 import { AIWalkGuide } from './pages/AIWalkGuide';
-import { SeniorPetDashboard } from './pages/SeniorPetDashboard';
 import { VisitCheckIn } from './pages/VisitCheckIn';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { NotFound } from './pages/NotFound';
@@ -51,7 +50,6 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
         }
         break;
       case 'ai-walk-guide': navigate('/ai-walk-guide'); break;
-      case 'senior-pet': navigate('/senior-pet'); break;
       case 'visit-checkin': navigate('/visit-checkin'); break;
       case 'edit-profile': navigate('/edit-profile'); break;
       case 'admin': navigate('/admin'); break;
@@ -62,8 +60,8 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
 }
 
 /** 헤더/GNB 숨김 대상 페이지 목록 */
-const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'senior-pet', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
-const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'senior-pet', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
+const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
+const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
 
 /** 루트 레이아웃 — 헤더, GNB, AI챗 표시 제어 */
 function RootAdapter() {
@@ -129,7 +127,7 @@ function RootAdapter() {
           <Outlet context={{ onNavigate: handleNavigate }} />
         </main>
 
-        {showAIChat && <AIChat onNavigate={handleNavigate} />}
+        {showAIChat && <AIChat />}
 
         {showBottomNav && (
           <BottomNav 
@@ -186,7 +184,6 @@ export const router = createBrowserRouter([
       { path: "find-password", Component: withNavigation(FindPassword) },
       { path: "onboarding", Component: withNavigation(Onboarding) },
       { path: "ai-walk-guide", Component: withNavigation(AIWalkGuide) },
-      { path: "senior-pet", Component: withNavigation(SeniorPetDashboard) },
       { path: "visit-checkin", Component: withNavigation(VisitCheckIn) },
       { path: "edit-profile", Component: withNavigation(EditProfile) },
       { path: "admin", Component: withNavigation(AdminDashboard) },

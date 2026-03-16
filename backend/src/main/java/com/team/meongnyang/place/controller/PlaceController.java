@@ -27,20 +27,28 @@ public class PlaceController {
 
     /**
      * 장소 목록 조회
-     * GET /api/v1/places
-     * GET /api/v1/places?category=STAY
-     * GET /api/v1/places?keyword=서울숲
-     * GET /api/v1/places?category=PLACE&keyword=공원
+     *
+     * [위치 기반] GET /api/v1/places?lat=37.5&lng=126.9&radius=5000&category=STAY
+     *   → PostGIS ST_DWithin 반경 검색 + Redis 캐싱
+     *
+     * [키워드 기반] GET /api/v1/places?category=STAY&keyword=서울숲
+     *   → 위치 정보 없을 때 fallback
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<PlaceResponseDto>>> getPlaces(
+        @RequestParam(required = false) Double lat,
+        @RequestParam(required = false) Double lng,
+        @RequestParam(required = false, defaultValue = "5000") int radius,
         @RequestParam(required = false) String category,
         @RequestParam(required = false) String keyword
     ) {
-        List<PlaceResponseDto> places = placeService.getPlaces(category, keyword);
-        return ResponseEntity.ok(
-            ApiResponse.success("장소 목록 조회 성공", places)
-        );
+        List<PlaceResponseDto> places;
+        if (lat != null && lng != null) {
+            places = placeService.getPlacesNearby(lat, lng, radius, category);
+        } else {
+            places = placeService.getPlaces(category, keyword);
+        }
+        return ResponseEntity.ok(ApiResponse.success("장소 목록 조회 성공", places));
     }
 
     /**

@@ -56,6 +56,10 @@ pet-tour:
   service-key: ${PET_TOUR_SERVICE_KEY:}
   base-url: https://apis.data.go.kr/B551011/KorPetTourService2
 
+# 카카오 REST API (Local API 교차검증)
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY:}
+
 # JWT 설정 (팀원 A 작업용)
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-change-in-production}

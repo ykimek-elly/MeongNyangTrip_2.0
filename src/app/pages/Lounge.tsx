@@ -160,13 +160,20 @@ export function Lounge({ onNavigate }: LoungeProps) {
         </AnimatePresence>
       </div>
 
-      {/* 글쓰기 FAB */}
-      <button
-        onClick={() => setIsWriteModalOpen(true)}
-        className="fixed bottom-24 right-5 w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center z-50 hover:scale-105 active:scale-95 transition-transform"
-      >
-        <Camera size={24} />
-      </button>
+      {/* 플로팅 버튼 그룹 — 컨테이너 우측 외부 고정 */}
+      <div className="fixed bottom-24 inset-x-0 flex justify-center pointer-events-none z-50">
+        <div className="relative w-full max-w-[600px]">
+          <div className="absolute bottom-0 left-full flex flex-col gap-2.5 pl-3">
+            <button
+              onClick={() => setIsWriteModalOpen(true)}
+              className="w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform pointer-events-auto"
+              title="글쓰기"
+            >
+              <Camera size={22} />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* 글쓰기 모달 */}
       <AnimatePresence>

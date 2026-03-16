@@ -1,0 +1,41 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build with Gradle
+        working-directory: backend
+        run: ./gradlew build -x test --no-daemon
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Deploy to EC2 via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "i-007364ef8c4161ab4" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["cd /home/ec2-user/MeongNyangTrip_2.0/backend && git pull origin main && docker build -t meongnyang-backend . && docker stop meongnyang-app || true && docker rm meongnyang-app || true && docker run -d --name meongnyang-app -p 8080:8080 -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=${{ secrets.REDIS_HOST }} -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e SPRING_PROFILES_ACTIVE=prod meongnyang-backend"]' \
+            --region ap-northeast-2

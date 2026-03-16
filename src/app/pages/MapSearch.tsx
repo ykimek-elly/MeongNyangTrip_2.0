@@ -61,6 +61,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
   const [vetPlaces, setVetPlaces] = useState<KakaoVet[]>([]);
   const [selectedVet, setSelectedVet] = useState<KakaoVet | null>(null);
   const [vetLoading, setVetLoading] = useState(false);
+  const vetFetchedRef = useRef(false); // 중복 호출 방지
 
   const handleLocate = () => {
     setSpinning(true);
@@ -94,9 +95,12 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
     if (activeFilter !== '동물병원') {
       setVetPlaces([]);
       setSelectedVet(null);
+      vetFetchedRef.current = false; // 필터 벗어나면 리셋
       return;
     }
     if (!lat || !lng) return;
+    if (vetFetchedRef.current) return; // 이미 호출했으면 스킵
+    vetFetchedRef.current = true;
 
     const REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
     setVetLoading(true);
@@ -106,8 +110,15 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       { headers: { Authorization: `KakaoAK ${REST_KEY}` } }
     )
       .then(r => r.json())
-      .then(data => setVetPlaces(data.documents ?? []))
-      .catch(e => console.error('카카오 로컬 API 오류:', e))
+      .then(data => {
+        console.log('[동물병원] Kakao API 응답:', data);
+        if (data.errorType || data.code) {
+          console.error('[동물병원] API 오류:', data.message || data.msg);
+          return;
+        }
+        setVetPlaces(data.documents ?? []);
+      })
+      .catch(e => console.error('[동물병원] 네트워크 오류 (CORS?):', e))
       .finally(() => setVetLoading(false));
   }, [activeFilter, lat, lng]);
 
@@ -242,6 +253,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                 setActiveFilter(filter.id);
                 setSelectedPlace(null);
                 setSelectedVet(null);
+                if (filter.id === '동물병원' && !lat) getLocation();
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id
                 ? 'bg-primary text-white'

@@ -58,7 +58,7 @@ public class NaverLocalImageService {
 
         try {
             Map<String, Object> response = callLocalSearch(placeName);
-            if (response == null) return new VerifyResult(false, fetchFromImageSearch(placeName));
+            if (response == null) return new VerifyResult(false, null);
 
             Integer total = (Integer) response.get("total");
             boolean isActive = total != null && total > 0;
@@ -71,11 +71,6 @@ public class NaverLocalImageService {
                     String thumbnail = (String) items.get(0).get("thumbnail");
                     imageUrl = (thumbnail != null && !thumbnail.isBlank()) ? thumbnail : null;
                 }
-            }
-
-            // thumbnail 없으면 이미지 검색 fallback
-            if (imageUrl == null) {
-                imageUrl = fetchFromImageSearch(placeName);
             }
 
             return new VerifyResult(isActive, imageUrl);
@@ -93,7 +88,7 @@ public class NaverLocalImageService {
         if (!enabled) return null;
         try {
             Map<String, Object> response = callLocalSearch(placeName);
-            if (response == null) return fetchFromImageSearch(placeName);
+            if (response == null) return null;
 
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
@@ -104,7 +99,7 @@ public class NaverLocalImageService {
         } catch (Exception e) {
             log.warn("[NaverImage] 지역검색 실패: name='{}', error={}", placeName, e.getMessage());
         }
-        return fetchFromImageSearch(placeName);
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -121,31 +116,4 @@ public class NaverLocalImageService {
                 .body(Map.class);
     }
 
-    @SuppressWarnings("unchecked")
-    private String fetchFromImageSearch(String placeName) {
-        try {
-            Map<String, Object> response = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/image.json")
-                            .queryParam("query", placeName)
-                            .queryParam("display", 1)
-                            .queryParam("filter", "large")
-                            .build())
-                    .header("X-Naver-Client-Id", clientId)
-                    .header("X-Naver-Client-Secret", clientSecret)
-                    .retrieve()
-                    .body(Map.class);
-
-            if (response == null) return null;
-            List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
-            if (items == null || items.isEmpty()) return null;
-
-            String link = (String) items.get(0).get("link");
-            return (link != null && !link.isBlank()) ? link : null;
-
-        } catch (Exception e) {
-            log.warn("[NaverImage] 이미지검색 실패: name='{}', error={}", placeName, e.getMessage());
-            return null;
-        }
-    }
 }

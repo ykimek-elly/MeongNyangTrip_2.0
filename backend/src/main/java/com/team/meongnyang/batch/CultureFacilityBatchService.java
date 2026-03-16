@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 한국문화정보원 전국 반려동물 동반 가능 문화시설 배치 서비스.
+ * 한국문화정보원 반려동물 동반 가능 문화시설 배치 서비스 (서울+경기 한정).
  * 데이터셋 ID: 15111389
  *
  * 수집 대상 (카테고리2 기준):
@@ -120,6 +120,9 @@ public class CultureFacilityBatchService {
         String lngStr = str(item, "경도");
 
         if (name == null || address == null || latStr == null || lngStr == null) return false;
+
+        // 서울·경기 외 지역 제외
+        if (!address.startsWith("서울") && !address.startsWith("경기")) return false;
 
         double lat, lng;
         try {

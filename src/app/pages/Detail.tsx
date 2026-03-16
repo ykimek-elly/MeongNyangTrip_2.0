@@ -192,8 +192,8 @@ export function Detail({ id, onNavigate }: DetailProps) {
             ) : (
               // 별점 없음
               <div className="flex items-center gap-1.5">
-                <Star size={14} className="text-gray-300" />
-                <span className="text-xs text-gray-400">아직 리뷰가 없어요</span>
+                <Star size={14} className="fill-gray-300 text-gray-300" />
+                <span className="text-xs font-bold text-gray-400">0</span>
               </div>
             )}
           </div>
@@ -221,28 +221,26 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 <span key={idx} className="text-[12px] text-primary font-medium">{tag}</span>
               ))}
             </div>
-            {(extra.overview || extra.petTurnAdroose) && (
-              <>
-                {showFullDesc && (
-                  <div className="space-y-3">
-                    {extra.overview && (
-                      <p className="text-xs text-gray-600 leading-relaxed">{extra.overview}</p>
-                    )}
-                    {extra.petTurnAdroose && (
-                      <div className="bg-primary/5 border border-primary/10 rounded-xl p-3">
-                        <p className="text-[11px] font-bold text-primary mb-1">🐾 반려동물 동반 안내</p>
-                        <p className="text-xs text-gray-600 leading-relaxed">{extra.petTurnAdroose}</p>
-                      </div>
-                    )}
-                  </div>
+            {extra.overview && (
+              <div className="space-y-2">
+                <p className={`text-xs text-gray-600 leading-relaxed ${!showFullDesc ? 'line-clamp-2' : ''}`}>
+                  {extra.overview}
+                </p>
+                {extra.overview.length > 80 && (
+                  <button
+                    onClick={() => setShowFullDesc(!showFullDesc)}
+                    className="text-primary text-xs font-bold flex items-center gap-0.5 hover:underline"
+                  >
+                    {showFullDesc ? '접기' : '더보기'} <ChevronRight size={13} className={showFullDesc ? 'rotate-90' : ''} />
+                  </button>
                 )}
-                <button
-                  onClick={() => setShowFullDesc(!showFullDesc)}
-                  className="text-primary text-xs font-bold mt-1 flex items-center gap-0.5 hover:underline"
-                >
-                  {showFullDesc ? '접기' : '더보기'} <ChevronRight size={13} className={showFullDesc ? 'rotate-90' : ''} />
-                </button>
-              </>
+              </div>
+            )}
+            {extra.petTurnAdroose && (
+              <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 mt-3">
+                <p className="text-[11px] font-bold text-primary mb-1">🐾 반려동물 동반 안내</p>
+                <p className="text-xs text-gray-600 leading-relaxed">{extra.petTurnAdroose}</p>
+              </div>
             )}
           </div>
 

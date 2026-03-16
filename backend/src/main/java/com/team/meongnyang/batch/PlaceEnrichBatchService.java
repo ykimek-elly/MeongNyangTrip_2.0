@@ -55,7 +55,7 @@ public class PlaceEnrichBatchService {
                 NaverLocalImageService.VerifyResult naverResult =
                         naverLocalImageService.verifyAndFetchImage(place.getTitle());
 
-                if (naverResult.imageUrl() != null && place.getImageUrl() == null) {
+                if (naverResult.imageUrl() != null && (place.getImageUrl() == null || place.getImageUrl().isBlank())) {
                     place.enrichImageFromNaver(naverResult.imageUrl());
                     imageUpdated++;
                 }

@@ -260,8 +260,6 @@ public class PlaceDataBatchService {
             URI uri = UriComponentsBuilder.fromUriString(BASE_URL + "/detailCommon2")
                     .queryParam("serviceKey", serviceKey)
                     .queryParam("contentId", contentId)
-                    .queryParam("overviewYN", "Y")
-                    .queryParam("homepageYN", "Y")
                     .queryParam("MobileOS", "ETC")
                     .queryParam("MobileApp", "MeongNyangTrip")
                     .queryParam("_type", "json")

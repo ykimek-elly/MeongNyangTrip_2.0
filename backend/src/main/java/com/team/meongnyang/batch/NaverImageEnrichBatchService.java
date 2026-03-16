@@ -37,7 +37,7 @@ public class NaverImageEnrichBatchService {
     @Transactional
     @CacheEvict(value = {"places", "places:detail"}, allEntries = true)
     public Map<String, Integer> runImageEnrichBatch() {
-        List<Place> targets = placeRepository.findByImageUrlIsNull();
+        List<Place> targets = placeRepository.findByImageUrlIsNullOrEmpty();
         int total = targets.size();
         log.info("===== 네이버 이미지 보강 시작: {}건 =====", total);
 

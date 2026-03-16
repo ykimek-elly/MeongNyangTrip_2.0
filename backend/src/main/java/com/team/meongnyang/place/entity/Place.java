@@ -181,7 +181,7 @@ public class Place {
         this.longitude = longitude;
         this.geom = geom;
         this.category = category;
-        this.imageUrl = imageUrl;
+        if (imageUrl != null) this.imageUrl = imageUrl;
         this.phone = phone;
         this.overview = overview;
         this.homepage = homepage;

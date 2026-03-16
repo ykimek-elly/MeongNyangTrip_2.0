@@ -20,8 +20,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     /** Google Places 보강 대상 조회 (isVerified=false인 레코드) */
     List<Place> findByIsVerified(boolean isVerified);
 
-    /** 네이버 이미지 보강 대상 조회 (imageUrl 없는 레코드) */
-    List<Place> findByImageUrlIsNull();
+    /** 네이버 이미지 보강 대상 조회 (imageUrl 없는 레코드 — NULL 또는 빈 문자열) */
+    @Query("SELECT p FROM Place p WHERE p.imageUrl IS NULL OR p.imageUrl = ''")
+    List<Place> findByImageUrlIsNullOrEmpty();
 
     /** 카테고리별 장소 목록 조회 */
     List<Place> findByCategory(String category);

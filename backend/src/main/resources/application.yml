@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: optional:file:./.env[.properties]
+
   application:
     name: meongnyang-backend
 
@@ -64,6 +67,10 @@ kakao:
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-change-in-production}
   expiration: ${JWT_EXPIRATION:3600000}
+
+weather:
+  api:
+    key: ${WEATHER_API_KEY:}
 
 # ==========================================
 # 📌 팀원 별 추가 설정 가이드 (작업 전 확인!)

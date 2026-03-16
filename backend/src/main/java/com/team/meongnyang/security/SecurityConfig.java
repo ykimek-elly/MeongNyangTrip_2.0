@@ -31,7 +31,8 @@ public class SecurityConfig {
                     "/api/auth/**",
                     "/api/places/**",
                     "/swagger-ui/**",
-                    "/v3/api-docs/**"
+                    "/v3/api-docs/**",
+                        "/orch/me/recommend"
                 ).permitAll()
                 .anyRequest().authenticated()
             )

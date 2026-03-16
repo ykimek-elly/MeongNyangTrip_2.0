@@ -29,7 +29,8 @@ public class Place {
     private String contentId;
 
     /** PostGIS 공간 좌표 (SRID:4326) — ST_DWithin 검색용 */
-    @Column(columnDefinition = "geometry(Point,4326)")
+    @Column(name = "geom", columnDefinition = "geometry(Point,4326)")
+    @Transient
     private Point geom;
 
     /** Optimistic Lock — 리뷰/평점 동시 갱신 제어 */

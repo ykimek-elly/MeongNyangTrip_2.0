@@ -1,6 +1,7 @@
 package com.team.meongnyang.place.repository;
 
 import com.team.meongnyang.place.entity.Place;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,6 +26,7 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
 
     /** 카테고리 + 키워드 복합 검색 */
     List<Place> findByCategoryAndTitleContainingIgnoreCase(String category, String keyword);
+
 
     /**
      * PostGIS ST_DWithin — 위경도 기준 반경 내 장소 검색 (거리 오름차순)
@@ -79,4 +81,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
         @Param("category") String category,
         @Param("limit") int limit
     );
+
+    /**
+     *  tag가 포함된 장소 검색
+     */
+    List<Place> findByTagsContaining(String tag, Pageable pageable);
 }

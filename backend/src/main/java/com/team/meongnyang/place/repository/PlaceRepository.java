@@ -1,6 +1,7 @@
 package com.team.meongnyang.place.repository;
 
 import com.team.meongnyang.place.entity.Place;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -19,4 +20,8 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
 
     /** 카테고리 + 키워드 복합 검색 */
     List<Place> findByCategoryAndTitleContainingIgnoreCase(String category, String keyword);
+
+
+    List<Place> findByTagsContaining(String tag, Pageable pageable);
+
 }

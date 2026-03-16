@@ -1,19 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  ArrowLeft,
-  Award,
-  MapPin,
-  Calendar,
-  Camera,
-  Check,
-  Clock,
-  TrendingUp,
-  LocateFixed,
-  ImagePlus,
-  AlertCircle,
+  ArrowLeft, Award, MapPin, Calendar, Camera, Check,
+  Clock, TrendingUp, LocateFixed, ImagePlus, AlertCircle,
 } from 'lucide-react';
-import { checkInApi, type CheckInStatsResponse } from '../api/checkInApi';
+import { checkInApi } from '../api/checkInApi';
+import type { CheckInStatsResponse } from '../api/checkInApi';
 
 interface VisitCheckInProps {
   onNavigate: (page: string, params?: any) => void;
@@ -29,12 +21,9 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [newBadge, setNewBadge] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // 서버에서 가져온 통계 데이터
   const [stats, setStats] = useState<CheckInStatsResponse | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // 마운트 시 통계 조회
   useEffect(() => {
     checkInApi.getMyStats()
       .then(setStats)
@@ -48,23 +37,22 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   const handleGetLocation = () => {
     setLocationStatus('loading');
     navigator.geolocation?.getCurrentPosition(
-      async (pos) => {
+      (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setLatitude(lat);
         setLongitude(lng);
         setLocationStatus('found');
-
-        // 카카오 역지오코딩으로 장소명 가져오기
         try {
           const kakao = (window as any).kakao;
           if (kakao?.maps?.services) {
             const geocoder = new kakao.maps.services.Geocoder();
             geocoder.coord2Address(lng, lat, (result: any, status: any) => {
               if (status === kakao.maps.services.Status.OK && result[0]) {
-                const addr = result[0].road_address?.address_name
-                          || result[0].address?.address_name
-                          || '현재 위치';
-                setLocationName(addr);
+                setLocationName(
+                  result[0].road_address?.address_name ||
+                  result[0].address?.address_name ||
+                  '현재 위치'
+                );
               } else {
                 setLocationName('현재 위치');
               }
@@ -82,22 +70,12 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
 
   const handleSubmit = async () => {
     if (!locationName || latitude === null || longitude === null) return;
-
     setIsSubmitting(true);
     try {
-      const result = await checkInApi.createCheckIn({
-        placeName: locationName,
-        latitude,
-        longitude,
-        photoUrl: undefined, // 추후 S3 업로드 연동
-      });
-
+      const result = await checkInApi.createCheckIn({ placeName: locationName, latitude, longitude });
       if (result.badgeName) setNewBadge(result.badgeName);
-
-      // 통계 갱신
       const updated = await checkInApi.getMyStats();
       setStats(updated);
-
       setShowSuccessModal(true);
       setTimeout(() => {
         setShowSuccessModal(false);
@@ -108,7 +86,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         setLongitude(null);
         setNewBadge(null);
       }, 2500);
-    } catch (e) {
+    } catch {
       alert('인증에 실패했어요. 로그인 상태를 확인해주세요.');
     } finally {
       setIsSubmitting(false);
@@ -119,7 +97,6 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-white pb-24">
-      {/* 헤더 */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 h-14 flex items-center">
         <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-800 hover:bg-gray-100 rounded-full">
           <ArrowLeft size={22} />
@@ -130,7 +107,6 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         </div>
       </header>
 
-      {/* 통계 카드 */}
       <div className="px-5 pt-6 pb-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -138,7 +114,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
           className="bg-gradient-to-br from-primary to-secondary rounded-3xl p-5 text-white shadow-lg"
         >
           {isLoadingStats ? (
-            <div className="text-center text-white/80 py-2">불러오는 중...</div>
+            <div className="text-center text-white/80 py-2 text-sm">불러오는 중...</div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 text-center">
@@ -156,7 +132,6 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         </motion.div>
       </div>
 
-      {/* 탭 */}
       <div className="sticky top-14 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-5 flex gap-1">
         {[
           { id: 'checkin', label: '사진 인증', icon: Camera },
@@ -178,7 +153,6 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         ))}
       </div>
 
-      {/* 콘텐츠 */}
       <div className="px-5 py-5">
         <AnimatePresence mode="wait">
           {activeTab === 'checkin' && (
@@ -189,7 +163,6 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-5"
             >
-              {/* Step 1: 위치 확인 */}
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">1</span>
@@ -197,12 +170,12 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 </h3>
                 {locationStatus === 'idle' && (
                   <button onClick={handleGetLocation} className="w-full py-3.5 rounded-2xl border-2 border-primary/30 text-primary font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors">
-                    <LocateFixed size={18} />위치 가져오기
+                    <LocateFixed size={18} /> 위치 가져오기
                   </button>
                 )}
                 {locationStatus === 'loading' && (
                   <div className="w-full py-3.5 rounded-2xl bg-gray-50 text-gray-500 text-sm flex items-center justify-center gap-2">
-                    <LocateFixed size={18} className="animate-pulse text-primary" />위치를 확인하는 중...
+                    <LocateFixed size={18} className="animate-pulse text-primary" /> 위치를 확인하는 중...
                   </div>
                 )}
                 {locationStatus === 'found' && (
@@ -220,14 +193,15 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 {locationStatus === 'error' && (
                   <div className="space-y-2">
                     <div className="w-full py-3 px-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-2 text-sm text-red-600">
-                      <AlertCircle size={16} className="shrink-0" />위치를 가져올 수 없어요. 권한을 확인해주세요.
+                      <AlertCircle size={16} className="shrink-0" /> 위치를 가져올 수 없어요. 권한을 확인해주세요.
                     </div>
-                    <button onClick={handleGetLocation} className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-colors">다시 시도</button>
+                    <button onClick={handleGetLocation} className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-colors">
+                      다시 시도
+                    </button>
                   </div>
                 )}
               </div>
 
-              {/* Step 2: 사진 촬영 */}
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
@@ -259,7 +233,6 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 </button>
               </div>
 
-              {/* 인증 완료 버튼 */}
               <button
                 onClick={handleSubmit}
                 disabled={!canSubmit}
@@ -270,11 +243,10 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 {isSubmitting ? '저장 중...' : '방문 인증 완료'}
               </button>
 
-              {/* 획득한 뱃지 */}
               {stats && stats.badges.filter(b => b.unlocked).length > 0 && (
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                   <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <Award className="text-primary" size={20} />획득한 뱃지
+                    <Award className="text-primary" size={20} /> 획득한 뱃지
                   </h3>
                   <div className="grid grid-cols-3 gap-3">
                     {stats.badges.filter(b => b.unlocked).map((badge) => (
@@ -297,28 +269,26 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-4"
             >
-              {/* 이번 달 통계 */}
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3">이번 달 통계</h3>
                 <div className="bg-blue-50 rounded-xl p-3">
                   <div className="text-xs text-blue-600 mb-1">방문 횟수</div>
                   <div className="text-2xl font-bold text-blue-700">{stats?.thisMonthVisits ?? 0}</div>
                   <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                    <TrendingUp size={10} />이번 달 방문
+                    <TrendingUp size={10} /> 이번 달 방문
                   </div>
                 </div>
               </div>
 
-              {/* 방문 목록 */}
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3">최근 방문</h3>
                 {isLoadingStats ? (
                   <div className="text-center text-gray-400 py-4">불러오는 중...</div>
-                ) : stats?.recentHistory.length === 0 ? (
+                ) : !stats?.recentHistory.length ? (
                   <div className="text-center text-gray-400 py-4">아직 방문 기록이 없어요</div>
                 ) : (
                   <div className="space-y-3">
-                    {stats?.recentHistory.map((visit) => (
+                    {stats.recentHistory.map((visit) => (
                       <div key={visit.checkinId} className="flex gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                         <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                           <MapPin className="text-primary" size={24} />
@@ -330,9 +300,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                             {new Date(visit.checkedInAt).toLocaleDateString('ko-KR')}
                           </div>
                           {visit.badgeName && (
-                            <div className="mt-1.5">
-                              <span className="text-xs">🏅 {visit.badgeName}</span>
-                            </div>
+                            <div className="mt-1.5 text-xs">🏅 {visit.badgeName}</div>
                           )}
                         </div>
                       </div>
@@ -341,13 +309,16 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 )}
               </div>
 
-              {/* 전체 뱃지 */}
               {stats && (
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                   <h3 className="font-bold text-gray-800 mb-3">전체 뱃지 ({stats.unlockedBadges}/{stats.badges.length})</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {stats.badges.map((badge) => (
-                      <div key={badge.id} className={`rounded-2xl p-4 text-center border-2 ${badge.unlocked ? 'bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20' : 'bg-gray-50 border-gray-100 opacity-40'}`}>
+                      <div key={badge.id} className={`rounded-2xl p-4 text-center border-2 ${
+                        badge.unlocked
+                          ? 'bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20'
+                          : 'bg-gray-50 border-gray-100 opacity-40'
+                      }`}>
                         <div className="text-3xl mb-2">{badge.icon}</div>
                         <div className="text-xs font-bold text-gray-800 mb-1">{badge.name}</div>
                         <div className="text-[10px] text-gray-500 leading-tight">{badge.description}</div>
@@ -361,7 +332,6 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         </AnimatePresence>
       </div>
 
-      {/* 인증 완료 모달 */}
       <AnimatePresence>
         {showSuccessModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">

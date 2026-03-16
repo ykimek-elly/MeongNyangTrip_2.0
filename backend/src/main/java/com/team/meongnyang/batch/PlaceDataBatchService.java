@@ -14,7 +14,6 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -27,7 +26,7 @@ import java.util.List;
 /**
  * 공공데이터 장소 수집 배치 서비스.
  *
- * 매일 새벽 2시 자동 실행:
+ * 수동 실행 전용: POST /api/v1/admin/batch/places
  * 1. 한국관광공사 API → 서울(areaCode=1) + 경기(areaCode=31) 전체 수집
  * 2. Kakao Local API 교차검증 (1단계: 좌표 정합, 2단계: 영업 확인)
  * 3. content_id 기준 DB Upsert
@@ -52,10 +51,9 @@ public class PlaceDataBatchService {
     private String serviceKey;
 
     /**
-     * 매일 새벽 2시 자동 실행.
-     * 수동 실행 시: POST /api/v1/admin/batch/places (PlaceBatchController 통해 호출 가능)
+     * 수동 실행 전용.
+     * POST /api/v1/admin/batch/places
      */
-    @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     @CacheEvict(value = "places", allEntries = true)
     public void runDailyBatch() {

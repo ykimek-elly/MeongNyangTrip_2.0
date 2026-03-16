@@ -209,9 +209,17 @@ export function List({ onNavigate, initialParams }: ListProps) {
                 <div className="ml-4 flex-1 min-w-0">
                   <div className="flex justify-between items-start">
                     <h6 className="font-bold text-gray-900 mb-1 truncate">{place.title}</h6>
-                    <span className="flex items-center text-brand-point text-xs font-bold gap-0.5">
-                      <Star size={12} className="fill-brand-point" /> {place.rating}
-                    </span>
+                    {place.reviewCount > 0 ? (
+                      <span className="flex items-center text-brand-point text-xs font-bold gap-0.5 shrink-0">
+                        <Star size={12} className="fill-brand-point" /> {place.rating.toFixed(1)}
+                      </span>
+                    ) : (place as any).googleRating ? (
+                      <span className="flex items-center text-gray-400 text-[10px] gap-0.5 shrink-0">
+                        <Star size={11} className="fill-gray-300 text-gray-300" />
+                        <span className="text-gray-500 font-bold">{((place as any).googleRating as number).toFixed(1)}</span>
+                        <span className="text-[9px]">G</span>
+                      </span>
+                    ) : null}
                   </div>
                   <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
                     <MapPin size={10} /> {place.address}
@@ -236,9 +244,17 @@ export function List({ onNavigate, initialParams }: ListProps) {
                 <div className="px-1 shrink-0">
                   <div className="flex justify-between items-center mb-0.5">
                     <h6 className="font-bold text-gray-900 text-sm truncate flex-1 pr-1">{place.title}</h6>
-                    <span className="flex items-center text-brand-point text-[10px] font-bold gap-0.5 flex-shrink-0">
-                      <Star size={10} className="fill-brand-point" /> {place.rating}
-                    </span>
+                    {place.reviewCount > 0 ? (
+                      <span className="flex items-center text-brand-point text-[10px] font-bold gap-0.5 flex-shrink-0">
+                        <Star size={10} className="fill-brand-point" /> {place.rating.toFixed(1)}
+                      </span>
+                    ) : (place as any).googleRating ? (
+                      <span className="flex items-center text-[9px] gap-0.5 flex-shrink-0">
+                        <Star size={10} className="fill-gray-300 text-gray-300" />
+                        <span className="text-gray-500 font-bold">{((place as any).googleRating as number).toFixed(1)}</span>
+                        <span className="text-gray-400">G</span>
+                      </span>
+                    ) : null}
                   </div>
                   <p className="text-[10px] text-gray-500 mb-1.5 flex items-center gap-1 truncate">
                     <MapPin size={10} className="flex-shrink-0" /> {place.address}

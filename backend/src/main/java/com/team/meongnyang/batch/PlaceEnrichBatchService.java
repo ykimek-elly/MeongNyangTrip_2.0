@@ -68,7 +68,8 @@ public class PlaceEnrichBatchService {
                 boolean isClosed = googleResult.isClosed()
                         || (!naverResult.isActive() && !googleResult.allowsDogs());
 
-                place.enrichFromGoogle(googleResult.allowsDogs(), isClosed);
+                place.enrichFromGoogle(googleResult.allowsDogs(), isClosed,
+                        googleResult.googleRating(), googleResult.googleReviewCount());
 
                 if (isClosed) closed++;
                 else if (googleResult.allowsDogs()) enriched++;
@@ -86,7 +87,7 @@ public class PlaceEnrichBatchService {
 
             } catch (Exception e) {
                 log.error("[보강오류] id={}, name={} — {}", place.getId(), place.getTitle(), e.getMessage());
-                place.enrichFromGoogle(false, false);
+                place.enrichFromGoogle(false, false, null, null);
                 noInfo++;
             }
         }

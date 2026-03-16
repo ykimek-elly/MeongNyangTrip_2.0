@@ -32,6 +32,8 @@ public class PlaceResponseDto {
     private String accomCountPet;
     private String petTurnAdroose;
     private String homepage;
+    private Double googleRating;
+    private Integer googleReviewCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -56,6 +58,8 @@ public class PlaceResponseDto {
             .accomCountPet(place.getAccomCountPet())
             .petTurnAdroose(place.getPetTurnAdroose())
             .homepage(place.getHomepage())
+            .googleRating(place.getGoogleRating())
+            .googleReviewCount(place.getGoogleReviewCount())
             .createdAt(place.getCreatedAt())
             .updatedAt(place.getUpdatedAt())
             .build();

@@ -79,6 +79,10 @@ public class PlaceDataBatchService {
                     log.error("[처리오류] contentId={} — {}", item.getContentid(), e.getMessage());
                     totalSkipped++;
                 }
+                // Kakao API 속도 제한(10 req/s) 준수
+                try { Thread.sleep(120); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt(); break;
+                }
             }
             log.info("[{}] 완료: 저장 {}건 / 제외 {}건", regionName, totalSaved, totalSkipped);
         }

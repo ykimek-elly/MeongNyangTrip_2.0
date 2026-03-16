@@ -76,6 +76,7 @@ public class Place {
     private Integer reviewCount = 0;
 
     /** 대표 이미지 URL */
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
     /** 연락처 */

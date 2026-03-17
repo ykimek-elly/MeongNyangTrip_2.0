@@ -174,26 +174,15 @@ export function Detail({ id, onNavigate }: DetailProps) {
           <div className="pt-5 pb-4 border-b border-gray-100">
             <h2 className="text-[20px] font-bold text-gray-900 mb-1.5">{displayTitle}</h2>
             {place.reviewCount > 0 ? (
-              // 자체 리뷰가 있으면 자체 별점 표시
               <div className="flex items-center gap-1.5">
                 <Star size={14} className="text-brand-point fill-brand-point" />
                 <span className="text-xs font-bold text-gray-900">{place.rating.toFixed(1)}</span>
                 <span className="text-xs text-gray-400">({place.reviewCount}개 리뷰)</span>
               </div>
-            ) : (place as any).googleRating ? (
-              // 자체 리뷰 없고 Google 별점 있으면 Google 별점 표시
-              <div className="flex items-center gap-1.5">
-                <Star size={14} className="text-brand-point fill-brand-point" />
-                <span className="text-xs font-bold text-gray-900">{((place as any).googleRating as number).toFixed(1)}</span>
-                <span className="text-xs text-gray-400">
-                  ({(place as any).googleReviewCount?.toLocaleString() ?? 0}개 리뷰 · Google 기준)
-                </span>
-              </div>
             ) : (
-              // 별점 없음
               <div className="flex items-center gap-1.5">
                 <Star size={14} className="fill-gray-300 text-gray-300" />
-                <span className="text-xs font-bold text-gray-400">0</span>
+                <span className="text-xs font-bold text-gray-400">리뷰없음</span>
               </div>
             )}
           </div>

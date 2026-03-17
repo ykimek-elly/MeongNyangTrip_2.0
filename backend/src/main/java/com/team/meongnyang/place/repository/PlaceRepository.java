@@ -17,11 +17,11 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     /** 공공데이터 원본 ID로 단건 조회 (배치 Upsert 기준) */
     Optional<Place> findByContentId(String contentId);
 
-    /** Google Places 보강 대상 조회 (isVerified=false인 레코드) */
+    /** 교차검증 대상 조회 (isVerified=false인 레코드) */
     List<Place> findByIsVerified(boolean isVerified);
 
-    /** 네이버 이미지 보강 대상 조회 (imageUrl 없는 레코드 — NULL 또는 빈 문자열) */
-    @Query("SELECT p FROM Place p WHERE p.imageUrl IS NULL OR p.imageUrl = ''")
+    /** 이미지 단독 보강 대상 조회 — 이미지 없고 폐업 아닌 장소만 (enrich 완료 후 실행) */
+    @Query("SELECT p FROM Place p WHERE (p.imageUrl IS NULL OR p.imageUrl = '') AND (p.tags IS NULL OR p.tags NOT LIKE '%폐업%')")
     List<Place> findByImageUrlIsNullOrEmpty();
 
     /** 카테고리별 장소 목록 조회 */

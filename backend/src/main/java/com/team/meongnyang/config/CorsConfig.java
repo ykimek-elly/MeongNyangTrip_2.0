@@ -27,6 +27,8 @@ public class CorsConfig {
             "http://54.180.22.22",          // EC2 프론트엔드
             "http://54.180.22.22:8080",     // EC2 Swagger
             "https://meongnyangtrip.com"    // 운영 도메인
+            "https://meongnyangtrip.duckdns.org"  // 임시 도메인
+
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));

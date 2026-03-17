@@ -51,7 +51,7 @@ jobs:
               "  docker tag meongnyang-backend-new meongnyang-backend",
               "  docker stop meongnyang-app || true",
               "  docker rm meongnyang-app || true",
-              "  docker run -d --name meongnyang-app -p 8080:8080 --link meongnyang-redis:redis -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=redis -e REDIS_PORT=6379 -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e SPRING_PROFILES_ACTIVE=prod --restart=always meongnyang-backend",
+              "  docker run -d --name meongnyang-app -p 8080:8080 --link meongnyang-redis:redis -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=redis -e REDIS_PORT=6379 -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }} -e NAVER_LOCAL_CLIENT_ID=${{ secrets.NAVER_LOCAL_CLIENT_ID }} -e NAVER_LOCAL_CLIENT_SECRET=${{ secrets.NAVER_LOCAL_CLIENT_SECRET }} -e SPRING_PROFILES_ACTIVE=prod --restart=always meongnyang-backend",
               "  docker rmi meongnyang-backend-new || true",
               "  echo 백엔드 배포 완료",
               "else",
@@ -59,7 +59,7 @@ jobs:
               "fi",
 
               "echo === 프론트엔드 빌드 ===",
-              "if docker build --build-arg VITE_KAKAO_MAP_API_KEY=${{ secrets.VITE_KAKAO_MAP_API_KEY }} --build-arg VITE_API_BASE_URL=/api/v1 -t meongnyang-frontend-new -f /home/ec2-user/MeongNyangTrip_2.0/Dockerfile.frontend /home/ec2-user/MeongNyangTrip_2.0; then",
+              "if docker build --build-arg VITE_KAKAO_MAP_API_KEY=${{ secrets.VITE_KAKAO_MAP_API_KEY }} --build-arg VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }} --build-arg VITE_API_BASE_URL=/api/v1 -t meongnyang-frontend-new -f /home/ec2-user/MeongNyangTrip_2.0/Dockerfile.frontend /home/ec2-user/MeongNyangTrip_2.0; then",
               "  docker tag meongnyang-frontend-new meongnyang-frontend",
               "  docker stop meongnyang-frontend || true",
               "  docker rm meongnyang-frontend || true",

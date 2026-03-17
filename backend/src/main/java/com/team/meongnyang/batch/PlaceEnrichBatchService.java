@@ -53,7 +53,7 @@ public class PlaceEnrichBatchService {
             try {
                 // 1단계: 네이버 — 운영 교차검증 + 이미지 취득
                 NaverLocalImageService.VerifyResult naverResult =
-                        naverLocalImageService.verifyAndFetchImage(place.getTitle());
+                        naverLocalImageService.verifyAndFetchImage(place.getTitle(), place.getAddress());
 
                 if (naverResult.imageUrl() != null
                         && (place.getImageUrl() == null || place.getImageUrl().isBlank())) {
@@ -76,6 +76,13 @@ public class PlaceEnrichBatchService {
                 }
 
                 place.markVerified(isClosed);
+
+                // AI 추천 별점 계산 — 운영 중/폐업 모두 계산 (폐업이면 0점 반환)
+                NaverLocalImageService.BlogResult blog =
+                        isClosed ? NaverLocalImageService.BlogResult.empty()
+                                 : naverLocalImageService.fetchBlogData(place.getTitle());
+                place.computeAiRating(blog.total(), blog.latestPostDate(), blog.descriptions());
+
                 if (isClosed) closed++; else active++;
 
                 if ((i + 1) % 100 == 0) {
@@ -97,5 +104,51 @@ public class PlaceEnrichBatchService {
 
         log.info("===== 보강 완료: 운영 {}건 / 폐업 {}건 / 이미지취득 {}건 =====",
                 active, closed, imageUpdated);
+    }
+
+    /**
+     * 교차검증 전체 재실행 — isVerified 리셋 후 enrich 배치 재실행.
+     * 이름 유사도 검증 로직 변경 후 전체 데이터 재검증 시 사용.
+     *
+     * 수동 실행: POST /api/v1/admin/batch/re-verify
+     */
+    @Transactional
+    @CacheEvict(value = {"places", "places:detail"}, allEntries = true)
+    public void runReVerifyBatch() {
+        int reset = placeRepository.resetAllVerified();
+        log.info("===== 교차검증 플래그 리셋: {}건 → enrich 배치 재실행 =====", reset);
+        runEnrichBatch();
+    }
+
+    /**
+     * AI 별점 단독 재계산 — aiRating IS NULL 장소 대상.
+     * enrich 배치에서 오류로 누락된 장소를 보완할 때 사용.
+     * 이미 isVerified된 장소도 대상 포함 (교차검증 생략).
+     *
+     * 수동 실행: POST /api/v1/admin/batch/recalculate-ai-rating
+     */
+    @Transactional
+    @CacheEvict(value = {"places", "places:detail"}, allEntries = true)
+    public int recalculateAiRating() {
+        List<Place> targets = placeRepository.findByAiRatingIsNull();
+        log.info("===== AI 별점 재계산 시작: {}건 =====", targets.size());
+
+        int updated = 0;
+        for (Place place : targets) {
+            try {
+                NaverLocalImageService.BlogResult blog =
+                        naverLocalImageService.fetchBlogData(place.getTitle());
+                place.computeAiRating(blog.total(), blog.latestPostDate(), blog.descriptions());
+                updated++;
+                try { Thread.sleep(200); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt(); break;
+                }
+            } catch (Exception e) {
+                log.warn("[AI점수오류] id={}, name={} — {}", place.getId(), place.getTitle(), e.getMessage());
+            }
+        }
+
+        log.info("===== AI 별점 재계산 완료: {}건 =====", updated);
+        return updated;
     }
 }

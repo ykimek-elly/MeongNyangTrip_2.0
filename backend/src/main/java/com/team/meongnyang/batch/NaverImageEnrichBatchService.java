@@ -34,6 +34,32 @@ public class NaverImageEnrichBatchService {
     private final PlaceRepository placeRepository;
     private final NaverLocalImageService naverLocalImageService;
 
+    /**
+     * 오배치 이미지 일괄 교체 배치.
+     * - Instagram/Facebook/Pinterest CDN (403/핫링크 차단)
+     * - imgnews.naver.net (뉴스 기사 사진 — 장소 사진 아님)
+     * 위 URL을 NULL 초기화 후 cafeblog 필터로 재보강.
+     *
+     * POST /api/v1/admin/batch/fix-broken-images
+     */
+    @Transactional
+    @CacheEvict(value = {"places", "places:detail"}, allEntries = true)
+    public Map<String, Integer> runFixBrokenImagesBatch() {
+        int resetBroken = placeRepository.resetBrokenImageUrls();
+        int resetNews = placeRepository.resetNewsImageUrls();
+        int totalReset = resetBroken + resetNews;
+        log.info("===== 오배치 이미지 초기화: SNS차단={}건 / 뉴스CDN={}건 / 합계={}건 =====",
+                resetBroken, resetNews, totalReset);
+
+        var result = runImageEnrichBatch();
+        return Map.of(
+                "reset", totalReset,
+                "updated", result.get("updated"),
+                "noImage", result.get("noImage"),
+                "total", result.get("total")
+        );
+    }
+
     @Transactional
     @CacheEvict(value = {"places", "places:detail"}, allEntries = true)
     public Map<String, Integer> runImageEnrichBatch() {

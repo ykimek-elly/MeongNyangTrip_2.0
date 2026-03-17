@@ -81,12 +81,26 @@ export function Login({ onNavigate }: LoginProps) {
         <span onClick={() => onNavigate('signup')} className="cursor-pointer hover:text-gray-800">회원가입</span>
       </div>
       
-      <button 
-        onClick={() => onNavigate('home')} 
+      <button
+        onClick={() => onNavigate('home')}
         className="mt-12 text-gray-400 text-sm underline decoration-gray-300 underline-offset-4"
       >
         둘러보기
       </button>
+
+      {/* Footer Links */}
+      <div className="mt-auto pt-10 pb-6 text-center">
+        <div className="flex justify-center items-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400 mb-1.5">
+          <span onClick={() => onNavigate('team')} className="cursor-pointer hover:text-gray-600 transition-colors">개발자소개</span>
+          <span className="text-gray-200">|</span>
+          <span className="cursor-pointer hover:text-gray-600 transition-colors">이용약관</span>
+          <span className="text-gray-200">|</span>
+          <span className="cursor-pointer hover:text-gray-600 transition-colors">개인정보처리방침</span>
+          <span className="text-gray-200">|</span>
+          <span className="cursor-pointer hover:text-gray-600 transition-colors">고객센터</span>
+        </div>
+        <p className="text-[11px] text-gray-300 font-medium">@멍냥트립</p>
+      </div>
     </motion.div>
   );
 }

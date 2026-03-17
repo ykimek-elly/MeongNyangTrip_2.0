@@ -160,8 +160,8 @@ export function Lounge({ onNavigate }: LoungeProps) {
         </AnimatePresence>
       </div>
 
-      {/* 플로팅 버튼 그룹 — 컨테이너 우측 외부 고정 */}
-      <div className="fixed bottom-24 inset-x-0 flex justify-center pointer-events-none z-50">
+      {/* 플로팅 버튼 그룹 — 컨테이너 우측 외부 고정 (AI 챗봇 버튼 위) */}
+      <div className="fixed bottom-[162px] inset-x-0 flex justify-center pointer-events-none z-50">
         <div className="relative w-full max-w-[600px]">
           <div className="absolute bottom-0 left-full flex flex-col gap-2.5 pl-3">
             <button

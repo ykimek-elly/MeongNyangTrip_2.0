@@ -99,10 +99,13 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
                       <span className="flex items-center gap-0.5 font-bold text-sm text-gray-800">
                         <Star size={14} className="fill-brand-point text-brand-point" /> {place.rating.toFixed(1)}
                       </span>
-                    ) : (
-                      <span className="flex items-center gap-0.5 font-bold text-sm text-gray-400">
-                        <Star size={14} className="fill-gray-300 text-gray-300" /> 0
+                    ) : place.aiRating ? (
+                      <span className="flex items-center gap-0.5 font-bold text-sm text-gray-900">
+                        <Star size={14} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
+                        <span className="text-[9px] font-normal text-gray-400">[AI]</span>
                       </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">🐾</span>
                     )}
                   </div>
                 </div>

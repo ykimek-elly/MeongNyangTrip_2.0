@@ -10,8 +10,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 /**
  * 장소(Place) 비즈니스 로직 서비스.
@@ -38,7 +40,8 @@ public class PlaceService {
         List<Place> places = category != null
                 ? placeRepository.findNearbyByCategory(lat, lng, radius, category, 50)
                 : placeRepository.findNearby(lat, lng, radius, 50);
-        return places.stream().filter(this::isActive).map(PlaceResponseDto::from).toList();
+        return places.stream().filter(this::isActive).map(PlaceResponseDto::from)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /** 장소 목록 조회 (카테고리/키워드 필터 — 위치 정보 없을 때 fallback, 1시간 캐싱) */
@@ -59,7 +62,7 @@ public class PlaceService {
         return places.stream()
             .filter(this::isActive)
             .map(PlaceResponseDto::from)
-            .toList();
+            .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /** 장소 상세 조회 (6시간 캐싱) — 폐업 장소는 404 처리 */

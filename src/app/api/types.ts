@@ -32,6 +32,7 @@ export interface PlaceDto {
   accomCountPet: string | null;
   petTurnAdroose: string | null;
   homepage: string | null;
+  aiRating: number | null;
   createdAt: string;
   updatedAt: string;
 }

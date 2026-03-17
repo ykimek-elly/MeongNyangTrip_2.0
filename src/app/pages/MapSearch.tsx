@@ -47,7 +47,7 @@ const FILTERS = [
 
 export function MapSearch({ onNavigate }: MapSearchProps) {
   const setUserLocation = useAppStore(state => state.setUserLocation);
-  const { lat, lng, address, error, isLoading, getLocation } = useGeolocation();
+  const { lat, lng, address, error, getLocation } = useGeolocation();
 
   const [activeFilter, setActiveFilter] = useState('all');
   const [places, setPlaces] = useState<SpotType[]>([]);
@@ -122,18 +122,20 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       .finally(() => setVetLoading(false));
   }, [activeFilter, lat, lng]);
 
-  // API를 통해 장소 데이터 받아오기 (Mock Interceptor가 가로챔)
+  // 장소 데이터 조회: 위치 확보 시 근처 5km, 미확보 시 전체 목록
   React.useEffect(() => {
     const fetchPlaces = async () => {
       try {
-        const data = await placeApi.getPlaces();
+        const data = lat && lng
+          ? await placeApi.getPlaces(undefined, undefined, lat, lng, 5000)
+          : await placeApi.getPlaces();
         setPlaces(data as SpotType[]);
       } catch (error) {
         console.error('Failed to fetch places:', error);
       }
     };
     fetchPlaces();
-  }, []);
+  }, [lat, lng]);
 
   const filteredSpots = activeFilter === 'all'
     ? places
@@ -375,7 +377,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
 
               <div className="flex gap-4">
                 <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100">
-                  <img src={selectedPlace.imageUrl || selectedPlace.img} alt={selectedPlace.name || selectedPlace.title} className="w-full h-full object-cover" />
+                  <img src={selectedPlace.imageUrl ?? undefined} alt={selectedPlace.title} className="w-full h-full object-cover" />
                 </div>
 
                 <div className="flex-1 min-w-0 pt-1">

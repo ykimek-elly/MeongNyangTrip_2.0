@@ -212,10 +212,13 @@ export function Home({ onNavigate }: HomeProps) {
                     <Star size={10} className="fill-brand-point text-brand-point" /> {place.rating}
                     <span className="text-gray-400 font-normal">({place.reviewCount})</span>
                   </span>
-                ) : (
-                  <span className="flex items-center text-gray-400 font-bold gap-0.5">
-                    <Star size={10} className="fill-gray-300 text-gray-300" /> 0
+                ) : place.aiRating ? (
+                  <span className="flex items-center text-gray-900 font-bold gap-0.5">
+                    <Star size={10} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
+                    <span className="text-[8px] font-normal text-gray-400">[AI]</span>
                   </span>
+                ) : (
+                  <span className="text-gray-400 text-[10px]">🐾</span>
                 )}
               </div>
             </div>
@@ -254,6 +257,20 @@ export function Home({ onNavigate }: HomeProps) {
           <h6 className="font-bold text-brand-point text-xs mb-1">방문인증센터</h6>
           <p className="m-0 text-[10px] text-gray-500 leading-snug">방문 인증하고 포인트 받자! 🎁</p>
         </div>
+      </div>
+
+      {/* Footer Area */}
+      <div className="mt-12 py-10 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-200">
+        <div className="flex items-center gap-3 text-[13px] text-gray-500 font-medium mb-3">
+          <span className="cursor-pointer hover:text-gray-800 transition-colors" onClick={() => onNavigate('team')}>개발자소개</span>
+          <span className="text-gray-300">|</span>
+          <span className="cursor-pointer hover:text-gray-800 transition-colors">이용약관</span>
+          <span className="text-gray-300">|</span>
+          <span className="cursor-pointer hover:text-gray-800 transition-colors">개인정보처리방침</span>
+          <span className="text-gray-300">|</span>
+          <span className="cursor-pointer hover:text-gray-800 transition-colors">고객센터</span>
+        </div>
+        <p className="text-[13px] text-gray-400 font-medium">@멍냥트립</p>
       </div>
 
       {/* 회원가입 유도 모달 */}

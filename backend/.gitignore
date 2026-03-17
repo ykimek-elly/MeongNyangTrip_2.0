@@ -40,3 +40,6 @@ out/
 .env
 
 project-key.cer
+
+### DB Backup ###
+/backup/

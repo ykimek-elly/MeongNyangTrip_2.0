@@ -57,7 +57,8 @@ public class User extends BaseEntity {
 
     /** 알림 수신 여부 */
     @Column(nullable = false)
-    private boolean notificationEnabled;
+    @Builder.Default
+    private boolean notificationEnabled = true;
 
     /** 마지막 알림 발송 시각 */
     @Column
@@ -70,5 +71,4 @@ public class User extends BaseEntity {
     public enum Status {
         ACTIVE, SUSPENDED, BLOCK, DELETED
     }
-
 }

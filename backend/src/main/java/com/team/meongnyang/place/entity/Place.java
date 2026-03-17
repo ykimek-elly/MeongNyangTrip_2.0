@@ -110,14 +110,6 @@ public class Place {
     @Column(columnDefinition = "TEXT")
     private String homepage;
 
-    /** Google Places 별점 (참고용 — 자체 리뷰 없을 때 표시) */
-    @Column(name = "google_rating")
-    private Double googleRating;
-
-    /** Google Places 리뷰 수 (참고용) */
-    @Column(name = "google_review_count")
-    private Integer googleReviewCount;
-
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -141,25 +133,16 @@ public class Place {
     }
 
     /**
-     * Google Places API 속성 보강 (3단계 교차검증).
-     * allowsDogs=true 시 tags에 "반려동물 동반 가능" 추가.
+     * 네이버+카카오 교차검증 완료 처리.
      * isClosed=true 시 tags에 "폐업" 추가.
      * 실행 후 isVerified=true 처리.
      */
-    public void enrichFromGoogle(boolean allowsDogs, boolean isClosed,
-                                 Double googleRating, Integer googleReviewCount) {
-        if (allowsDogs) {
-            this.tags = (this.tags != null && !this.tags.isBlank())
-                    ? this.tags + ",반려동물 동반 가능"
-                    : "반려동물 동반 가능";
-        }
+    public void markVerified(boolean isClosed) {
         if (isClosed) {
             this.tags = (this.tags != null && !this.tags.isBlank())
                     ? this.tags + ",폐업"
                     : "폐업";
         }
-        if (googleRating != null) this.googleRating = googleRating;
-        if (googleReviewCount != null) this.googleReviewCount = googleReviewCount;
         this.isVerified = true;
     }
 

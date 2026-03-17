@@ -40,14 +40,15 @@ public class SecurityConfig {
                     "/api/v1/places/**",
                     "/api/v1/public-places/**",
                     "/api/v1/admin/**",
-                    "/api/v1/pets/**",   // TODO: JWT 완성 후 제거
+                    "/api/v1/pets/**",
                     "/api/places/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                         "/orch/me/recommend"
                 ).permitAll()
                 .requestMatchers(
-                    "/api/checkins/**"   // 방문 인증 — JWT 필요
+                    "/api/checkins/**",
+                    "/api/v1/checkins/**"
                 ).authenticated()
                 .anyRequest().authenticated()
             )
@@ -61,8 +62,12 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
             "http://localhost:5173",
+            "http://localhost:3000",
             "http://54.180.22.22",
-            "http://54.180.22.22:80"
+            "http://54.180.22.22:8080",
+            "https://meongnyangtrip.duckdns.org",
+            "http://meongnyangtrip.duckdns.org",
+            "https://meongnyangtrip.com"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

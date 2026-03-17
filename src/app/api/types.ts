@@ -32,8 +32,6 @@ export interface PlaceDto {
   accomCountPet: string | null;
   petTurnAdroose: string | null;
   homepage: string | null;
-  googleRating: number | null;
-  googleReviewCount: number | null;
   createdAt: string;
   updatedAt: string;
 }

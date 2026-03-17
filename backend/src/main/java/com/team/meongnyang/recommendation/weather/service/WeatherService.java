@@ -16,6 +16,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 기상청 초단기 실황 API를 호출해 추천 흐름에서 사용할 날씨 문맥을 만드는 서비스이다.
+ *
+ * <p>추천 오케스트레이션에서 격자 좌표가 계산된 뒤 호출되며,
+ * API 응답을 산책 가능 수준과 강수 여부 같은 추천 판단용 {@link WeatherContext}로 변환한다.
+ * 생성된 결과는 후보 장소 필터링, 점수 계산, 프롬프트 생성의 공통 입력으로 사용된다.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,6 +43,13 @@ public class WeatherService {
 //    System.out.println("Injected weather.api.key length = " + (weatherApiKey == null ? "null" : weatherApiKey.length()));
 //  }
 
+  /**
+   * 지정한 기상청 격자 좌표의 현재 날씨를 조회해 추천용 날씨 문맥으로 변환한다.
+   *
+   * @param nx 기상청 격자 X 좌표
+   * @param ny 기상청 격자 Y 좌표
+   * @return 추천 필터링과 점수 계산에 사용할 날씨 문맥, 조회 실패 시 fallback 날씨 문맥
+   */
   public WeatherContext getWeather(int nx, int ny) {
 
     if (weatherApiKey == null || weatherApiKey.isBlank()) {

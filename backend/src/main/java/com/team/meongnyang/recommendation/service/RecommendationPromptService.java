@@ -13,12 +13,29 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 추천 오케스트레이션에서 수집한 데이터를 Gemini 입력 프롬프트로 조합하는 서비스이다.
+ *
+ * <p>점수 계산이 끝난 후보 장소, 날씨 문맥, 사용자와 반려동물 정보, RAG 문맥을
+ * 모델이 바로 사용할 수 있는 단일 문자열로 정리한다. 이 프롬프트는 이후 Gemini 호출과
+ * 캐시 키 생성의 기준이 되며, 최종 추천 문장의 품질을 좌우한다.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RecommendationPromptService {
 
+  /**
+   * 추천에 필요한 핵심 입력을 하나의 Gemini 프롬프트 문자열로 구성한다.
+   *
+   * @param user 추천 대상 사용자 정보
+   * @param pet 추천 기준이 되는 반려동물 정보
+   * @param weather 추천 시점의 날씨 문맥
+   * @param rankedPlaces 점수 계산 후 정렬된 상위 후보 장소 목록
+   * @param ragContext 추천 설명에 반영할 RAG 문맥
+   * @return Gemini 호출과 캐시 키 생성에 사용할 최종 프롬프트 문자열
+   */
   public String buildRecommendationPrompt(
           User user,
           Pet pet,

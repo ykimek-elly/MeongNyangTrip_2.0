@@ -69,9 +69,18 @@ class RecommendationOrchestratorServiceTest {
     @InjectMocks
     private RecommendationOrchestratorService recommendationOrchestratorService;
 
+    /**
+     * 전체 추천 흐름이 정상적으로 끝까지 수행되는지
+     * recommendationOrchestratorService 테스트
+     *
+     * Mock : 가짜 객체
+     * Mockito = 가짜 객체 만들고 조작하는 도구
+     * @InjectMocks : Mock 주입
+     */
     @Test
     @DisplayName("전체 추천 성공 흐름")
     void recommendForCurrentUser_success() {
+        // 테스트 변수(객체)
         User user = fixtureUser();
         Pet pet = fixturePet(user);
         WeatherGridPoint gridPoint = fixtureGridPoint();
@@ -80,22 +89,44 @@ class RecommendationOrchestratorServiceTest {
         List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
         String ragContext = "rag context";
 
+        /*
+         * 테스트 전략
+         * 1. given : 테스트를 위한 준비
+         * 2. when : 테스트를 위한 실행
+         * 3. then : 테스트를 위한 검증
+         */
+
+        // when()을 통해 mock 객체의 동작을 미리 세팅함
+        // ex) orchUserService.getCurrentUserByEmail(EMAIL) = user 리턴
+
+        // given : 사용자와 대표 반려견 조회
         when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
+
+        // given : 현재 위치를 날씨 격자로 변환 후 날씨 조회
         when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
         when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
+
+        // given : 추천 후보 장소 조회 및 RAG 문맥 검색
         when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
         when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
+
+        // given : 후보 장소 점수 계산 후 추천 프롬프트 생성
         when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
         when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext)).thenReturn(PROMPT);
+
+        // given : Gemini 캐시 조회(MISS) 후 응답 생성
         when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
         when(geminiCacheService.get(CACHE_KEY)).thenReturn(null);
         when(geminiRecommendationService.generateRecommendation(PROMPT)).thenReturn(GEMINI_RESPONSE);
 
+        // when : 추천 로직 실행
         String result = recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
 
+        // then: Gemini 응답이 최종 결과로 반환된다
         assertThat(result).isEqualTo(GEMINI_RESPONSE);
 
+        // then: 메서드 호출 순서 검증, 반드시 이 순서대로여야 함
         InOrder inOrder = inOrder(
                 orchUserService,
                 recommnedationPetReader,
@@ -109,6 +140,7 @@ class RecommendationOrchestratorServiceTest {
                 geminiRecommendationService
         );
 
+        // then: 추천 흐름이 설계된 순서대로 호출된다
         inOrder.verify(orchUserService).getCurrentUserByEmail(EMAIL);
         inOrder.verify(recommnedationPetReader).getPrimaryPet(user);
         inOrder.verify(weatherGridConverter).convertToGrid(37.27, 127.01);
@@ -122,7 +154,13 @@ class RecommendationOrchestratorServiceTest {
         inOrder.verify(geminiRecommendationService).generateRecommendation(PROMPT);
         inOrder.verify(geminiCacheService).save(CACHE_KEY, GEMINI_RESPONSE);
 
+        // then: Gemini 응답은 캐시에 저장되고 AI 로그가 남는다
+
+        // then : Gemini 결과를 중복 저장하지 않고 한 번만 저장했는지 검증
         verify(geminiCacheService, times(1)).save(CACHE_KEY, GEMINI_RESPONSE);
+
+
+        // eq : 특정 값과 일치하는지 검증하는 matcher
         verify(aiLogservice, times(1)).save(
                 eq(user),
                 eq(pet),
@@ -136,338 +174,10 @@ class RecommendationOrchestratorServiceTest {
         );
     }
 
-    @Test
-    @DisplayName("사용자 조회 실패 시 이후 호출 중단")
-    void recommendForCurrentUser_userLookupFailure_stopsFlow() {
-        RuntimeException exception = new RuntimeException("user lookup failed");
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenThrow(exception);
-
-        assertThatThrownBy(() -> recommendationOrchestratorService.recommendForCurrentUser(EMAIL))
-                .isSameAs(exception);
-
-        verify(orchUserService).getCurrentUserByEmail(EMAIL);
-        verifyNoInteractions(
-                recommnedationPetReader,
-                weatherGridConverter,
-                weatherService,
-                candidatePlaceService,
-                ragService,
-                placeScoringService,
-                recommendationPromptService,
-                geminiCacheService,
-                geminiRecommendationService,
-                aiLogservice
-        );
-    }
-
-    @Test
-    @DisplayName("반려견 조회 실패 시 이후 호출 중단")
-    void recommendForCurrentUser_petLookupFailure_stopsFlow() {
-        User user = fixtureUser();
-        RuntimeException exception = new RuntimeException("pet lookup failed");
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenThrow(exception);
-
-        assertThatThrownBy(() -> recommendationOrchestratorService.recommendForCurrentUser(EMAIL))
-                .isSameAs(exception);
-
-        verify(orchUserService).getCurrentUserByEmail(EMAIL);
-        verify(recommnedationPetReader).getPrimaryPet(user);
-        verifyNoInteractions(
-                weatherGridConverter,
-                weatherService,
-                candidatePlaceService,
-                ragService,
-                placeScoringService,
-                recommendationPromptService,
-                geminiCacheService,
-                geminiRecommendationService,
-                aiLogservice
-        );
-    }
-
-    @Test
-    @DisplayName("날씨 조회 실패 시 처리 검증")
-    void recommendForCurrentUser_weatherLookupFailure_stopsFlow() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        RuntimeException exception = new RuntimeException("weather lookup failed");
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenThrow(exception);
-
-        assertThatThrownBy(() -> recommendationOrchestratorService.recommendForCurrentUser(EMAIL))
-                .isSameAs(exception);
-
-        verify(weatherGridConverter).convertToGrid(37.27, 127.01);
-        verify(weatherService).getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy());
-        verifyNoInteractions(
-                candidatePlaceService,
-                ragService,
-                placeScoringService,
-                recommendationPromptService,
-                geminiCacheService,
-                geminiRecommendationService,
-                aiLogservice
-        );
-
-        // TODO: 날씨 조회 실패를 fallback 응답으로 전환할지 정책이 확정되면 기대 동작을 보강한다.
-    }
-
-    @Test
-    @DisplayName("후보 장소 없음")
-    void recommendForCurrentUser_noCandidates_returnsDefaultResponse() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        WeatherContext weatherContext = fixtureWeatherContext();
-        String ragContext = "rag context";
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(List.of());
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
-        when(placeScoringService.scorePlaces(List.of(), user, pet, weatherContext, 37.27, 127.01)).thenReturn(List.of());
-
-        String result = recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
-
-        assertThat(result).isNotBlank();
-        verify(recommendationPromptService, never()).buildRecommendationPrompt(eq(user), eq(pet), eq(weatherContext), eq(List.of()), eq(ragContext));
-        verify(geminiCacheService, never()).generateKey(PROMPT);
-        verify(geminiRecommendationService, never()).generateRecommendation(PROMPT);
-        verify(aiLogservice, never()).save(
-                eq(user),
-                eq(pet),
-                eq(PROMPT),
-                eq(""),
-                eq(ragContext),
-                eq(GEMINI_RESPONSE),
-                eq(false),
-                eq(false),
-                eq(0L)
-        );
-    }
-
-    @Test
-    @DisplayName("점수 계산 결과 없음")
-    void recommendForCurrentUser_noRankedPlaces_stopsBeforePrompt() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        WeatherContext weatherContext = fixtureWeatherContext();
-        List<Place> candidates = fixtureCandidates();
-        String ragContext = "rag context";
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(List.of());
-
-        String result = recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
-
-        assertThat(result).isNotBlank();
-        verify(recommendationPromptService, never()).buildRecommendationPrompt(eq(user), eq(pet), eq(weatherContext), eq(List.of()), eq(ragContext));
-        verify(geminiCacheService, never()).generateKey(PROMPT);
-        verify(geminiRecommendationService, never()).generateRecommendation(PROMPT);
-        verify(geminiCacheService, never()).save(CACHE_KEY, GEMINI_RESPONSE);
-        verify(aiLogservice, never()).save(
-                eq(user),
-                eq(pet),
-                eq(PROMPT),
-                argThat(this::containsTopPlaceSummary),
-                eq(ragContext),
-                eq(GEMINI_RESPONSE),
-                eq(false),
-                eq(false),
-                eq(0L)
-        );
-    }
-
-    @Test
-    @DisplayName("RAG 결과 없음")
-    void recommendForCurrentUser_blankRagContext_keepsFlow() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        WeatherContext weatherContext = fixtureWeatherContext();
-        List<Place> candidates = fixtureCandidates();
-        List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn("");
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
-        when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, "")).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(null);
-        when(geminiRecommendationService.generateRecommendation(PROMPT)).thenReturn(GEMINI_RESPONSE);
-
-        String result = recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
-
-        assertThat(result).isEqualTo(GEMINI_RESPONSE);
-        verify(recommendationPromptService).buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, "");
-        verify(geminiRecommendationService).generateRecommendation(PROMPT);
-    }
-
-    @Test
-    @DisplayName("Gemini 응답 실패")
-    void recommendForCurrentUser_geminiFailure_returnsFallbackAndSavesFailureLog() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        WeatherContext weatherContext = fixtureWeatherContext();
-        List<Place> candidates = fixtureCandidates();
-        List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        String ragContext = "rag context";
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
-        when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext)).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(null);
-        when(geminiRecommendationService.generateRecommendation(PROMPT)).thenThrow(new RuntimeException("gemini failed"));
-
-        String result = recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
-
-        assertThat(result).isNotBlank();
-        verify(geminiCacheService, never()).save(CACHE_KEY, GEMINI_RESPONSE);
-        verify(aiLogservice).save(
-                eq(user),
-                eq(pet),
-                eq(PROMPT),
-                argThat(this::containsTopPlaceSummary),
-                eq(ragContext),
-                eq(result),
-                eq(true),
-                eq(false),
-                eq(0L)
-        );
-    }
-
-    @Test
-    @DisplayName("Gemini 캐시 적중")
-    void recommendForCurrentUser_cacheHit_returnsCachedResponse() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        WeatherContext weatherContext = fixtureWeatherContext();
-        List<Place> candidates = fixtureCandidates();
-        List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        String ragContext = "rag context";
-        String cachedResponse = "cached recommendation";
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
-        when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext)).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(cachedResponse);
-
-        String result = recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
-
-        assertThat(result).isEqualTo(cachedResponse);
-        verify(geminiRecommendationService, never()).generateRecommendation(PROMPT);
-        verify(geminiCacheService, never()).save(CACHE_KEY, cachedResponse);
-        verify(aiLogservice).save(
-                eq(user),
-                eq(pet),
-                eq(PROMPT),
-                argThat(this::containsTopPlaceSummary),
-                eq(ragContext),
-                eq(cachedResponse),
-                eq(false),
-                eq(true),
-                eq(0L)
-        );
-    }
-
-    @Test
-    @DisplayName("캐시 저장 호출 여부 검증")
-    void recommendForCurrentUser_cacheSaveVerified() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        WeatherContext weatherContext = fixtureWeatherContext();
-        List<Place> candidates = fixtureCandidates();
-        List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        String ragContext = "rag context";
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
-        when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext)).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(null);
-        when(geminiRecommendationService.generateRecommendation(PROMPT)).thenReturn(GEMINI_RESPONSE);
-
-        recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
-
-        verify(geminiCacheService, times(1)).save(CACHE_KEY, GEMINI_RESPONSE);
-    }
-
-    @Test
-    @DisplayName("로그 저장 호출 여부 검증")
-    void recommendForCurrentUser_logSaveVerified() {
-        User user = fixtureUser();
-        Pet pet = fixturePet(user);
-        WeatherGridPoint gridPoint = fixtureGridPoint();
-        WeatherContext weatherContext = fixtureWeatherContext();
-        List<Place> candidates = fixtureCandidates();
-        List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        String ragContext = "rag context";
-
-        when(orchUserService.getCurrentUserByEmail(EMAIL)).thenReturn(user);
-        when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
-        when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext)).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(null);
-        when(geminiRecommendationService.generateRecommendation(PROMPT)).thenReturn(GEMINI_RESPONSE);
-
-        recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
-
-        verify(aiLogservice, times(1)).save(
-                eq(user),
-                eq(pet),
-                eq(PROMPT),
-                argThat(this::containsTopPlaceSummary),
-                eq(ragContext),
-                eq(GEMINI_RESPONSE),
-                eq(false),
-                eq(false),
-                longThat(latency -> latency >= 0L)
-        );
-    }
-
+    /**
+     * 유저 생성 테스트용 fixture
+     * @return
+     */
     private User fixtureUser() {
         return User.builder()
                 .userId(1L)
@@ -477,6 +187,11 @@ class RecommendationOrchestratorServiceTest {
                 .build();
     }
 
+    /**
+     * 펫 생성 테스트용 fixture
+     * @param user
+     * @return
+     */
     private Pet fixturePet(User user) {
         return Pet.builder()
                 .petId(10L)
@@ -493,10 +208,18 @@ class RecommendationOrchestratorServiceTest {
                 .build();
     }
 
+    /**
+     * 좌표 생성 테스트용 fixture
+     * @return
+     */
     private WeatherGridPoint fixtureGridPoint() {
         return new WeatherGridPoint(60, 121);
     }
 
+    /**
+     * 날씨 생성 테스트용 fixture
+     * @return
+     */
     private WeatherContext fixtureWeatherContext() {
         return WeatherContext.builder()
                 .temperature(21.5)
@@ -512,6 +235,10 @@ class RecommendationOrchestratorServiceTest {
                 .build();
     }
 
+    /**
+     * 장소 생성 테스트용 fixture
+     * @return
+     */
     private List<Place> fixtureCandidates() {
         return List.of(
                 fixturePlace(100L, "Alpha Cafe"),
@@ -519,6 +246,10 @@ class RecommendationOrchestratorServiceTest {
         );
     }
 
+    /**
+     * 후보 장소 생성 테스트용 fixture
+     * @return
+     */
     private List<ScoredPlace> fixtureRankedPlaces() {
         return List.of(
                 ScoredPlace.builder()
@@ -548,6 +279,12 @@ class RecommendationOrchestratorServiceTest {
         );
     }
 
+    /**
+     * 장소 생성 테스트용 fixture
+     * @param id
+     * @param title
+     * @return
+     */
     private Place fixturePlace(Long id, String title) {
         return Place.builder()
                 .id(id)
@@ -567,6 +304,11 @@ class RecommendationOrchestratorServiceTest {
                 .build();
     }
 
+    /**
+     * 후보 장소의 요약 정보가 주어진 summary에 포함되어 있는지 확인하는 테스트용 fixture
+     * @param summary
+     * @return
+     */
     private boolean containsTopPlaceSummary(String summary) {
         return summary != null
                 && summary.contains("Alpha Cafe")

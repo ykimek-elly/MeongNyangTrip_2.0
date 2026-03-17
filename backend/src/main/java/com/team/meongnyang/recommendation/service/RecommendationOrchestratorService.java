@@ -26,6 +26,16 @@ import java.util.stream.Collectors;
  * <p>사용자, 반려견, 날씨, 장소 후보, RAG context를 모아
  * 최종 추천 프롬프트를 만들고 Gemini 응답을 생성한다.
  */
+/**
+ * 반려동물 동반 장소 추천 흐름 전체를 조합하는 오케스트레이션 진입점이다.
+ *
+ * <p>사용자와 반려동물 정보 조회, 날씨 조회, 후보 장소 수집, 점수 계산, RAG 문맥 조회,
+ * 프롬프트 생성, Gemini 응답 생성과 캐시 확인, AI 응답 로그 저장까지 추천 파이프라인의 핵심 단계를
+ * 순서대로 연결한다.
+ *
+ * <p>이 클래스에서 만든 최종 추천 문장은 추천 API 응답으로 바로 반환되며,
+ * 동일한 입력에 대해서는 캐시 재사용과 로그 분석에도 활용된다.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -54,6 +64,15 @@ public class RecommendationOrchestratorService {
    *
    * @param email 현재 사용자 이메일
    * @return 추천 문장 또는 fallback 메시지
+   */
+  /**
+   * 현재 사용자 기준으로 추천 오케스트레이션 전체를 실행해 최종 추천 문장을 생성한다.
+   *
+   * <p>사용자와 대표 반려동물 조회부터 날씨 확인, 후보 장소 필터링, 장소 점수 계산,
+   * 프롬프트 구성, Gemini 응답 생성 또는 캐시 재사용, AI 로그 저장까지 한 번의 호출 안에서 처리한다.
+   *
+   * @param email 추천 대상 사용자를 식별하는 이메일
+   * @return 사용자에게 바로 전달할 추천 문장 또는 예외 상황에서의 fallback 메시지
    */
   public String recommendForCurrentUser(String email) {
     // 1. 현재 로그인 사용자를 조회한다.

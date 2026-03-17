@@ -24,6 +24,13 @@ import java.util.Locale;
  * - 벡터 검색 결과에서 추천 목적에 맞는 chunk만 필터링한다.
  * - 프롬프트에 넣기 좋은 짧은 context로 압축한다.
  */
+/**
+ * 추천 설명에 필요한 보조 문맥만 벡터 검색으로 가져오는 RAG 검색 서비스이다.
+ *
+ * <p>오케스트레이션 흐름에서 후보 장소 수집 뒤, 프롬프트 생성 전에 호출되며
+ * 반려동물 특성과 날씨에 맞는 검색 질의를 만들고 추천에 직접 도움이 되는 문장만 압축한다.
+ * 이렇게 만든 문맥은 프롬프트에 포함되어 AI 코멘트의 설명력을 보강한다.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -54,6 +61,13 @@ public class RagService {
    * @param pet 반려견 정보
    * @param weather 현재 날씨 정보
    * @return 정제된 RAG context. 적절한 결과가 없으면 빈 문자열을 반환한다.
+   */
+  /**
+   * 반려동물 정보와 현재 날씨를 바탕으로 추천 프롬프트에 넣을 RAG 문맥을 생성한다.
+   *
+   * @param pet 추천 기준이 되는 반려동물 정보
+   * @param weather 현재 추천 시점의 날씨 문맥
+   * @return 추천 문장 보강에 사용할 압축된 RAG 문맥, 적절한 결과가 없으면 빈 문자열
    */
   public String searchContext(Pet pet, WeatherContext weather) {
     // 1. 반려견 정보와 날씨를 바탕으로 검색용 질의를 만든다.

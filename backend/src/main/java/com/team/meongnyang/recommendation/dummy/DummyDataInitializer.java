@@ -20,12 +20,14 @@ public class DummyDataInitializer implements CommandLineRunner {
 
   @Override
   public void run(String... args) {
-    if (userRepository.findByEmail("testsingle@test.com").isEmpty()) {
+    if (userRepository.findByEmail("testsingle2@test.com").isEmpty()) {
 
       User singleUser = User.builder()
-              .email("testsingle@test.com")
+              .email("testsingle2@test.com")
               .password("12345678")
-              .nickname("singleTester")
+              .nickname("singleTester2")
+              .phoneNumber("010-1234-5678")
+              .notificationEnabled(true)
               .role(User.Role.USER)
               .status(User.Status.ACTIVE)
               .build();

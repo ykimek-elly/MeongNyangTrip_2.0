@@ -6,6 +6,13 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 추천 프롬프트를 Gemini에 전달해 사용자용 최종 추천 문장을 생성하는 AI 응답 계층이다.
+ *
+ * <p>오케스트레이션 흐름에서 프롬프트 생성과 캐시 확인 이후 호출되며,
+ * 모델 응답이 비어 있거나 예외가 발생하면 fallback 문장으로 대체한다.
+ * 생성된 결과는 API 응답과 AI 로그 저장에 함께 사용된다.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -14,6 +21,12 @@ public class GeminiRecommendationService {
   private static final String FALLBACK_MESSAGE = "?꾩옱 議곌굔??諛뷀깢?쇰줈 異붿쿇??以鍮꾪뻽?댁슂. ?ㅻ뒛? ?좎뵪? 諛섎젮寃??곹깭瑜?怨좊젮??臾대━ ?녿뒗 媛源뚯슫 ?μ냼遺??媛蹂띻쾶 ?섎윭蹂대뒗 寃껋쓣 異붿쿇?쒕젮??";
 
   private final ChatClient chatClient;
+  /**
+   * 응답이 내부 fallback 문장인지 판별한다.
+   *
+   * @param response Gemini 호출 결과로 받은 추천 문장
+   * @return fallback 문장과 동일하면 {@code true}
+   */
   public boolean isFallbackResponse(String response) {
     return createFallbackMessage().equals(response);
   }
@@ -27,6 +40,12 @@ public class GeminiRecommendationService {
    *
    * @param prompt Gemini 입력 프롬프트
    * @return 최종 사용자 안내 문장
+   */
+  /**
+   * 최종 추천 프롬프트를 Gemini에 전달해 사용자용 추천 문장을 생성한다.
+   *
+   * @param prompt 사용자, 반려동물, 날씨, 후보 장소 정보가 반영된 최종 프롬프트
+   * @return 사용자에게 반환할 추천 문장, 모델 응답이 비거나 예외가 발생하면 fallback 문장
    */
   public String generateRecommendation(String prompt) {
     log.info("[Gemini] 추천 문장 생성 시작 promptLength={}", prompt == null ? 0 : prompt.length());

@@ -25,6 +25,13 @@ import java.util.stream.Collectors;
  * 하드 필터는 OrchPlaceService에서 담당하고, 여기서는 상대적인 우선순위만 계산한다.
  *
  */
+/**
+ * 1차 필터를 통과한 후보 장소를 사용자 상황에 맞는 추천 순위로 재정렬하는 점수 계산기이다.
+ *
+ * <p>반려동물 적합도, 날씨 적합도, 장소 환경, 이동 편의성, 보너스 요소와 페널티를 조합해
+ * 각 장소의 설명 가능한 점수를 만든다. 오케스트레이션 흐름에서는 후보 장소 수집 다음 단계에서 호출되며,
+ * 계산 결과는 프롬프트 생성과 최종 추천 순위 설명에 직접 사용된다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -57,28 +64,31 @@ public class PlaceScoringService {
     }
 
     /**
-     * 좌표가 지정되지 않은 경우 기본 좌표를 사용하여 장소 점수를 계산합니다.
-     * @param candidates
-     * @param user
-     * @param pet
-     * @param weather
-     * @return
+     * 사용자 좌표가 따로 주어지지 않은 경우 기본 좌표를 기준으로 후보 장소 점수를 계산한다.
+     *
+     * @param candidates 1차 필터를 통과한 후보 장소 목록
+     * @param user 추천 대상 사용자 정보
+     * @param pet 추천 기준이 되는 반려동물 정보
+     * @param weather 현재 추천에 반영할 날씨 정보
+     * @return 총점 내림차순으로 정렬된 장소 점수 목록
      */
     public List<ScoredPlace> scorePlaces(List<Place> candidates, User user, Pet pet, WeatherContext weather) {
         return scorePlaces(candidates, user, pet, weather, DEFAULT_USER_LAT, DEFAULT_USER_LNG);
     }
 
     /**
-     * 후보 장소 목록을 순회하며 각 장소를 점수화하고,
-     * 총점이 높은 순으로 정렬하여 반환합니다.
+     * 후보 장소 전체를 순회하며 세부 점수를 계산하고 최종 추천 순위로 정렬한다.
      *
-     * @param candidates 후보 장소 목록
-     * @param user 사용자 정보
-     * @param pet 반려동물 정보
-     * @param weather 날씨 정보
-     * @param userLat 사용자 위치 위도
-     * @param userLng 사용자 위치 경도
-     * @return 점수화된 장소 목록
+     * <p>오케스트레이션 흐름에서 후보 장소 수집 이후 호출되며,
+     * 반환된 결과는 프롬프트의 Top 후보와 추천 근거 문장을 만드는 입력으로 사용된다.
+     *
+     * @param candidates 1차 필터를 통과한 후보 장소 목록
+     * @param user 추천 대상 사용자 정보
+     * @param pet 추천 기준이 되는 반려동물 정보
+     * @param weather 현재 추천에 반영할 날씨 정보
+     * @param userLat 거리 계산에 사용할 사용자 위도
+     * @param userLng 거리 계산에 사용할 사용자 경도
+     * @return 총점 기준 내림차순으로 정렬된 {@link ScoredPlace} 목록
      */
     public List<ScoredPlace> scorePlaces(
             List<Place> candidates,
@@ -109,16 +119,15 @@ public class PlaceScoringService {
     }
 
     /**
-     * 단일 장소에 대해 섹션별 점수와 감점을 계산하고,
-     * 최종 총점 및 설명 정보를 포함한 ScoredPlace로 변환합니다.
+     * 단일 장소의 세부 점수와 설명 문장을 계산해 최종 점수 객체로 변환한다.
      *
-     * @param place 점수를 계산할 장소
-     * @param user 사용자 정보
-     * @param pet 반려동물 정보
-     * @param weather 날씨 정보
-     * @param userLat 사용자 위치 위도
-     * @param userLng 사용자 위치 경도
-     * @return 점수화된 장소 정보
+     * @param place 점수를 계산할 후보 장소
+     * @param user 추천 대상 사용자 정보
+     * @param pet 추천 기준이 되는 반려동물 정보
+     * @param weather 현재 추천에 반영할 날씨 정보
+     * @param userLat 거리 계산에 사용할 사용자 위도
+     * @param userLng 거리 계산에 사용할 사용자 경도
+     * @return 프롬프트 생성과 추천 근거 설명에 사용할 단일 장소 점수 결과
      */
     public ScoredPlace scoreSinglePlace(
             Place place,

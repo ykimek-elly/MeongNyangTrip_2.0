@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 /**
  * 회원 엔티티 (ERD: USER)
  */
@@ -49,6 +51,18 @@ public class User extends BaseEntity {
     @Builder.Default
     private Status status = Status.ACTIVE;
 
+    /** 사용자 전화번호 (카카오 알림 발송용) */
+    @Column(length = 20)
+    private String phoneNumber;
+
+    /** 알림 수신 여부 */
+    @Column(nullable = false)
+    private boolean notificationEnabled;
+
+    /** 마지막 알림 발송 시각 */
+    @Column
+    private LocalDateTime lastNotificationSentAt;
+
     public enum Role {
         USER, ADMIN
     }
@@ -56,4 +70,5 @@ public class User extends BaseEntity {
     public enum Status {
         ACTIVE, SUSPENDED, BLOCK, DELETED
     }
+
 }

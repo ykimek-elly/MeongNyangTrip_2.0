@@ -18,6 +18,7 @@ public class PlaceResponseDto {
     private String title;
     private String description;
     private String address;
+    private String addr2;
     private Double latitude;
     private Double longitude;
     private String category;
@@ -26,6 +27,13 @@ public class PlaceResponseDto {
     private String imageUrl;
     private String phone;
     private String tags;
+    private String overview;
+    private String chkPetInside;
+    private String accomCountPet;
+    private String petTurnAdroose;
+    private String homepage;
+    private Double googleRating;
+    private Integer googleReviewCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -36,6 +44,7 @@ public class PlaceResponseDto {
             .title(place.getTitle())
             .description(place.getDescription())
             .address(place.getAddress())
+            .addr2(place.getAddr2())
             .latitude(place.getLatitude())
             .longitude(place.getLongitude())
             .category(place.getCategory())
@@ -44,6 +53,13 @@ public class PlaceResponseDto {
             .imageUrl(place.getImageUrl())
             .phone(place.getPhone())
             .tags(place.getTags())
+            .overview(place.getOverview())
+            .chkPetInside(place.getChkPetInside())
+            .accomCountPet(place.getAccomCountPet())
+            .petTurnAdroose(place.getPetTurnAdroose())
+            .homepage(place.getHomepage())
+            .googleRating(place.getGoogleRating())
+            .googleReviewCount(place.getGoogleReviewCount())
             .createdAt(place.getCreatedAt())
             .updatedAt(place.getUpdatedAt())
             .build();

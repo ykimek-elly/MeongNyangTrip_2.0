@@ -91,4 +91,23 @@ public class Pet extends BaseEntity {
     public enum PetActivity {
         LOW, NORMAL, HIGH
     }
+
+    public void update(String petName, PetType petType, String petBreed, PetGender petGender,
+                       PetSize petSize, Integer petAge, BigDecimal petWeight,
+                       PetActivity petActivity, String personality, String preferredPlace) {
+        this.petName = petName;
+        this.petType = petType;
+        this.petBreed = petBreed;
+        this.petGender = petGender;
+        this.petSize = petSize;
+        this.petAge = petAge;
+        this.petWeight = petWeight;
+        this.petActivity = petActivity;
+        this.personality = personality;
+        this.preferredPlace = preferredPlace;
+    }
+
+    public void setRepresentative(boolean isRepresentative) {
+        this.isRepresentative = isRepresentative;
+    }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { placeApi } from '../api/placeApi';
@@ -39,9 +39,9 @@ type SpotType = PlaceDto & {
 
 const FILTERS = [
   { id: 'all', label: '전체' },
-  { id: '햇살맛집', label: '#햇살맛집' },
-  { id: '조용한산책', label: '#조용한산책' },
-  { id: '뛰뛰가능', label: '#뛰뛰가능' },
+  { id: 'PLACE', label: '#명소' },
+  { id: 'STAY', label: '#숙박' },
+  { id: 'DINING', label: '#맛집' },
   { id: '동물병원', label: '#동물병원' },
 ];
 
@@ -52,20 +52,34 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
   const [activeFilter, setActiveFilter] = useState('all');
   const [places, setPlaces] = useState<SpotType[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<SpotType | null>(null);
+  const [mapLevel, setMapLevel] = useState(5); // 카카오 레벨: 낮을수록 확대
+  const [spinning, setSpinning] = useState(false);
+  const mapRef = useRef<kakao.maps.Map | null>(null);
+  const locatingRef = useRef(false);
 
   // 동물병원 전용 상태
   const [vetPlaces, setVetPlaces] = useState<KakaoVet[]>([]);
   const [selectedVet, setSelectedVet] = useState<KakaoVet | null>(null);
   const [vetLoading, setVetLoading] = useState(false);
+  const vetFetchedRef = useRef(false); // 중복 호출 방지
 
-  const handleLocate = async () => {
+  const handleLocate = () => {
+    setSpinning(true);
+    locatingRef.current = true;
     getLocation();
+    setTimeout(() => setSpinning(false), 600);
   };
 
-  // 위치 정보 받아오면 상태 업데이트
+  // 위치 정보 받아오면 상태 업데이트 + 버튼 클릭 시 지도 이동 & 줌 리셋
   React.useEffect(() => {
     if (lat && lng) {
       setUserLocation({ lat, lng, address });
+      if (locatingRef.current && mapRef.current) {
+        mapRef.current.setLevel(5);
+        mapRef.current.setCenter(new window.kakao.maps.LatLng(lat, lng));
+        setMapLevel(5);
+        locatingRef.current = false;
+      }
     }
   }, [lat, lng, address, setUserLocation]);
 
@@ -81,9 +95,12 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
     if (activeFilter !== '동물병원') {
       setVetPlaces([]);
       setSelectedVet(null);
+      vetFetchedRef.current = false; // 필터 벗어나면 리셋
       return;
     }
     if (!lat || !lng) return;
+    if (vetFetchedRef.current) return; // 이미 호출했으면 스킵
+    vetFetchedRef.current = true;
 
     const REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
     setVetLoading(true);
@@ -93,8 +110,15 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       { headers: { Authorization: `KakaoAK ${REST_KEY}` } }
     )
       .then(r => r.json())
-      .then(data => setVetPlaces(data.documents ?? []))
-      .catch(e => console.error('카카오 로컬 API 오류:', e))
+      .then(data => {
+        console.log('[동물병원] Kakao API 응답:', data);
+        if (data.errorType || data.code) {
+          console.error('[동물병원] API 오류:', data.message || data.msg);
+          return;
+        }
+        setVetPlaces(data.documents ?? []);
+      })
+      .catch(e => console.error('[동물병원] 네트워크 오류 (CORS?):', e))
       .finally(() => setVetLoading(false));
   }, [activeFilter, lat, lng]);
 
@@ -113,16 +137,20 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
 
   const filteredSpots = activeFilter === 'all'
     ? places
-    : places.filter(s => s.tag === activeFilter);
+    : activeFilter === '동물병원'
+      ? []
+      : places.filter(s => s.category === activeFilter);
 
   return (
     <div className="relative w-full h-full bg-gray-100 overflow-hidden flex flex-col">
       {/* Kakao Map Area */}
       <div className="absolute inset-0 z-0">
         <Map
-          center={{ lat: lat || 37.5665, lng: lng || 126.9780 }}   // 초기 중심좌표 (사용자 위치 없으면 서울시청)
+          center={{ lat: lat || 37.5665, lng: lng || 126.9780 }}
           style={{ width: "100%", height: "100%" }}
-          level={5} // 초기 확대 레벨
+          level={5}
+          onZoomChanged={(map) => setMapLevel(map.getLevel())}
+          onCreate={(map) => { mapRef.current = map; }}
         >
           {/* 동물병원 마커 */}
           {vetPlaces.map((vet) => (
@@ -137,50 +165,65 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                 className="cursor-pointer flex flex-col items-center"
                 onClick={() => { setSelectedVet(vet); setSelectedPlace(null); }}
               >
-                <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
-                  selectedVet?.id === vet.id ? 'bg-blue-500 scale-110 z-20' : 'bg-white hover:bg-blue-50'
-                }`}>
-                  <Stethoscope size={18} className={selectedVet?.id === vet.id ? 'text-white' : 'text-blue-500'} />
-                  <div className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-20" />
-                </div>
-                <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm max-w-[80px] truncate ${
-                  selectedVet?.id === vet.id ? 'bg-blue-500 text-white' : 'bg-white/90 text-gray-800'
-                }`}>
-                  {vet.place_name}
-                </span>
+                {mapLevel > 5 ? (
+                  // 축소 시: 점
+                  <div className={`w-3 h-3 rounded-full border-2 border-white shadow-md ${
+                    selectedVet?.id === vet.id ? 'bg-blue-500 scale-125' : 'bg-blue-400'
+                  }`} />
+                ) : (
+                  // 확대 시: 아이콘 + 상호명
+                  <>
+                    <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
+                      selectedVet?.id === vet.id ? 'bg-blue-500 scale-110 z-20' : 'bg-white hover:bg-blue-50'
+                    }`}>
+                      <Stethoscope size={18} className={selectedVet?.id === vet.id ? 'text-white' : 'text-blue-500'} />
+                      {selectedVet?.id === vet.id && <div className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-20" />}
+                    </div>
+                    <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm max-w-[80px] truncate ${
+                      selectedVet?.id === vet.id ? 'bg-blue-500 text-white' : 'bg-white/90 text-gray-800'
+                    }`}>
+                      {vet.place_name}
+                    </span>
+                  </>
+                )}
               </motion.div>
             </CustomOverlayMap>
           ))}
 
           {filteredSpots.map((spot) => (
-            // spot.desc 등에서 lat, lng 추출이 필요하나 현재 Mock Data 형태이므로 임의의 좌표 처리 (기존 % 대신 실제 좌표 매핑 필요)
-            // 여기선 임시로 spot.id 값을 활용한 가벼운 오프셋 좌표로 보여줌
             <CustomOverlayMap
               key={spot.id}
-              position={{
-                lat: (lat || 37.5665) + (spot.id % 2 === 0 ? 0.002 : -0.002) + (spot.id * 0.0005),
-                lng: (lng || 126.9780) + (spot.id % 3 === 0 ? 0.002 : -0.002) - (spot.id * 0.0005)
-              }}
+              position={{ lat: spot.latitude, lng: spot.longitude }}
               clickable={true}
             >
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
-                whileHover={{ scale: 1.1 }}
                 className="cursor-pointer flex flex-col items-center"
                 onClick={() => setSelectedPlace(spot)}
               >
-                <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${selectedPlace?.id === spot.id ? 'bg-primary scale-110 z-20' : 'bg-white text-primary hover:bg-gray-50'
-                  }`}>
-                  <PawPrint size={20} className={selectedPlace?.id === spot.id ? 'text-white' : 'text-primary'} fill={selectedPlace?.id === spot.id ? 'white' : 'currentColor'} />
-                  {/* Ripple Effect */}
-                  <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-20" />
-                </div>
-                <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm transition-opacity ${selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
-                  }`}>
-                  {spot.name || spot.title}
-                </span>
+                {mapLevel > 5 ? (
+                  // 축소 시: 점
+                  <div className={`w-3 h-3 rounded-full border-2 border-white shadow-md ${
+                    selectedPlace?.id === spot.id ? 'bg-primary scale-125' : 'bg-primary/70'
+                  }`} />
+                ) : (
+                  // 확대 시: 아이콘 + 상호명
+                  <>
+                    <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${
+                      selectedPlace?.id === spot.id ? 'bg-primary scale-110 z-20' : 'bg-white hover:bg-gray-50'
+                    }`}>
+                      <PawPrint size={20} className={selectedPlace?.id === spot.id ? 'text-white' : 'text-primary'} fill={selectedPlace?.id === spot.id ? 'white' : 'currentColor'} />
+                      {selectedPlace?.id === spot.id && <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-20" />}
+                    </div>
+                    <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm ${
+                      selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
+                    }`}>
+                      {spot.name || spot.title}
+                    </span>
+                  </>
+                )}
               </motion.div>
             </CustomOverlayMap>
           ))}
@@ -210,6 +253,7 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                 setActiveFilter(filter.id);
                 setSelectedPlace(null);
                 setSelectedVet(null);
+                if (filter.id === '동물병원' && !lat) getLocation();
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id
                 ? 'bg-primary text-white'
@@ -223,13 +267,14 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
       </div>
 
       {/* Current Location Button */}
-      <button
+      <motion.button
         onClick={handleLocate}
-        className={`absolute right-4 bottom-[82px] z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-all ${lat && lng ? 'text-primary' : 'text-gray-700'
-          }`}
+        animate={{ rotate: spinning ? 360 : 0 }}
+        transition={{ duration: 0.55, ease: "easeInOut" }}
+        className={`absolute right-4 bottom-[82px] z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-colors ${lat && lng ? 'text-primary' : 'text-gray-700'}`}
       >
-        <Navigation size={24} className={isLoading ? "animate-spin" : ""} />
-      </button>
+        <Navigation size={24} />
+      </motion.button>
 
       {/* 동물병원 로딩 인디케이터 */}
       {vetLoading && (

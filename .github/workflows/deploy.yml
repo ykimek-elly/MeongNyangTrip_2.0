@@ -5,6 +5,9 @@ on:
     branches: [ main ]
     paths:
       - 'backend/**'
+      - 'src/**'
+      - 'Dockerfile.frontend'
+      - 'nginx.conf'
   workflow_dispatch:
 
 jobs:
@@ -20,6 +23,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x backend/gradlew
 
       - name: Build with Gradle
         working-directory: backend
@@ -37,5 +43,19 @@ jobs:
           aws ssm send-command \
             --instance-ids "i-007364ef8c4161ab4" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["cd /home/ec2-user/MeongNyangTrip_2.0/backend && git pull origin main && docker build -t meongnyang-backend . && docker stop meongnyang-app || true && docker rm meongnyang-app || true && docker run -d --name meongnyang-app -p 8080:8080 -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=${{ secrets.REDIS_HOST }} -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e SPRING_PROFILES_ACTIVE=prod meongnyang-backend"]' \
+            --parameters 'commands=[
+              "cd /home/ec2-user/MeongNyangTrip_2.0 && git pull origin main",
+              "echo === 백엔드 빌드 ===",
+              "docker build -t meongnyang-backend ./backend",
+              "docker stop meongnyang-app || true",
+              "docker rm meongnyang-app || true",
+              "docker run -d --name meongnyang-app -p 8080:8080 --link meongnyang-redis:redis -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=redis -e REDIS_PORT=6379 -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e SPRING_PROFILES_ACTIVE=prod --restart=always meongnyang-backend",
+              "echo === 프론트엔드 빌드 ===",
+              "docker build --build-arg VITE_KAKAO_MAP_API_KEY=${{ secrets.VITE_KAKAO_MAP_API_KEY }} --build-arg VITE_API_BASE_URL=/api/v1 -t meongnyang-frontend -f /home/ec2-user/MeongNyangTrip_2.0/Dockerfile.frontend /home/ec2-user/MeongNyangTrip_2.0",
+              "docker stop meongnyang-frontend || true",
+              "docker rm meongnyang-frontend || true",
+              "docker run -d --name meongnyang-frontend -p 80:80 --link meongnyang-app:app --restart=always meongnyang-frontend",
+              "echo === 배포 완료 ===",
+              "docker ps"
+            ]' \
             --region ap-northeast-2

@@ -63,6 +63,19 @@ pet-tour:
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY:}
 
+# Google Places API (3단계 속성 보강 — allowsDogs)
+google:
+  places:
+    api-key: ${GOOGLE_PLACES_API_KEY:}
+    base-url: https://places.googleapis.com/v1
+
+# 네이버 지역 검색 API (이미지 보강 — imageUrl 없는 장소 대상)
+# 발급: https://developers.naver.com → 앱 등록 → "검색 > 지역" 권한 추가
+naver:
+  local:
+    client-id: ${NAVER_LOCAL_CLIENT_ID:}
+    client-secret: ${NAVER_LOCAL_CLIENT_SECRET:}
+
 # JWT 설정 (팀원 A 작업용)
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-change-in-production}

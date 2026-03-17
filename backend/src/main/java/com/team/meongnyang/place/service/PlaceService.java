@@ -24,6 +24,11 @@ public class PlaceService {
 
     private final PlaceRepository placeRepository;
 
+    /** 폐업 여부 판단 — tags에 "폐업" 포함 시 노출 제외 */
+    private boolean isActive(Place p) {
+        return p.getTags() == null || !p.getTags().contains("폐업");
+    }
+
     /**
      * 위치 기반 근거리 장소 검색 (PostGIS ST_DWithin).
      * 결과는 Redis에 1시간 캐싱. 배치 실행 시 자동 무효화.
@@ -33,10 +38,11 @@ public class PlaceService {
         List<Place> places = category != null
                 ? placeRepository.findNearbyByCategory(lat, lng, radius, category, 50)
                 : placeRepository.findNearby(lat, lng, radius, 50);
-        return places.stream().map(PlaceResponseDto::from).toList();
+        return places.stream().filter(this::isActive).map(PlaceResponseDto::from).toList();
     }
 
-    /** 장소 목록 조회 (카테고리/키워드 필터 — 위치 정보 없을 때 fallback) */
+    /** 장소 목록 조회 (카테고리/키워드 필터 — 위치 정보 없을 때 fallback, 1시간 캐싱) */
+    @Cacheable(value = "places", key = "'list_' + (#category ?: 'ALL') + '_' + (#keyword ?: 'ALL')")
     public List<PlaceResponseDto> getPlaces(String category, String keyword) {
         List<Place> places;
 
@@ -51,15 +57,19 @@ public class PlaceService {
         }
 
         return places.stream()
+            .filter(this::isActive)
             .map(PlaceResponseDto::from)
             .toList();
     }
 
-    /** 장소 상세 조회 (6시간 캐싱) */
+    /** 장소 상세 조회 (6시간 캐싱) — 폐업 장소는 404 처리 */
     @Cacheable(value = "places:detail", key = "#id")
     public PlaceResponseDto getPlace(Long id) {
         Place place = placeRepository.findById(id)
             .orElseThrow(() -> new NoSuchElementException("해당 장소를 찾을 수 없습니다. (id: " + id + ")"));
+        if (!isActive(place)) {
+            throw new NoSuchElementException("폐업된 장소입니다. (id: " + id + ")");
+        }
         return PlaceResponseDto.from(place);
     }
 

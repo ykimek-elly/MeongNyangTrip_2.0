@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
+import { authApi } from '../api/authApi';
 import { ArrowLeft, Mail, Eye, EyeOff, Leaf } from 'lucide-react';
 
 interface SignupProps {
@@ -15,15 +16,27 @@ export function Signup({ onNavigate }: SignupProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const isValid = email.trim() && password.length >= 6 && nickname.trim() && agreeTerms;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
-    // TODO: [DB 연동] POST /api/auth/signup → Spring Security 회원가입 + JWT 발급
-    login(nickname, email);
-    // 가입 후 온보딩으로 이동
-    onNavigate('onboarding');
+    setError('');
+    setIsLoading(true);
+    try {
+      const res = await authApi.signup(email, password, nickname);
+      localStorage.setItem('accessToken', res.token);
+      login(res.nickname, res.email, res.userId);
+      onNavigate('onboarding');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || '회원가입에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
@@ -156,17 +169,19 @@ export function Signup({ onNavigate }: SignupProps) {
               </span>
             </label>
 
+            {error && <p className="text-red-500 text-sm px-1">{error}</p>}
+
             {/* 가입 버튼 */}
             <button
               type="submit"
-              disabled={!isValid}
+              disabled={!isValid || isLoading}
               className={`w-full py-4 rounded-2xl font-bold shadow-lg transition-all active:scale-[0.98] mt-2 ${
-                isValid
+                isValid && !isLoading
                   ? 'bg-primary text-white hover:bg-primary/90'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
               }`}
             >
-              가입하기
+              {isLoading ? '가입 중...' : '가입하기'}
             </button>
           </form>
 

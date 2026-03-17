@@ -60,7 +60,7 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
 }
 
 /** 헤더/GNB 숨김 대상 페이지 목록 */
-const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
+const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
 const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
 
 /** 루트 레이아웃 — 헤더, GNB, AI챗 표시 제어 */

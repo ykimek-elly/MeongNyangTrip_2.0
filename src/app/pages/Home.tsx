@@ -259,20 +259,6 @@ export function Home({ onNavigate }: HomeProps) {
         </div>
       </div>
 
-      {/* Footer Area */}
-      <div className="mt-12 py-10 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-200">
-        <div className="flex items-center gap-3 text-[13px] text-gray-500 font-medium mb-3">
-          <span className="cursor-pointer hover:text-gray-800 transition-colors" onClick={() => onNavigate('team')}>개발자소개</span>
-          <span className="text-gray-300">|</span>
-          <span className="cursor-pointer hover:text-gray-800 transition-colors">이용약관</span>
-          <span className="text-gray-300">|</span>
-          <span className="cursor-pointer hover:text-gray-800 transition-colors">개인정보처리방침</span>
-          <span className="text-gray-300">|</span>
-          <span className="cursor-pointer hover:text-gray-800 transition-colors">고객센터</span>
-        </div>
-        <p className="text-[13px] text-gray-400 font-medium">@멍냥트립</p>
-      </div>
-
       {/* 회원가입 유도 모달 */}
       <AnimatePresence>
         {showSignupPrompt && (

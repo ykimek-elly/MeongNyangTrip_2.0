@@ -26,7 +26,7 @@ public class CorsConfig {
             "http://localhost:3000",        // 프론트엔드 로컬 (대체)
             "http://54.180.22.22",          // EC2 프론트엔드
             "http://54.180.22.22:8080",     // EC2 Swagger
-            "https://meongnyangtrip.com"    // 운영 도메인
+            "https://meongnyangtrip.com",   // 운영 도메인
             "https://meongnyangtrip.duckdns.org"  // 임시 도메인
 
         ));

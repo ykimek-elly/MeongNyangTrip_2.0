@@ -9,11 +9,22 @@ export const placeApi = {
   /**
    * 장소 목록 조회
    * GET /api/v1/places
+   * - lat/lng/radius 전달 시 위치 기반 근처 장소 조회 (ST_DWithin)
+   * - 미전달 시 전체 목록 (카테고리/키워드 필터 가능)
    */
-  getPlaces: async (category?: string, keyword?: string): Promise<PlaceDto[]> => {
-    const params: Record<string, string> = {};
+  getPlaces: async (
+    category?: string,
+    keyword?: string,
+    lat?: number,
+    lng?: number,
+    radius?: number,
+  ): Promise<PlaceDto[]> => {
+    const params: Record<string, string | number> = {};
     if (category) params.category = category;
-    if (keyword) params.keyword = keyword;
+    if (keyword)  params.keyword  = keyword;
+    if (lat !== undefined) params.lat    = lat;
+    if (lng !== undefined) params.lng    = lng;
+    if (radius !== undefined) params.radius = radius;
 
     const { data } = await api.get<ApiResponse<PlaceDto[]>>('/places', { params });
     return data.data ?? [];

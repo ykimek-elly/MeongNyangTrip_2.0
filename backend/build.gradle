@@ -46,6 +46,9 @@ dependencies {
 	// Swagger / OpenAPI (전체 — API 문서 자동화)
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
 
+	// Jsoup (웹 파싱/크롤링)
+	implementation 'org.jsoup:jsoup:1.17.2'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

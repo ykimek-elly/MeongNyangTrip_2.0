@@ -13,6 +13,7 @@ import { MyPage } from './pages/MyPage';
 import { AIWalkGuide } from './pages/AIWalkGuide';
 import { VisitCheckIn } from './pages/VisitCheckIn';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { TeamPage } from './pages/TeamPage';
 import { NotFound } from './pages/NotFound';
 import { Onboarding } from './pages/Onboarding';
 import { EditProfile } from './pages/EditProfile';
@@ -53,6 +54,7 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
       case 'visit-checkin': navigate('/visit-checkin'); break;
       case 'edit-profile': navigate('/edit-profile'); break;
       case 'admin': navigate('/admin'); break;
+      case 'team': navigate('/team'); break;
       default: navigate('/');
     }
     window.scrollTo(0, 0);
@@ -60,8 +62,8 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
 }
 
 /** 헤더/GNB 숨김 대상 페이지 목록 */
-const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
-const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile'];
+const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team'];
+const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team'];
 
 /** 루트 레이아웃 — 헤더, GNB, AI챗 표시 제어 */
 function RootAdapter() {
@@ -187,6 +189,7 @@ export const router = createBrowserRouter([
       { path: "visit-checkin", Component: withNavigation(VisitCheckIn) },
       { path: "edit-profile", Component: withNavigation(EditProfile) },
       { path: "admin", Component: withNavigation(AdminDashboard) },
+      { path: "team",  Component: withNavigation(TeamPage) },
       { path: "*", Component: withNavigation(NotFound) },
     ],
   },

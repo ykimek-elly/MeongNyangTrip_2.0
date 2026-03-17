@@ -3,15 +3,17 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft, Heart, MessageCircle, Send, Eye, EyeOff, Trash2,
   AlertTriangle, BarChart3, Users, TrendingUp, Mail, Image as ImageIcon,
-  ChevronDown, ChevronUp, Search, Filter, Shield
+  ChevronDown, ChevronUp, Search, Shield, Settings,
+  Play, CheckCircle, XCircle, Loader, ImageOff, Star, Database, Wrench
 } from 'lucide-react';
 import { useFeedStore, type FeedPost } from '../store/useFeedStore';
+import { adminApi } from '../api/adminApi';
 
 interface AdminDashboardProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
-type TabType = 'overview' | 'posts' | 'comments' | 'dms';
+type TabType = 'overview' | 'batch' | 'posts' | 'comments' | 'dms';
 type SortType = 'latest' | 'likes' | 'comments' | 'dms' | 'reported';
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
@@ -33,17 +35,18 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-t border-gray-800">
+        <div className="flex border-t border-gray-800 overflow-x-auto scrollbar-hide">
           {([
-            { key: 'overview', label: '전체 현황', icon: BarChart3 },
-            { key: 'posts', label: '게시글', icon: ImageIcon },
-            { key: 'comments', label: '댓글', icon: MessageCircle },
-            { key: 'dms', label: 'DM', icon: Mail },
+            { key: 'overview', label: '현황', icon: BarChart3 },
+            { key: 'batch',    label: '배치',  icon: Settings },
+            { key: 'posts',    label: '게시글', icon: ImageIcon },
+            { key: 'comments', label: '댓글',  icon: MessageCircle },
+            { key: 'dms',      label: 'DM',    icon: Mail },
           ] as { key: TabType; label: string; icon: any }[]).map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-2.5 text-xs font-bold transition-colors relative flex items-center justify-center gap-1 ${
+              className={`flex-1 min-w-[56px] py-2.5 text-xs font-bold transition-colors relative flex items-center justify-center gap-1 ${
                 activeTab === tab.key ? 'text-primary' : 'text-gray-500'
               }`}
             >
@@ -60,13 +63,140 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       {/* Content */}
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && <OverviewTab key="overview" posts={posts} />}
-        {activeTab === 'posts' && <PostsTab key="posts" posts={posts} />}
+        {activeTab === 'batch'    && <BatchTab    key="batch" />}
+        {activeTab === 'posts'    && <PostsTab    key="posts" posts={posts} />}
         {activeTab === 'comments' && <CommentsTab key="comments" posts={posts} />}
-        {activeTab === 'dms' && <DMsTab key="dms" posts={posts} />}
+        {activeTab === 'dms'      && <DMsTab      key="dms" posts={posts} />}
       </AnimatePresence>
     </div>
   );
 }
+
+// ─── 배치 관리 탭 ──────────────────────────────────────────────────────────────
+
+type BatchStatus = 'idle' | 'running' | 'done' | 'error';
+
+interface BatchJob {
+  id: string;
+  label: string;
+  desc: string;
+  icon: React.ElementType;
+  run: () => Promise<any>;
+}
+
+function BatchTab() {
+  const [statuses, setStatuses] = useState<Record<string, BatchStatus>>({});
+  const [messages, setMessages] = useState<Record<string, string>>({});
+
+  const BATCH_JOBS: BatchJob[] = [
+    {
+      id: 'places',
+      label: 'KTO 장소 수집',
+      desc: '한국관광공사 서울+경기 전체 수집 · 네이버+카카오 이중검증 후 저장',
+      icon: Database,
+      run: adminApi.runPlacesBatch,
+    },
+    {
+      id: 'culture',
+      label: '문화시설 수집',
+      desc: '한국문화정보원(KCISA) 수집 · kakaoId 기준 KTO 중복 제거',
+      icon: Star,
+      run: adminApi.runCultureBatch,
+    },
+    {
+      id: 'enrich-images',
+      label: '이미지 보강',
+      desc: 'imageUrl 없는 장소 대상 네이버 Local Search thumbnail 취득',
+      icon: ImageOff,
+      run: adminApi.runEnrichImagesBatch,
+    },
+    {
+      id: 'ai-rating',
+      label: 'AI 별점 계산',
+      desc: '전체 장소 aiRating 재계산 (리뷰 수 · 이미지 · 검증 여부 반영)',
+      icon: Star,
+      run: adminApi.runAiRatingBatch,
+    },
+    {
+      id: 'fix-broken',
+      label: '깨진 이미지 교체',
+      desc: 'SNS CDN · 뉴스 이미지 초기화 후 네이버 이미지로 재보강',
+      icon: Wrench,
+      run: adminApi.runFixBrokenImagesBatch,
+    },
+  ];
+
+  const run = async (job: BatchJob) => {
+    setStatuses(s => ({ ...s, [job.id]: 'running' }));
+    setMessages(m => ({ ...m, [job.id]: '' }));
+    try {
+      await job.run();
+      setStatuses(s => ({ ...s, [job.id]: 'done' }));
+      setMessages(m => ({ ...m, [job.id]: '완료' }));
+    } catch (e: any) {
+      setStatuses(s => ({ ...s, [job.id]: 'error' }));
+      setMessages(m => ({ ...m, [job.id]: e?.response?.data?.message ?? '오류 발생' }));
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 pb-24 space-y-3">
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-700 font-medium">
+        권장 실행 순서: KTO 장소 → 문화시설 → 이미지 보강 → AI 별점<br />
+        Kakao 쿼터(300,000건/일)는 KST 09:00 리셋됩니다.
+      </div>
+
+      {BATCH_JOBS.map((job) => {
+        const status = statuses[job.id] ?? 'idle';
+        const msg = messages[job.id] ?? '';
+        return (
+          <div key={job.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-start gap-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              status === 'done'    ? 'bg-green-100' :
+              status === 'error'  ? 'bg-red-100'   :
+              status === 'running'? 'bg-blue-100'  : 'bg-gray-100'
+            }`}>
+              {status === 'running' ? (
+                <Loader size={18} className="text-blue-500 animate-spin" />
+              ) : status === 'done' ? (
+                <CheckCircle size={18} className="text-green-500" />
+              ) : status === 'error' ? (
+                <XCircle size={18} className="text-red-500" />
+              ) : (
+                <job.icon size={18} className="text-gray-500" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-800">{job.label}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{job.desc}</p>
+              {msg && (
+                <p className={`text-xs font-bold mt-1 ${status === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+                  {msg}
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={() => run(job)}
+              disabled={status === 'running'}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                status === 'running'
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-primary text-white hover:opacity-90'
+              }`}
+            >
+              <Play size={12} />
+              실행
+            </button>
+          </div>
+        );
+      })}
+    </motion.div>
+  );
+}
+
+// ─── 전체 현황 탭 ──────────────────────────────────────────────────────────────
 
 function OverviewTab({ posts }: { posts: FeedPost[] }) {
   const totalLikes = posts.reduce((acc, p) => acc + p.likes, 0);
@@ -185,7 +315,7 @@ function OverviewTab({ posts }: { posts: FeedPost[] }) {
           <Users size={16} className="text-blue-500" /> 사용자 활동
         </h3>
         <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-          {getUniqueUsers(posts).map((user, i) => (
+          {getUniqueUsers(posts).map((user) => (
             <div key={user.name} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100">
@@ -228,7 +358,7 @@ function getUniqueUsers(posts: FeedPost[]) {
 }
 
 function PostsTab({ posts }: { posts: FeedPost[] }) {
-  const { toggleHidePost, deletePost, reportPost } = useFeedStore();
+  const { toggleHidePost, deletePost } = useFeedStore();
   const [sortBy, setSortBy] = useState<SortType>('latest');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedPost, setExpandedPost] = useState<number | null>(null);

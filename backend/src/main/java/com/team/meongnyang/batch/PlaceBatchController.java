@@ -8,12 +8,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 장소 데이터 배치 수동 트리거 컨트롤러.
- * 개발/테스트 환경에서 DB 초기 데이터 투입 시 사용.
  *
- * POST /api/v1/admin/batch/places
- * POST /api/v1/admin/batch/culture
- * POST /api/v1/admin/batch/enrich
- * POST /api/v1/admin/batch/enrich-images
+ * [파이프라인 2.0 — 권장 실행 순서]
+ *   1. POST /api/v1/admin/batch/places          — KTO 수집 + 네이버·카카오 이중검증 + 저장
+ *   2. POST /api/v1/admin/batch/culture         — KCISA 수집 + 네이버·카카오 이중검증 + 저장 (kakaoId 중복제거)
+ *   3. POST /api/v1/admin/batch/enrich-images   — 이미지 없는 장소 Naver 이미지 보강
+ *   4. POST /api/v1/admin/batch/recalculate-ai-rating — AI 별점 계산
+ *
+ * [레거시 — 기존 데이터 재처리용]
+ *   POST /api/v1/admin/batch/enrich            — isVerified=false 레코드 재검증
+ *   POST /api/v1/admin/batch/re-verify         — 전체 교차검증 재실행
+ *   POST /api/v1/admin/batch/fix-broken-images — 깨진 이미지 교체
  */
 @RestController
 @RequestMapping("/api/v1/admin/batch")
@@ -40,7 +45,19 @@ public class PlaceBatchController {
     @PostMapping("/enrich")
     public ResponseEntity<String> triggerEnrichBatch() {
         placeEnrichBatchService.runEnrichBatch();
-        return ResponseEntity.ok("Google Places 속성 보강 완료");
+        return ResponseEntity.ok("네이버+카카오 교차검증 + AI 별점 산정 완료");
+    }
+
+    @PostMapping("/re-verify")
+    public ResponseEntity<String> triggerReVerifyBatch() {
+        placeEnrichBatchService.runReVerifyBatch();
+        return ResponseEntity.ok("전체 교차검증 재실행 완료 (이름 유사도 검증 적용)");
+    }
+
+    @PostMapping("/recalculate-ai-rating")
+    public ResponseEntity<String> triggerRecalculateAiRating() {
+        int updated = placeEnrichBatchService.recalculateAiRating();
+        return ResponseEntity.ok(String.format("AI 별점 재계산 완료 — %d건", updated));
     }
 
     @PostMapping("/enrich-images")
@@ -49,5 +66,13 @@ public class PlaceBatchController {
         return ResponseEntity.ok(String.format(
                 "네이버 이미지 보강 완료 — 성공: %d건 / 이미지없음: %d건 / 전체: %d건",
                 result.get("updated"), result.get("noImage"), result.get("total")));
+    }
+
+    @PostMapping("/fix-broken-images")
+    public ResponseEntity<String> triggerFixBrokenImagesBatch() {
+        var result = naverImageEnrichBatchService.runFixBrokenImagesBatch();
+        return ResponseEntity.ok(String.format(
+                "깨진 이미지 교체 완료 — 초기화: %d건 / 재보강 성공: %d건 / 이미지없음: %d건 / 전체: %d건",
+                result.get("reset"), result.get("updated"), result.get("noImage"), result.get("total")));
     }
 }

@@ -32,7 +32,6 @@ public class KakaoNotificationService {
      * @return 외부 알림 발송 결과 코드와 성공 여부
      */
     public NotificationResponse send (User user, Place place, String aiComment) {
-        String message = messageBuilder.buildMessage(user, place, aiComment);
         String title = "오늘의 추천";
         String phone = user.getPhoneNumber();
 
@@ -41,7 +40,6 @@ public class KakaoNotificationService {
                 .templateCode("T0001")
                 .senderKey("sender_key")
                 .title(title)
-                .message(message)
                 .build();
 
         log.info("[카카오 알림] 발송 시도 userId={}, placeTitle={}",

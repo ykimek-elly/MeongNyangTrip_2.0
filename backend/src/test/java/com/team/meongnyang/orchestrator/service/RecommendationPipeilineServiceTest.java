@@ -29,14 +29,12 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class RecommendationOrchestratorServiceTest {
+class RecommendationPipeilineServiceTest {
 
     private static final String EMAIL = "user@example.com";
     private static final String PROMPT = "recommendation prompt";
@@ -67,7 +65,7 @@ class RecommendationOrchestratorServiceTest {
     private AiLogService aiLogservice;
 
     @InjectMocks
-    private RecommendationOrchestratorService recommendationOrchestratorService;
+    private RecommendationPipelineService recommendationPipeilineService;
 
     /**
      * 전체 추천 흐름이 정상적으로 끝까지 수행되는지
@@ -121,7 +119,7 @@ class RecommendationOrchestratorServiceTest {
         when(geminiRecommendationService.generateRecommendation(PROMPT)).thenReturn(GEMINI_RESPONSE);
 
         // when : 추천 로직 실행
-        String result = recommendationOrchestratorService.recommendForCurrentUser(EMAIL);
+        String result = recommendationPipeilineService.recommendForCurrentUser(EMAIL);
 
         // then: Gemini 응답이 최종 결과로 반환된다
         assertThat(result).isEqualTo(GEMINI_RESPONSE);

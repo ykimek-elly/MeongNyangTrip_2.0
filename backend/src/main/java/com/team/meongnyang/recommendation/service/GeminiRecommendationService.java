@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 추천 프롬프트를 Gemini에 전달해 사용자용 최종 추천 문장을 생성하는 AI 응답 계층이다.
  *
- * <p>오케스트레이션 흐름에서 프롬프트 생성과 캐시 확인 이후 호출되며,
+ * <p>파이프라인 흐름에서 프롬프트 생성과 캐시 확인 이후 호출되며,
  * 모델 응답이 비어 있거나 예외가 발생하면 fallback 문장으로 대체한다.
  * 생성된 결과는 API 응답과 AI 로그 저장에 함께 사용된다.
  */

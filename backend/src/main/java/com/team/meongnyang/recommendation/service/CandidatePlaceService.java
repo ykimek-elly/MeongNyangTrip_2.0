@@ -16,18 +16,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 추천 전 1차 후보군만 추리는 서비스.
- * 세밀한 우선순위 판단은 PlaceScoreService로 넘기고,
- * 여기서는 "제외해야 할 장소"를 먼저 걷어낸다.
- */
-/**
  * 추천 가능한 장소 후보를 1차로 수집하고 위험한 조건을 먼저 걸러내는 후보 추출 계층이다.
  *
- * <p>오케스트레이션 흐름에서 날씨 조회 직후 호출되며,
+ * <p>파이프라인 흐름에서 날씨 조회 직후 호출되며,
  * 사용자 좌표와 날씨, 반려동물 선호를 기준으로 추천에 사용할 후보 장소 집합을 만든다.
  * 여기서 반환한 결과는 이후 {@link PlaceScoringService}의 점수 계산 입력으로 사용된다.
  */
-@Service("orchestratorPlaceService")
+@Service
 @Slf4j
 @RequiredArgsConstructor
 public class CandidatePlaceService {
@@ -49,25 +44,6 @@ public class CandidatePlaceService {
   private final PlaceRepository placeRepository;
   private final DistanceCalculator distanceCalculator;
 
-  /**
-   * 사용자 위치와 날씨 정보를 기준으로 추천 장소의 1차 후보군을 선별합니다.
-   *
-   * 처리 순서:
-   * 1) 입력값 검증
-   * 2) 산책 가능 등급(walkLevel)에 따른 최대 반경 계산
-   * 3) 반경 내 주변 장소 조회
-   * 4) 운영 여부, 좌표 유효성, 카테고리, 거리, 날씨 조건으로 1차 필터 적용
-   * 5) 엄격 필터 결과가 없으면 날씨 조건 완화 필터 적용
-   * 6) 그래도 없으면 핵심 조건만 남긴 fallback 필터 적용
-   * 7) 대표 반려동물의 선호 장소를 약한 우선순위로 반영한 뒤 최종 후보를 반환
-   *
-   * @param user 사용자 정보
-   * @param pet 반려동물
-   * @param weather 날씨 정보
-   * @param lat 위도
-   * @param lng 경도
-   * @return 스코어링 전 단계에서 사용할 1차 후보 장소 목록
-   */
   /**
    * 사용자 위치와 현재 날씨를 기준으로 추천 가능한 1차 후보 장소 목록을 만든다.
    *

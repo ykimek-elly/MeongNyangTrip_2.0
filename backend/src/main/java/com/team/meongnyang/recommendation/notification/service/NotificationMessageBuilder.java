@@ -20,16 +20,42 @@ public class NotificationMessageBuilder {
    * @param user 메시지 수신 대상 사용자 정보
    * @param place 알림에 포함할 추천 장소 정보
    * @param message AI가 생성한 추천 코멘트
+   * @param weatherType 날씨 유형 (SUNNY, RAINY, CLOUDY, HEATWAVE, COLD_WAVE)
    * @return 외부 알림 API에 전달할 최종 메시지 본문
    */
-  public String buildMessage(User user, Place place, String message) {
+  public String buildMessage(User user, Place place, String message, String weatherType) {
     String nickname = user != null ? user.getNickname() : "사용자";
     String placeTitle = place != null ? place.getTitle() : "추천 장소";
+
+    String intro = buildWeatherIntro(weatherType);
+
     return String.format(
-            "%s님을 위한 오늘의 추천 장소는 %s입니다. %s",
+            "%s %s님을 위한 오늘의 추천 장소는 %s입니다. %s",
+            intro,
             nickname,
             placeTitle,
             message != null ? message : "즐거운 외출 되세요!"
     );
+  }
+
+  /**
+   * 날씨 유형에 따라 알림 시작 문구를 만든다.
+   *
+   * @param weatherType 날씨 유형
+   * @return 알림 서두 문장
+   */
+  private String buildWeatherIntro(String weatherType) {
+    if (weatherType == null) {
+      return "오늘도 반려견과 좋은 하루 보내세요.";
+    }
+
+    return switch (weatherType.toUpperCase()) {
+      case "SUNNY" -> "맑은 날씨네요.";
+      case "RAINY" -> "비 소식이 있어요.";
+      case "CLOUDY" -> "조금 흐린 날씨예요.";
+      case "HEATWAVE" -> "더운 날씨가 이어지고 있어요.";
+      case "COLD_WAVE" -> "기온이 많이 낮아요.";
+      default -> "오늘도 반려견과 좋은 하루 보내세요.";
+    };
   }
 }

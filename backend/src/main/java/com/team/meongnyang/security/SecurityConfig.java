@@ -44,7 +44,7 @@ public class SecurityConfig {
                     "/api/places/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
-                        "/orch/me/recommend"
+                    "/api/v1/ai/walk-guide"
                 ).permitAll()
                 .requestMatchers(
                     "/api/checkins/**",

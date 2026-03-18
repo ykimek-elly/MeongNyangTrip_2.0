@@ -226,6 +226,25 @@ public class Place {
         return (int) keywords.stream().filter(combined::contains).count();
     }
 
+    /** 리뷰 추가 시 평점·리뷰수 갱신 */
+    public void addReview(double newRating) {
+        double total = this.rating * this.reviewCount + newRating;
+        this.reviewCount++;
+        this.rating = Math.round((total / this.reviewCount) * 10.0) / 10.0;
+    }
+
+    /** 리뷰 삭제 시 평점·리뷰수 갱신 */
+    public void removeReview(double removedRating) {
+        if (this.reviewCount <= 1) {
+            this.reviewCount = 0;
+            this.rating = 0.0;
+        } else {
+            double total = this.rating * this.reviewCount - removedRating;
+            this.reviewCount--;
+            this.rating = Math.round((total / this.reviewCount) * 10.0) / 10.0;
+        }
+    }
+
     /** 네이버 지역 검색 API 이미지 보강 */
     public void enrichImageFromNaver(String imageUrl) {
         this.imageUrl = imageUrl;

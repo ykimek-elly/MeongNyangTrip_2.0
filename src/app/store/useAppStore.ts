@@ -72,13 +72,14 @@ interface AppState {
   userId: number | null;   // DB user_id — JWT 완성 후 로그인 시 설정됨
   username: string;
   email: string;
+  profileImage: string;
   pets: PetInfo[];                  // 다중 등록 (2026-03-13 확정)
   hasCompletedOnboarding: boolean;
   wishlist: number[];
   savedRoutes: SavedRoute[];
   userLocation: UserLocation;
 
-  login: (username: string, email?: string, userId?: number) => void;
+  login: (username: string, email?: string, userId?: number, profileImage?: string) => void;
   logout: () => void;
   updateProfile: (data: { username?: string; email?: string }) => void;
   completeOnboarding: () => void;
@@ -108,6 +109,7 @@ export const useAppStore = create<AppState>()(
       userId: null,
       username: '게스트',
       email: '',
+      profileImage: '',
       pets: [],
       hasCompletedOnboarding: false,
       wishlist: [],
@@ -117,15 +119,16 @@ export const useAppStore = create<AppState>()(
       isLoadingPlaces: false,
 
       // TODO: [DB 연동] POST /api/auth/login → Step 4에서 JWT 토큰 기반으로 전환 (userId 자동 세팅)
-      login: (username, email, userId) => set({
+      login: (username, email, userId, profileImage) => set({
         isLoggedIn: true,
         username,
         email: email || '',
         userId: userId ?? null,
+        profileImage: profileImage || '',
       }),
 
       // TODO: [DB 연동] POST /api/auth/logout → JWT 토큰 블랙리스트(Redis) 처리 + 클라이언트 토큰 삭제
-      logout: () => set({ isLoggedIn: false, userId: null, username: '게스트', email: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
+      logout: () => set({ isLoggedIn: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
 
       // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE (PostgreSQL)
       updateProfile: (data) => set((state) => ({

@@ -30,3 +30,7 @@ pnpm-debug.log*
 
 # misc
 *.local
+
+# Claude IDE/Tool Files
+.claude/
+/.metadata/

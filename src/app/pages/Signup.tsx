@@ -29,7 +29,7 @@ export function Signup({ onNavigate }: SignupProps) {
     try {
       const res = await authApi.signup(email, password, nickname);
       localStorage.setItem('accessToken', res.token);
-      login(res.nickname, res.email, res.userId);
+      login(res.nickname, res.email, res.userId, res.profileImage);
       onNavigate('onboarding');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -40,9 +40,8 @@ export function Signup({ onNavigate }: SignupProps) {
   };
 
   const handleSocialLogin = (provider: string) => {
-    // TODO: [DB 연동] GET /api/oauth2/{provider} → Spring Security OAuth2.0 소셜 로그인 (Google/Kakao)
-    login(provider === 'google' ? '구글유저' : '카카오유저', `${provider}@example.com`);
-    onNavigate('onboarding');
+    const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '');
+    window.location.href = `${apiHost}/oauth2/authorization/${provider}`;
   };
 
   return (

@@ -14,6 +14,7 @@ import { AIWalkGuide } from './pages/AIWalkGuide';
 import { VisitCheckIn } from './pages/VisitCheckIn';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeamPage } from './pages/TeamPage';
+import { OAuthCallback } from './pages/OAuthCallback';
 import { NotFound } from './pages/NotFound';
 import { Onboarding } from './pages/Onboarding';
 import { EditProfile } from './pages/EditProfile';
@@ -62,8 +63,8 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
 }
 
 /** 헤더/GNB 숨김 대상 페이지 목록 */
-const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team'];
-const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team'];
+const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team', 'oauth2/callback'];
+const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team', 'oauth2/callback'];
 
 /** 루트 레이아웃 — 헤더, GNB, AI챗 표시 제어 */
 function RootAdapter() {
@@ -190,6 +191,7 @@ export const router = createBrowserRouter([
       { path: "edit-profile", Component: withNavigation(EditProfile) },
       { path: "admin", Component: withNavigation(AdminDashboard) },
       { path: "team",  Component: withNavigation(TeamPage) },
+      { path: "oauth2/callback", Component: OAuthCallback },
       { path: "*", Component: withNavigation(NotFound) },
     ],
   },

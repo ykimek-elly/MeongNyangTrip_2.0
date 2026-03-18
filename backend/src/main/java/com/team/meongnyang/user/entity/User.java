@@ -31,9 +31,8 @@ public class User extends BaseEntity {
     @Column(unique = true, nullable = false, length = 100)
     private String email;
 
-    @NotBlank
-    @Size(min = 8, max = 100)
-    @Column(nullable = false, length = 100)
+    /** 소셜 로그인 사용자는 password = null */
+    @Column(length = 100)
     private String password;
 
     @NotBlank
@@ -50,6 +49,18 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 10)
     @Builder.Default
     private Status status = Status.ACTIVE;
+
+    /** 소셜 로그인 제공자 (GOOGLE, KAKAO, null=이메일 가입) */
+    @Column(length = 20)
+    private String provider;
+
+    /** 소셜 제공자의 고유 사용자 ID */
+    @Column(name = "provider_id", length = 100)
+    private String providerId;
+
+    /** 프로필 이미지 URL (소셜 로그인 시 수집) */
+    @Column(name = "profile_image", length = 500)
+    private String profileImage;
 
     /** 사용자 전화번호 (카카오 알림 발송용) */
     @Column(length = 20)
@@ -70,5 +81,10 @@ public class User extends BaseEntity {
 
     public enum Status {
         ACTIVE, SUSPENDED, BLOCK, DELETED
+    }
+
+    /** 닉네임 업데이트 (소셜 로그인 재방문 시 최신화) */
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
     }
 }

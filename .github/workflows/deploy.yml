@@ -46,10 +46,6 @@ jobs:
             --parameters 'commands=[
               "cd /home/ec2-user/MeongNyangTrip_2.0 && git pull origin main",
 
-              "echo === 기존 컨테이너 중지 ===",
-              "docker stop meongnyang-app meongnyang-frontend || true",
-              "docker rm meongnyang-app meongnyang-frontend || true",
-
               "echo === 백엔드 빌드 ===",
               "if docker build -t meongnyang-backend-new ./backend; then",
               "  docker tag meongnyang-backend-new meongnyang-backend",
@@ -68,7 +64,9 @@ jobs:
               "  echo 프론트엔드 빌드 실패",
               "fi",
 
-              "echo === 컨테이너 시작 ===",
+              "echo === 컨테이너 교체 ===",
+              "docker stop meongnyang-app meongnyang-frontend || true",
+              "docker rm meongnyang-app meongnyang-frontend || true",
               "docker run -d --name meongnyang-app -p 8080:8080 --link meongnyang-redis:redis -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=redis -e REDIS_PORT=6379 -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }} -e NAVER_LOCAL_CLIENT_ID=${{ secrets.NAVER_LOCAL_CLIENT_ID }} -e NAVER_LOCAL_CLIENT_SECRET=${{ secrets.NAVER_LOCAL_CLIENT_SECRET }} -e SPRING_PROFILES_ACTIVE=prod --restart=always meongnyang-backend",
               "docker run -d --name meongnyang-frontend -p 80:80 -p 443:443 -v /etc/letsencrypt:/etc/letsencrypt:ro --link meongnyang-app:app --restart=always meongnyang-frontend",
 

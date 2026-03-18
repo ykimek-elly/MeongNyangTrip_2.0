@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 public class NotificationRecommendationProcessor {
 
   private final PetRepository petRepository;
-  private final RecommendationPipelineService recommendtationService;
+  private final RecommendationPipelineService recommendationPipelineService;
   private final NotificationMessageBuilder messageBuilder;
   private static final double SUWON_LAT = 37.27;
   private static final double SUWON_LNG = 127.01;
@@ -51,7 +51,7 @@ public class NotificationRecommendationProcessor {
     }
 
 
-    RecommendationNotificationResult result = recommendtationService.recommendForNotification(user, pet);
+    RecommendationNotificationResult result = recommendationPipelineService.recommendForNotification(user, pet);
     // todo : 알림 변환
     // todo : NotificationMessageBuilder 로 문구 조립
 

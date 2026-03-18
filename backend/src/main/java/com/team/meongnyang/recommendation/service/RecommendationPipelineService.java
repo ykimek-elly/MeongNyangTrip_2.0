@@ -53,6 +53,8 @@ public class RecommendationPipelineService {
   private static final double SUWON_LNG = 127.01;
 
   public RecommendationNotificationResult recommendForCurrentUser(String email) {
+    log.info("[추천 파이프라인] START");
+
     // 1. 현재 로그인 사용자를 조회한다.
     User user = recommendationUserReader.getCurrentUserByEmail(email);
     log.info("[추천 파이프라인] 사용자 조회 결과 email={}, userId={}, nickname={}", email, user.getUserId(), user.getNickname());

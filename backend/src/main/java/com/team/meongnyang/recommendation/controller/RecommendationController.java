@@ -14,8 +14,12 @@ public class RecommendationController {
 
   private final RecommendationPipelineService service;
 
+  /**
+   * 로그인 된 사용자에게 추천
+   * @return
+   */
   @GetMapping("/api/v1/ai/walk-guide")
-  public RecommendationNotificationResult recommendForCurrentUser() {
+  public RecommendationNotificationResult recommendForUser() {
     // TODO : 인증 기능 (시큐리티 인증 객체에서 EMAIL or USERNAME)
     String email = "testsingle2@test.com";
 

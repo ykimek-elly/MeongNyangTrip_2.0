@@ -82,7 +82,8 @@ export function List({ onNavigate, initialParams }: ListProps) {
     return () => observer.disconnect();
   }, [filteredPlaces.length, displayCount]);
 
-  const getEffectiveRating = (p: typeof places[0]) => p.rating;
+  const getEffectiveRating = (p: typeof places[0]) =>
+    p.reviewCount > 0 ? p.rating : (p.aiRating ?? 0);
 
   const getEffectiveReviewCount = (p: typeof places[0]) => p.reviewCount;
 
@@ -241,10 +242,13 @@ export function List({ onNavigate, initialParams }: ListProps) {
                       <span className="flex items-center text-brand-point text-xs font-bold gap-0.5 shrink-0">
                         <Star size={12} className="fill-brand-point" /> {place.rating.toFixed(1)}
                       </span>
-                    ) : (
-                      <span className="flex items-center text-gray-400 text-xs font-bold gap-0.5 shrink-0">
-                        <Star size={11} className="fill-gray-300 text-gray-300" /> 0
+                    ) : place.aiRating ? (
+                      <span className="flex items-center text-gray-900 text-xs font-bold gap-0.5 shrink-0">
+                        <Star size={12} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
+                        <span className="text-[9px] font-normal text-gray-400">[AI]</span>
                       </span>
+                    ) : (
+                      <span className="text-gray-400 text-[10px] shrink-0">🐾</span>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
@@ -274,10 +278,13 @@ export function List({ onNavigate, initialParams }: ListProps) {
                       <span className="flex items-center text-brand-point text-[10px] font-bold gap-0.5 flex-shrink-0">
                         <Star size={10} className="fill-brand-point" /> {place.rating.toFixed(1)}
                       </span>
-                    ) : (
-                      <span className="flex items-center text-gray-400 text-[10px] font-bold gap-0.5 flex-shrink-0">
-                        <Star size={10} className="fill-gray-300 text-gray-300" /> 0
+                    ) : place.aiRating ? (
+                      <span className="flex items-center text-gray-900 text-[10px] font-bold gap-0.5 flex-shrink-0">
+                        <Star size={10} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
+                        <span className="text-[8px] font-normal text-gray-400">[AI]</span>
                       </span>
+                    ) : (
+                      <span className="text-gray-400 text-[10px] flex-shrink-0">🐾</span>
                     )}
                   </div>
                   <p className="text-[10px] text-gray-500 mb-1.5 flex items-center gap-1 truncate">

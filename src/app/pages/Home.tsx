@@ -212,10 +212,13 @@ export function Home({ onNavigate }: HomeProps) {
                     <Star size={10} className="fill-brand-point text-brand-point" /> {place.rating}
                     <span className="text-gray-400 font-normal">({place.reviewCount})</span>
                   </span>
-                ) : (
-                  <span className="flex items-center text-gray-400 font-bold gap-0.5">
-                    <Star size={10} className="fill-gray-300 text-gray-300" /> 0
+                ) : place.aiRating ? (
+                  <span className="flex items-center text-gray-900 font-bold gap-0.5">
+                    <Star size={10} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
+                    <span className="text-[8px] font-normal text-gray-400">[AI]</span>
                   </span>
+                ) : (
+                  <span className="text-gray-400 text-[10px]">🐾</span>
                 )}
               </div>
             </div>

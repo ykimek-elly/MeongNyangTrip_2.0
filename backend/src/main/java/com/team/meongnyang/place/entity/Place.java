@@ -6,7 +6,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.locationtech.jts.geom.Point;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 장소(Place) JPA Entity.
@@ -27,6 +32,10 @@ public class Place {
     /** 공공데이터 원본 ID (upsert 기준키) */
     @Column(name = "content_id", unique = true)
     private String contentId;
+
+    /** 카카오 장소 ID — 데이터셋 간 중복 방지 dedup 키 (nullable) */
+    @Column(name = "kakao_id", unique = true)
+    private String kakaoId;
 
     /** PostGIS 공간 좌표 (SRID:4326) — ST_DWithin 검색용 */
     @Column(name = "geom", columnDefinition = "geometry(Point,4326)")
@@ -110,6 +119,10 @@ public class Place {
     @Column(columnDefinition = "TEXT")
     private String homepage;
 
+    /** AI 추천 별점 (데이터 품질 + 화제성 + 감성 기반 자동 계산, 0.0~5.0) */
+    @Column(name = "ai_rating")
+    private Double aiRating;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -146,18 +159,86 @@ public class Place {
         this.isVerified = true;
     }
 
+    /**
+     * AI 추천 별점 자동 계산 — Rubric V3.0 (5.0점 만점)
+     * PlaceEnrichBatchService에서 markVerified() 직후 호출
+     *
+     * @param blogTotal       네이버 블로그 검색 결과 수 (화제성)
+     * @param latestPostDate  최신 글 날짜 "yyyyMMdd" (Time-Decay)
+     * @param descriptions    최신 5개 글 요약본 (감성 반응)
+     */
+    public void computeAiRating(int blogTotal, String latestPostDate, List<String> descriptions) {
+        // A. 기본 점수 — 생존 검증 통과 필수
+        boolean notClosed = tags == null || !tags.contains("폐업");
+        if (!Boolean.TRUE.equals(isVerified) || !notClosed) {
+            this.aiRating = 0.0;
+            return;
+        }
+        double score = 2.0;
+
+        // B. 내부 정보 (최대 1.0점)
+        boolean petFriendly = "Y".equalsIgnoreCase(chkPetInside)
+                || (tags != null && tags.contains("대형견"));
+        if (petFriendly) score += 0.4;
+        if (imageUrl != null && !imageUrl.isBlank()
+                && overview != null && overview.length() >= 50) score += 0.3;
+        if (phone != null && !phone.isBlank()
+                && homepage != null && !homepage.isBlank()) score += 0.3;
+
+        // C. 화제성 (최대 1.0점, Time-Decay 적용)
+        double blogScore = 0.0;
+        if (blogTotal >= 100)     blogScore = 1.0;
+        else if (blogTotal >= 50) blogScore = 0.7;
+        else if (blogTotal >= 10) blogScore = 0.4;
+        else if (blogTotal >= 1)  blogScore = 0.1;
+        score += blogScore * computeDecayFactor(latestPostDate);
+
+        // D. 감성 반응 (최대 1.0점)
+        int positiveCount = countPositiveKeywords(descriptions);
+        if (positiveCount >= 5)      score += 1.0;
+        else if (positiveCount >= 2) score += 0.5;
+
+        this.aiRating = Math.round(score * 10.0) / 10.0;
+    }
+
+    /** Time-Decay 계수 — 최신 글 날짜(yyyyMMdd) 기준 */
+    private double computeDecayFactor(String latestPostDate) {
+        if (latestPostDate == null || latestPostDate.isBlank()) return 0.1;
+        try {
+            LocalDate postDate = LocalDate.parse(latestPostDate, DateTimeFormatter.BASIC_ISO_DATE);
+            long months = ChronoUnit.MONTHS.between(postDate, LocalDate.now());
+            if (months <= 3)  return 1.0;
+            if (months <= 6)  return 0.8;
+            if (months <= 12) return 0.5;
+            return 0.1;
+        } catch (Exception e) {
+            return 0.1;
+        }
+    }
+
+    /** 긍정 키워드 카운트 — 5개 블로그 description 분석 */
+    private int countPositiveKeywords(List<String> descriptions) {
+        if (descriptions == null || descriptions.isEmpty()) return 0;
+        List<String> keywords = Arrays.asList(
+                "추천", "강추", "맛있", "친절", "깨끗", "예쁘", "분위기",
+                "재방문", "만족", "훌륭", "편안", "최고", "좋아", "좋았"
+        );
+        String combined = String.join(" ", descriptions).toLowerCase();
+        return (int) keywords.stream().filter(combined::contains).count();
+    }
+
     /** 네이버 지역 검색 API 이미지 보강 */
     public void enrichImageFromNaver(String imageUrl) {
         this.imageUrl = imageUrl;
     }
 
-    /** 배치 Upsert — 공공데이터 + Kakao 교차검증 결과 반영 */
+    /** 배치 Upsert — 공공데이터 + Kakao/Naver 교차검증 결과 반영 */
     public void upsertFromBatch(String title, String address, String addr2,
                                 Double latitude, Double longitude,
                                 Point geom, String category, String imageUrl, String phone,
                                 String overview, String homepage,
                                 String chkPetInside, String accomCountPet,
-                                String petTurnAdroose, boolean isVerified) {
+                                String petTurnAdroose, boolean isVerified, String kakaoId) {
         this.title = title;
         this.address = address;
         this.addr2 = addr2;
@@ -173,5 +254,6 @@ public class Place {
         this.accomCountPet = accomCountPet;
         this.petTurnAdroose = petTurnAdroose;
         this.isVerified = isVerified;
+        if (kakaoId != null) this.kakaoId = kakaoId;
     }
 }

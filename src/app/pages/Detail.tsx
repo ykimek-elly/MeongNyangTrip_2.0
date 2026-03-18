@@ -179,10 +179,15 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 <span className="text-xs font-bold text-gray-900">{place.rating.toFixed(1)}</span>
                 <span className="text-xs text-gray-400">({place.reviewCount}개 리뷰)</span>
               </div>
+            ) : place.aiRating ? (
+              <div className="flex items-center gap-1.5">
+                <Star size={14} className="fill-[#008BFF] text-[#008BFF]" />
+                <span className="text-xs font-bold text-gray-900">{place.aiRating.toFixed(1)}</span>
+                <span className="text-[10px] text-gray-400">[AI 추천]</span>
+              </div>
             ) : (
               <div className="flex items-center gap-1.5">
-                <Star size={14} className="fill-gray-300 text-gray-300" />
-                <span className="text-xs font-bold text-gray-400">리뷰없음</span>
+                <span className="text-xs text-gray-400">🐾 첫 리뷰를 남겨주세요!</span>
               </div>
             )}
           </div>

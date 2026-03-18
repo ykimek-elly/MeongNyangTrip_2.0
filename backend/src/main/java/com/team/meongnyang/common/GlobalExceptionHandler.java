@@ -70,8 +70,9 @@ public class GlobalExceptionHandler {
     /** 그 외 모든 예외 */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+        // TEMP DEBUG
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.error(500, "서버 내부 오류가 발생했습니다."));
+            .body(ApiResponse.error(500, e.getClass().getSimpleName() + ": " + e.getMessage()));
     }
 }

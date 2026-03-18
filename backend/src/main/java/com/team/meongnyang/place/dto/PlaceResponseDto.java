@@ -1,5 +1,7 @@
 package com.team.meongnyang.place.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.team.meongnyang.place.entity.Place;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,10 +11,19 @@ import java.time.LocalDateTime;
 /**
  * 장소 응답 DTO.
  * Entity의 내부 구조를 직접 노출하지 않고, 필요한 데이터만 가공하여 반환한다.
+ *
+ * @JsonDeserialize/@JsonPOJOBuilder: Redis 캐시 역직렬화 시 Lombok Builder를 사용하도록 지시.
+ * @Builder만 있을 경우 Jackson이 기본 생성자를 찾지 못해 500 에러 발생.
  */
 @Getter
 @Builder
+@JsonDeserialize(builder = PlaceResponseDto.PlaceResponseDtoBuilder.class)
 public class PlaceResponseDto {
+
+    @JsonPOJOBuilder(withPrefix = "")
+    public static class PlaceResponseDtoBuilder {
+        // Lombok이 내용을 채워줌 — Jackson은 이 Builder를 역직렬화에 사용
+    }
 
     private Long id;
     private String title;
@@ -32,6 +43,7 @@ public class PlaceResponseDto {
     private String accomCountPet;
     private String petTurnAdroose;
     private String homepage;
+    private Double aiRating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -56,6 +68,7 @@ public class PlaceResponseDto {
             .accomCountPet(place.getAccomCountPet())
             .petTurnAdroose(place.getPetTurnAdroose())
             .homepage(place.getHomepage())
+            .aiRating(place.getAiRating())
             .createdAt(place.getCreatedAt())
             .updatedAt(place.getUpdatedAt())
             .build();

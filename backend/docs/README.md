@@ -28,28 +28,43 @@
 사용자에게는 자연어 설명을 제공할 수 있습니다.
 
 ```mermaid
-flowchart TD
-    G --> H[점수 계산 및 정렬]
-    H --> I[Top 추천 장소 선정]
+flowchart LR
+    A[사용자 요청 또는 스케줄러 실행] --> B[사용자 정보 조회]
+    B --> C[반려견 정보 조회]
+    C --> D[날씨 조회]
 
-    I --> J[추천 결과 Redis 저장]
+    D --> D1{Weather Cache HIT?}
+    D1 -- Yes --> D2[캐시된 WeatherContext 반환]
+    D1 -- No --> D3[외부 날씨 API 호출]
+    D3 --> D4[WeatherContext 생성]
+    D4 --> D5[Weather Redis 저장]
+    D2 --> E[장소 후보 조회]
+    D5 --> E
 
-    I --> K[RAG Context 생성]
-    K --> L[Gemini 호출]
+    E --> F[후보 장소 1차 필터링]
+    F --> G[점수 계산 및 정렬]
+    G --> H[Top 추천 장소 선정]
+    H --> I[추천 결과 Redis 저장]
 
-    L --> L1{Gemini Cache HIT?}
-    L1 -- Yes --> L2[Cached AI 응답 반환]
-    L1 -- No --> L3[Gemini 응답 생성]
-    L3 --> L4[Gemini Cache 저장]
+    H --> J[RAG Context 생성]
+    J --> K[Gemini 호출]
 
-    L2 --> M[AI 로그 저장]
-    L4 --> M
+    K --> K1{Gemini Cache HIT?}
+    K1 -- Yes --> K2[캐시된 AI 응답 반환]
+    K1 -- No --> K3[Gemini 응답 생성]
+    K3 --> K4[Gemini Cache 저장]
 
-    J --> N[최종 추천 결과 반환]
-    M --> N
+    K2 --> L[AI 로그 저장]
+    K4 --> L
 
-    N --> O[카카오 알림 발송]
+    I --> M[최종 추천 결과 구성]
+    L --> M
+
+    M --> N{알림 발송 필요?}
+    N -- Yes --> O[카카오 알림 발송]
     O --> P[알림 로그 저장]
+    N -- No --> Q[응답 반환]
+    P --> Q
 ```
 
 

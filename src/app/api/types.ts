@@ -46,6 +46,7 @@ export interface AuthResponseDto {
   userId: number;
   email: string;
   nickname: string;
+  profileImage?: string;
 }
 
 /**

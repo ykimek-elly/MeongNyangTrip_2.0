@@ -34,8 +34,32 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
+  # OAuth2 소셜 로그인
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope: email, profile
+          kakao:
+            client-id: ${KAKAO_OAUTH_CLIENT_ID:}
+            client-secret: ${KAKAO_OAUTH_CLIENT_SECRET:}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: profile_nickname, profile_image, account_email
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
 server:
   port: ${SERVER_PORT:8080}
+
 
 # 한국관광공사 반려동물 동반여행 API
 pet-tour:
@@ -53,21 +77,16 @@ google:
     base-url: https://places.googleapis.com/v1
 
 # 네이버 지역 검색 API (이미지 보강 — imageUrl 없는 장소 대상)
-# 발급: https://developers.naver.com → 앱 등록 → "검색 > 지역" 권한 추가
 naver:
   local:
     client-id: ${NAVER_LOCAL_CLIENT_ID:}
     client-secret: ${NAVER_LOCAL_CLIENT_SECRET:}
 
-# JWT 설정 (팀원 A 작업용)
+# JWT 설정
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-change-in-production}
   expiration: ${JWT_EXPIRATION:3600000}
 
-# ==========================================
-# 📌 팀원 별 추가 설정 가이드 (작업 전 확인!)
-# ==========================================
-# TODO (팀원 A): 배포 시 application-prod.yml 파일 분리 및 AWS S3 설정 추가 필요
-# TODO (팀원 B): Redis 캐시 만료 시간 및 Connection Pool 세부 설정 필요 시 여기에 추가
-# TODO (팀원 C): Spring AI (Gemini) 연동을 위한 spring.ai.openai.api-key 설정 추가 필요
-
+# 소셜 로그인 성공 후 FE 리다이렉트 URL
+oauth2:
+  redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth2/callback}

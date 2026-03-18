@@ -1,5 +1,7 @@
 package com.team.meongnyang.security;
 
+import com.team.meongnyang.security.oauth2.CustomOAuth2UserService;
+import com.team.meongnyang.security.oauth2.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +27,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -32,7 +36,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/v1/auth/**",
@@ -42,6 +46,8 @@ public class SecurityConfig {
                     "/api/v1/admin/**",
                     "/api/v1/pets/**",
                     "/api/places/**",
+                    "/oauth2/**",
+                    "/login/oauth2/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**"
                 ).permitAll()
@@ -50,6 +56,14 @@ public class SecurityConfig {
                     "/api/v1/checkins/**"
                 ).authenticated()
                 .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService))
+                .successHandler(oAuth2SuccessHandler)
+                .failureHandler((request, response, exception) ->
+                    response.sendRedirect("http://localhost:5173/login?error=oauth2")
+                )
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

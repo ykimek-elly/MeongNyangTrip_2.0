@@ -59,7 +59,7 @@ jobs:
               "fi",
 
               "echo === 프론트엔드 빌드 ===",
-              "if docker build --build-arg VITE_KAKAO_MAP_API_KEY=${{ secrets.VITE_KAKAO_MAP_API_KEY }} --build-arg VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }} --build-arg VITE_API_BASE_URL=/api/v1 -t meongnyang-frontend-new -f /home/ec2-user/MeongNyangTrip_2.0/Dockerfile.frontend /home/ec2-user/MeongNyangTrip_2.0; then",
+              "if docker build --no-cache --build-arg VITE_KAKAO_MAP_API_KEY=${{ secrets.VITE_KAKAO_MAP_API_KEY }} --build-arg VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }} --build-arg VITE_API_BASE_URL=/api/v1 -t meongnyang-frontend-new -f /home/ec2-user/MeongNyangTrip_2.0/Dockerfile.frontend /home/ec2-user/MeongNyangTrip_2.0; then",
               "  docker tag meongnyang-frontend-new meongnyang-frontend",
               "  docker stop meongnyang-frontend || true",
               "  docker rm meongnyang-frontend || true",

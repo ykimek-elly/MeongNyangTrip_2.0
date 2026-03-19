@@ -22,7 +22,7 @@ import { RouteErrorFallback } from './components/ErrorBoundary';
 import { BottomNav } from './components/BottomNav';
 import { AIChat } from './components/AIChat';
 import { useAppStore } from './store/useAppStore';
-import { Leaf, Sun } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 
 /** 공통 네비게이션 핸들러 — 페이지 이동 로직 통합 */
 function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boolean) {
@@ -98,13 +98,7 @@ function RootAdapter() {
             </div>
             
             <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end">
-                <div className="flex items-center gap-1 ml-[0px] mr-[10px] my-[0px]">
-                  <Sun size={14} className="text-orange-400 fill-orange-400" />
-                  <span className="text-sm font-bold text-gray-800">23°C</span>
-                  <span className="text-[10px] text-primary font-medium tracking-tight ml-1 -order-1">산책하기 좋은 날씨예요!</span>
-                </div>
-              </div>
+              {/* 날씨 섹션 — WEATHER_API_KEY 연동 전까지 숨김 (팀원C 연동 후 복구) */}
 
               <div className="flex items-center gap-2">
                 {isLoggedIn && (

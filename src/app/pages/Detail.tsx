@@ -64,6 +64,17 @@ export function Detail({ id, onNavigate }: DetailProps) {
   // 반려동물 정책 카드 표시 여부
   const hasPetPolicy = place.chkPetInside || place.accomCountPet?.trim() || place.petTurnAdroose || place.tags;
 
+  // 하이라이트 3가지 (Airbnb 방식, DB 필드 기반 자동 생성)
+  const highlights: string[] = [];
+  if (place.chkPetInside === 'Y') highlights.push('실내 반려동물 동반 가능');
+  else if (place.chkPetInside === 'N') highlights.push('전용 야외 공간 동반 가능');
+  if (place.tags?.toLowerCase().includes('대형견')) highlights.push('대형견 환영');
+  else if (place.tags?.toLowerCase().includes('소형견')) highlights.push('소형견 동반 가능');
+  if (place.phone || place.homepage) highlights.push('문의 및 예약 가능');
+  if (place.aiRating && place.aiRating >= 4.0) highlights.push('AI 추천 우수 장소');
+  if (reviewCount > 0) highlights.push(`${reviewCount}개의 실방문 리뷰`);
+  if (place.overview) highlights.push('상세 소개 정보 제공');
+
   // 소개 태그: place.tags(DB) 우선, 없으면 카테고리 기반 1개
   const descTags: string[] = place.tags
     ? place.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
@@ -141,8 +152,8 @@ export function Detail({ id, onNavigate }: DetailProps) {
       </header>
 
       <div className="max-w-[600px] mx-auto">
-        {/* 메인 이미지 */}
-        <div className="w-full aspect-[4/3] overflow-hidden">
+        {/* 메인 이미지 — 16:9 */}
+        <div className="w-full aspect-video overflow-hidden">
           <PlaceImage
             imageUrl={place.imageUrl ?? (place as any).img ?? null}
             category={place.category}
@@ -174,6 +185,22 @@ export function Detail({ id, onNavigate }: DetailProps) {
               </div>
             )}
           </div>
+
+          {/* 하이라이트 */}
+          {highlights.length > 0 && (
+            <div className="py-4 border-b border-gray-100">
+              <div className="space-y-2">
+                {highlights.slice(0, 3).map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2.5">
+                    <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <span className="text-white text-[10px] font-bold">✓</span>
+                    </div>
+                    <span className="text-[13px] text-gray-700">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 반려동물 정책 카드 */}
           {hasPetPolicy && (
@@ -372,25 +399,34 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 ) : (
                   reviews.map((review) => (
                     <div key={review.reviewId} className="pb-4 border-b border-gray-50 last:border-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-bold text-gray-800">{review.nickname}</span>
-                        <span className="text-[11px] text-gray-400">
-                          {review.createdAt ? review.createdAt.slice(0, 10).replace(/-/g, '.') : ''}
-                        </span>
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-[10px] font-bold text-primary">
+                            {review.nickname?.charAt(0) ?? '?'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-gray-800">{review.nickname}</span>
+                            <span className="text-[11px] text-gray-400">
+                              {review.createdAt ? review.createdAt.slice(0, 10).replace(/-/g, '.') : ''}
+                            </span>
+                          </div>
+                          <div className="flex gap-0.5 mb-1.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={12}
+                                className={star <= review.rating
+                                  ? "text-brand-point fill-brand-point"
+                                  : "text-gray-200"
+                                }
+                              />
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-600 leading-relaxed">{review.content}</p>
+                        </div>
                       </div>
-                      <div className="flex gap-0.5 mb-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            size={12}
-                            className={star <= review.rating
-                              ? "text-brand-point fill-brand-point"
-                              : "text-gray-200"
-                            }
-                          />
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-600 leading-relaxed">{review.content}</p>
                     </div>
                   ))
                 )}

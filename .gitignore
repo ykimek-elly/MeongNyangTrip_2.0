@@ -33,3 +33,12 @@ pnpm-debug.log*
 
 # Claude IDE/Tool Files
 .claude/
+/.metadata/
+
+# Eclipse/STS IDE
+.project
+.settings/
+backend/.metadata/
+
+# Zip files
+*.zip

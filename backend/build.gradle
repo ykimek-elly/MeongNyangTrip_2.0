@@ -33,6 +33,7 @@ dependencies {
 
 	// Security & JWT (팀원 A)
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
@@ -55,6 +56,9 @@ dependencies {
 
 	// Database
 	runtimeOnly 'org.postgresql:postgresql'
+
+	// .env 파일 자동 로드
+	implementation 'me.paulschwarz:spring-dotenv:3.0.0'
 
 	// Dev & Test
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'

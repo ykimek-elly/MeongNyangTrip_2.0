@@ -1,5 +1,19 @@
 import api from './axios';
 
+export interface PendingPlaceDto {
+  id: number;
+  title: string;
+  address: string;
+  addr2: string | null;
+  latitude: number;
+  longitude: number;
+  category: string;
+  imageUrl: string | null;
+  phone: string | null;
+  pendingReason: string | null;  // JSON: {similarity, sourceTitle, kakaoTitle, kakaoLat, kakaoLng}
+  kakaoMapUrl: string;
+}
+
 /**
  * 관리자 배치 API.
  * 백엔드 PlaceBatchController와 매핑.
@@ -20,4 +34,21 @@ export const adminApi = {
 
   /** 깨진 이미지(SNS CDN / 뉴스) 초기화 + 재보강 */
   runFixBrokenImagesBatch: () => api.post('/admin/batch/fix-broken-images'),
+
+  // ── 장소 검토 큐 ──────────────────────────────────────────────────────────
+  /** 보류 장소 목록 조회 (유사도 50~79%) */
+  getPendingPlaces: () =>
+    api.get<PendingPlaceDto[]>('/admin/places/pending').then(r => r.data),
+
+  /** 승인 — 좌표 수정 옵션 포함 */
+  approvePlace: (id: number, coords?: { lat: number; lng: number }) =>
+    api.post<PendingPlaceDto>(`/admin/places/${id}/approve`, coords ?? {}).then(r => r.data),
+
+  /** 거절 */
+  rejectPlace: (id: number) =>
+    api.post(`/admin/places/${id}/reject`),
+
+  /** 수동 수정 후 승인 */
+  manualApprovePlace: (id: number, data: { title?: string; address?: string; lat?: number; lng?: number }) =>
+    api.put<PendingPlaceDto>(`/admin/places/${id}/manual`, data).then(r => r.data),
 };

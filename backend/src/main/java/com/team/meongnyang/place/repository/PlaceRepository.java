@@ -1,6 +1,7 @@
 package com.team.meongnyang.place.repository;
 
 import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.place.entity.PlaceStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -54,6 +55,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     /** AI 별점 재계산 대상 조회 — aiRating이 null인 장소 (폐업 제외) */
     @Query("SELECT p FROM Place p WHERE p.aiRating IS NULL AND (p.tags IS NULL OR p.tags NOT LIKE '%폐업%')")
     List<Place> findByAiRatingIsNull();
+
+    /** 상태별 장소 조회 — PENDING(관리자 검토 큐) 등 */
+    List<Place> findByStatusOrderByCreatedAtDesc(PlaceStatus status);
 
     /** 카테고리별 장소 목록 조회 */
     List<Place> findByCategory(String category);

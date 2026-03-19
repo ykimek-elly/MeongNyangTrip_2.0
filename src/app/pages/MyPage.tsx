@@ -3,8 +3,8 @@ import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield
 import { places } from '../data/places';
 import { useAppStore } from '../store/useAppStore';
 import { useFeedStore } from '../store/useFeedStore';
+import { useDMStore } from '../store/useDMStore';
 import { PetProfileForm } from '../components/PetProfileForm';
-import { getAgeGroupLabel } from '../data/pet-care-helpers';
 import type { PetInfo } from '../store/useAppStore';
 import { AnimatePresence } from 'motion/react';
 import { motion } from 'motion/react';
@@ -14,8 +14,9 @@ interface MyPageProps {
 }
 
 export function MyPage({ onNavigate }: MyPageProps) {
-  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet } = useAppStore();
+  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet, isAdmin, username } = useAppStore();
   const { posts } = useFeedStore();
+  const { conversations, getUnreadTotal } = useDMStore();
 
   const [showPetForm, setShowPetForm] = React.useState(false);
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
@@ -24,21 +25,17 @@ export function MyPage({ onNavigate }: MyPageProps) {
 
   const wishItems = places.filter(p => wishlist.includes(p.id));
 
-  // Admin overview stats
-  const totalLikes = posts.reduce((acc, p) => acc + p.likes, 0);
-  const totalComments = posts.reduce((acc, p) => acc + p.comments, 0);
-  const totalDMs = posts.reduce((acc, p) => acc + p.dms, 0);
-  const reportedPosts = posts.filter(p => p.isReported).length;
-  const hiddenPosts = posts.filter(p => p.isHidden).length;
-  const unreadDMs = posts.reduce((acc, p) => acc + p.dmList.filter(d => !d.isRead).length, 0);
+  // 나의 활동 통계 (일반 유저용)
+  const myTotalLikes    = posts.reduce((acc, p) => acc + p.likes, 0);
+  const myTotalComments = posts.reduce((acc, p) => acc + p.comments, 0);
+  const dmUnreadCount   = getUnreadTotal(username);
+  const dmTotalCount    = conversations.reduce((acc, c) => acc + c.messages.filter(m => m.from !== username).length, 0);
 
-  const overviewStats = [
-    { label: '게시글', value: posts.length, icon: ImageIcon, color: 'bg-blue-50 text-blue-600' },
-    { label: '좋아요', value: totalLikes, icon: Heart, color: 'bg-pink-50 text-primary' },
-    { label: '댓글', value: totalComments, icon: MessageCircle, color: 'bg-green-50 text-green-600' },
-    { label: 'DM', value: totalDMs, icon: Send, color: 'bg-purple-50 text-purple-600' },
-    { label: '신고', value: reportedPosts, icon: AlertTriangle, color: 'bg-red-50 text-red-600' },
-    { label: '숨김', value: hiddenPosts, icon: EyeOff, color: 'bg-gray-100 text-gray-600' },
+  const myStats = [
+    { label: '게시글',  value: posts.length,    icon: ImageIcon,    color: 'bg-blue-50 text-blue-600',   page: null          },
+    { label: '받은 좋아요', value: myTotalLikes,   icon: Heart,        color: 'bg-pink-50 text-primary',    page: null          },
+    { label: '댓글',   value: myTotalComments, icon: MessageCircle, color: 'bg-green-50 text-green-600', page: null          },
+    { label: 'DM',     value: dmTotalCount,    icon: Send,         color: 'bg-purple-50 text-purple-600', page: 'dm', unread: dmUnreadCount },
   ];
 
   const handlePetSubmit = (petData: PetInfo) => {
@@ -108,7 +105,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
             </div>
             <div>
               <p className="text-sm font-bold text-gray-500">반려동물을 등록해주세요</p>
-              <p className="text-xs text-gray-400 mt-0.5">등록하면 맞춤 케어와 알림을 받을 수 있어요!</p>
+              <p className="text-xs text-gray-400 mt-0.5">등록하면 맞춤 알림을 받을 수 있어요!</p>
             </div>
           </div>
         ) : (
@@ -143,9 +140,6 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="font-bold text-gray-900">{pet.name}</span>
-                    <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-medium">
-                      {getAgeGroupLabel(pet.age)}
-                    </span>
                   </div>
                   <p className="text-xs text-gray-500">
                     {pet.breed} · {pet.age}살 · {pet.gender}
@@ -270,50 +264,57 @@ export function MyPage({ onNavigate }: MyPageProps) {
         </div>
       </div>
 
-      {/* Admin Overview Summary */}
+      {/* 나의 활동 / 관리자 센터 */}
       <div className="px-6 mb-8">
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-                <Shield size={14} className="text-white" />
+        {isAdmin ? (
+          /* 관리자 전용: 관리자 센터 바로가기 */
+          <button
+            onClick={() => onNavigate('admin')}
+            className="w-full flex items-center justify-between p-4 bg-gray-900 rounded-3xl shadow-sm active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center">
+                <Shield size={20} className="text-primary" />
               </div>
-              <div>
-                <h6 className="text-sm font-bold text-gray-900">관리자 현황</h6>
-                <span className="text-[10px] text-gray-400">라운지 전체 현황 요약</span>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigate('admin')}
-              className="flex items-center gap-0.5 text-xs font-bold text-primary active:opacity-70 transition-opacity"
-            >
-              상세보기 <ChevronRight size={14} />
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-2 px-4 py-3">
-            {overviewStats.map((s, i) => (
-              <div key={i} className="bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100">
-                <div className={`w-7 h-7 rounded-full ${s.color} flex items-center justify-center mx-auto mb-1.5`}>
-                  <s.icon size={13} />
-                </div>
-                <div className="text-base font-bold text-gray-800">{s.value}</div>
-                <div className="text-[10px] text-gray-500 font-medium">{s.label}</div>
-              </div>
-            ))}
-          </div>
-          {(reportedPosts > 0 || unreadDMs > 0) && (
-            <div className="mx-4 mb-4 bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2.5">
-              <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
-              <div>
-                <h6 className="text-xs font-bold text-red-700">관리자 알림</h6>
-                <div className="text-[11px] text-red-600 space-y-0.5 mt-0.5">
-                  {reportedPosts > 0 && <p>신고된 게시글 {reportedPosts}건</p>}
-                  {unreadDMs > 0 && <p>읽지 않은 DM {unreadDMs}건</p>}
-                </div>
+              <div className="text-left">
+                <div className="text-sm font-bold text-white">관리자 센터</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">회원·장소·신고·통계 관리</div>
               </div>
             </div>
-          )}
-        </div>
+            <ChevronRight size={18} className="text-gray-500" />
+          </button>
+        ) : (
+          /* 일반 유저: 나의 활동 통계 */
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-4 pt-4 pb-2">
+              <h6 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <ImageIcon size={15} className="text-primary" /> 나의 활동
+              </h6>
+            </div>
+            <div className="grid grid-cols-4 gap-2 px-4 pb-4">
+              {myStats.map((s, i) => (
+                <div
+                  key={i}
+                  onClick={s.page ? () => onNavigate(s.page!) : undefined}
+                  className={`bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100 relative ${
+                    s.page ? 'cursor-pointer active:scale-95 transition-transform hover:bg-gray-100' : ''
+                  }`}
+                >
+                  <div className={`w-7 h-7 rounded-full ${s.color} flex items-center justify-center mx-auto mb-1.5 relative`}>
+                    <s.icon size={13} />
+                    {s.unread ? (
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                        {s.unread}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-base font-bold text-gray-800">{s.value}</div>
+                  <div className="text-[10px] text-gray-500 font-medium">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Wishlist */}

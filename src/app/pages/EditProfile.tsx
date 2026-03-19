@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { authApi } from '../api/authApi';
 
 interface EditProfileProps {
   onNavigate: (page: string) => void;
 }
 
 export function EditProfile({ onNavigate }: EditProfileProps) {
-  const { username, email, updateProfile } = useAppStore();
+  const { username, email, updateProfile, logout } = useAppStore();
 
   // 폼 상태
   const [newNickname, setNewNickname] = useState(username);
-  const [newEmail, setNewEmail] = useState(email);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,36 +24,75 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
   const [saved, setSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
 
+  // 로딩 상태
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [isPasswordChanging, setIsPasswordChanging] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // 에러 메시지
+  const [profileError, setProfileError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  // 회원탈퇴 확인 모달
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   // 유효성 검사
   const nicknameChanged = newNickname.trim() !== username;
-  const emailChanged = newEmail.trim() !== email;
-  const profileChanged = (nicknameChanged || emailChanged) && newNickname.trim().length > 0;
+  const profileChanged = nicknameChanged && newNickname.trim().length >= 2;
 
   const passwordValid = newPassword.length >= 6;
   const passwordMatch = newPassword === confirmPassword;
   const canChangePassword = currentPassword.length > 0 && passwordValid && passwordMatch;
 
   // 프로필 저장
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!profileChanged) return;
-    // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE 닉네임/이메일 (PostgreSQL)
-    updateProfile({
-      username: newNickname.trim(),
-      email: newEmail.trim(),
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setIsProfileSaving(true);
+    setProfileError('');
+    try {
+      await authApi.updateProfile(newNickname.trim());
+      updateProfile({ username: newNickname.trim() });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: any) {
+      setProfileError(err.response?.data?.message || err.message || '저장에 실패했습니다.');
+    } finally {
+      setIsProfileSaving(false);
+    }
   };
 
   // 비밀번호 변경
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (!canChangePassword) return;
-    // TODO: [DB 연동] PUT /api/auth/password → Spring Security 비밀번호 변경 (BCrypt 암호화)
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setPasswordSaved(true);
-    setTimeout(() => setPasswordSaved(false), 2000);
+    setIsPasswordChanging(true);
+    setPasswordError('');
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordSaved(true);
+      setTimeout(() => setPasswordSaved(false), 2000);
+    } catch (err: any) {
+      setPasswordError(err.response?.data?.message || err.message || '비밀번호 변경에 실패했습니다.');
+    } finally {
+      setIsPasswordChanging(false);
+    }
+  };
+
+  // 회원 탈퇴
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await authApi.deleteAccount();
+      logout();
+      onNavigate('home');
+    } catch (err: any) {
+      alert(err.response?.data?.message || '회원 탈퇴에 실패했습니다.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   return (
@@ -96,41 +135,53 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
                   className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
                 />
               </div>
-              {newNickname.trim().length === 0 && (
+              {newNickname.trim().length > 0 && newNickname.trim().length < 2 && (
                 <p className="text-xs text-destructive mt-1 ml-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  닉네임은 필수입니다
+                  닉네임은 2자 이상이어야 합니다
                 </p>
               )}
             </div>
 
-            {/* 이메일 */}
+            {/* 이메일 (읽기 전용) */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">이메일</label>
               <div className="relative">
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="example@email.com"
-                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
+                  value={email}
+                  readOnly
+                  className="w-full pl-11 pr-4 py-3.5 bg-gray-100 border border-gray-200 rounded-2xl outline-none text-sm text-gray-500 cursor-not-allowed"
                 />
               </div>
+              <p className="text-[10px] text-gray-400 mt-1 ml-1">이메일은 변경할 수 없습니다</p>
             </div>
           </div>
+
+          {profileError && (
+            <p className="text-xs text-destructive mt-3 flex items-center gap-1">
+              <AlertCircle size={12} />
+              {profileError}
+            </p>
+          )}
 
           {/* 저장 버튼 */}
           <button
             onClick={handleSaveProfile}
-            disabled={!profileChanged}
+            disabled={!profileChanged || isProfileSaving}
             className={`w-full mt-5 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] ${
-              profileChanged
+              profileChanged && !isProfileSaving
                 ? 'bg-primary text-white shadow-md hover:bg-primary/90'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {saved ? (
+            {isProfileSaving ? (
+              <span className="flex items-center justify-center gap-1.5">
+                <Loader2 size={16} className="animate-spin" />
+                저장 중...
+              </span>
+            ) : saved ? (
               <span className="flex items-center justify-center gap-1.5">
                 <Check size={16} />
                 저장되었습니다!
@@ -230,17 +281,29 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
             </div>
           </div>
 
+          {passwordError && (
+            <p className="text-xs text-destructive mt-3 flex items-center gap-1">
+              <AlertCircle size={12} />
+              {passwordError}
+            </p>
+          )}
+
           {/* 비밀번호 변경 버튼 */}
           <button
             onClick={handleChangePassword}
-            disabled={!canChangePassword}
+            disabled={!canChangePassword || isPasswordChanging}
             className={`w-full mt-5 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] ${
-              canChangePassword
+              canChangePassword && !isPasswordChanging
                 ? 'bg-gray-900 text-white shadow-md hover:bg-gray-800'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {passwordSaved ? (
+            {isPasswordChanging ? (
+              <span className="flex items-center justify-center gap-1.5">
+                <Loader2 size={16} className="animate-spin" />
+                변경 중...
+              </span>
+            ) : passwordSaved ? (
               <span className="flex items-center justify-center gap-1.5">
                 <Check size={16} />
                 변경되었습니다!
@@ -270,12 +333,52 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
           <p className="text-xs text-gray-500 mb-4">
             계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
           </p>
-          <button className="w-full py-3 rounded-2xl border border-red-200 text-destructive text-sm font-bold hover:bg-red-50 transition-colors active:scale-[0.98]">
-            {/* TODO: [DB 연동] 계정 삭제 확인 모달 + DELETE /api/auth/account → Spring Security 회원 탈퇴 (JWT 무효화 + 데이터 삭제) */}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full py-3 rounded-2xl border border-red-200 text-destructive text-sm font-bold hover:bg-red-50 transition-colors active:scale-[0.98]"
+          >
             회원 탈퇴
           </button>
         </motion.section>
       </main>
+
+      {/* 회원탈퇴 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl"
+          >
+            <h3 className="font-bold text-gray-800 text-lg mb-2">정말 탈퇴하시겠어요?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              계정과 모든 데이터가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors disabled:opacity-60"
+              >
+                {isDeleting ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Loader2 size={14} className="animate-spin" />
+                    처리 중...
+                  </span>
+                ) : (
+                  '탈퇴하기'
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

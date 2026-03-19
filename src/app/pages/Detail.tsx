@@ -270,35 +270,9 @@ export function Detail({ id, onNavigate }: DetailProps) {
           {/* 오시는길 */}
           <div className="py-4 border-b border-gray-100">
             <h3 className="text-[15px] font-bold text-gray-900 mb-3">오시는길</h3>
-            <div className="flex items-start gap-2 mb-3">
+            <div className="flex items-start gap-2">
               <MapPin size={14} className="text-gray-400 shrink-0 mt-0.5" />
               <span className="text-xs text-gray-600 leading-relaxed">{extra.address}</span>
-            </div>
-            <div className="flex gap-2">
-              <a
-                href={mapLinks.kakao}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 text-center py-2 text-[11px] font-bold rounded-lg bg-[#FEE500] text-gray-900 active:scale-95 transition-transform"
-              >
-                카카오맵
-              </a>
-              <a
-                href={mapLinks.naver}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 text-center py-2 text-[11px] font-bold rounded-lg bg-[#03C75A] text-white active:scale-95 transition-transform"
-              >
-                네이버맵
-              </a>
-              <a
-                href={mapLinks.google}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 text-center py-2 text-[11px] font-bold rounded-lg bg-[#4285F4] text-white active:scale-95 transition-transform"
-              >
-                구글맵
-              </a>
             </div>
           </div>
 
@@ -449,14 +423,12 @@ export function Detail({ id, onNavigate }: DetailProps) {
           >
             {isWishlisted ? '❤️ 찜 완료' : '🤍 찜하기'}
           </button>
-          <a
-            href={mapLinks.kakao}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => onNavigate?.('map', { placeId: id })}
             className="flex-1 py-3.5 rounded-xl text-sm font-bold bg-primary text-white text-center hover:bg-primary/90 active:scale-[0.98] transition-all"
           >
             🗺 길찾기
-          </a>
+          </button>
         </div>
       </div>
 

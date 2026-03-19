@@ -25,6 +25,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
   const [filteredPlaces, setFilteredPlaces] = useState(places);
   const [displayCount, setDisplayCount] = useState(50);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const listContainerRef = useRef<HTMLDivElement>(null);
   const [searchMsg, setSearchMsg] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [sortKey, setSortKey] = useState<SortKey>('latest');
@@ -76,7 +77,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
           setDisplayCount(prev => Math.min(prev + 50, filteredPlaces.length));
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, root: listContainerRef.current }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -133,11 +134,11 @@ export function List({ onNavigate, initialParams }: ListProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-white pb-24"
+      className="flex-1 flex flex-col bg-white min-h-0"
     >
       {/* 검색 헤더 */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
-        <div className="flex items-center gap-2 px-4 py-2.5">
+      <div className="flex-shrink-0 z-10 bg-white border-b border-gray-100">
+        <div className="flex items-center gap-2 px-4 py-2">
           <button
             onClick={() => onNavigate('home')}
             className="p-1.5 -ml-1 text-gray-700 hover:bg-gray-100 rounded-full shrink-0"
@@ -169,7 +170,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
         </div>
 
         {/* 1행: 필터 탭 */}
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
+        <div className="grid grid-cols-4 gap-2 px-4 pb-2">
           <FilterButton label="전체" active={activeFilter === 'all'} onClick={() => handleFilterClick('all')} />
           <FilterButton label="🏞️ 멍냥플레이스" active={activeFilter === 'PLACE'} onClick={() => handleFilterClick('PLACE')} />
           <FilterButton label="🏡 멍냥스테이" active={activeFilter === 'STAY'} onClick={() => handleFilterClick('STAY')} />
@@ -177,7 +178,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
         </div>
 
         {/* 2행: 정렬 + 카운트 + 뷰토글 */}
-        <div className="flex items-center justify-between px-4 pb-2.5">
+        <div className="flex items-center justify-between px-4 pb-2">
           <div className="relative">
             <button
               onClick={() => setShowSortMenu(prev => !prev)}
@@ -213,6 +214,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
       </div>
 
       {/* 목록 컨테이너 */}
+      <div ref={listContainerRef} className="flex-1 overflow-y-auto pb-24 min-h-0">
       <div className={viewMode === 'list' ? "px-4 py-4 space-y-3" : "px-4 py-4 grid grid-cols-2 gap-3"}>
         {filteredPlaces.length === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-400 opacity-75">
@@ -303,6 +305,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
           </div>
         )}
       </div>
+      </div>
     </motion.div>
   );
 }
@@ -312,7 +315,7 @@ function FilterButton({ label, active, onClick }: { label: string, active: boole
   return (
     <button
       onClick={onClick}
-      className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+      className={`w-full text-center px-1 py-1.5 rounded-full text-[10px] font-medium transition-colors ${
         active 
           ? 'bg-primary text-white shadow-md shadow-primary/20' 
           : 'bg-gray-100 text-gray-500 border border-transparent hover:bg-gray-200'

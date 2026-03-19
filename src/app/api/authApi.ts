@@ -8,6 +8,7 @@ import type { AuthResponseDto } from './types';
  */
 
 const AUTH_BASE = '/auth';
+const USER_BASE = '/users';
 
 export const authApi = {
   /** POST /api/auth/login → JWT 토큰 발급 */
@@ -20,5 +21,20 @@ export const authApi = {
   signup: async (email: string, password: string, nickname: string): Promise<AuthResponseDto> => {
     const { data } = await api.post<AuthResponseDto>(`${AUTH_BASE}/signup`, { email, password, nickname });
     return data;
+  },
+
+  /** PUT /api/v1/users/profile → 닉네임 수정 (JWT 인증 필요) */
+  updateProfile: async (nickname: string): Promise<void> => {
+    await api.put(`${USER_BASE}/profile`, { nickname });
+  },
+
+  /** PUT /api/v1/users/password → 비밀번호 변경 (JWT 인증 필요) */
+  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    await api.put(`${USER_BASE}/password`, { currentPassword, newPassword });
+  },
+
+  /** DELETE /api/v1/users/me → 회원 탈퇴 소프트 딜리트 (JWT 인증 필요) */
+  deleteAccount: async (): Promise<void> => {
+    await api.delete(`${USER_BASE}/me`);
   },
 };

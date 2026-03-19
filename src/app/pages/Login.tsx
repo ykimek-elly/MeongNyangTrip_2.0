@@ -146,7 +146,7 @@ export function Login({ onNavigate }: LoginProps) {
     try {
       const res = await authApi.login(email, password);
       localStorage.setItem('accessToken', res.token);
-      login(res.nickname, res.email, res.userId, res.profileImage);
+      login(res.nickname, res.email, res.userId, res.profileImage, res.role === 'ADMIN');
       onNavigate('home');
     } catch {
       setError('이메일 또는 비밀번호가 올바르지 않습니다.');

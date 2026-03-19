@@ -51,6 +51,10 @@ export interface PetInfo {
   personality?: string;                 // personality, 최대 100자, 선택
   preferredPlace?: string;              // preferred_place, 최대 50자, 선택
   isRepresentative?: boolean;           // is_representative — 알림 수신 대표 동물 (1마리만 true)
+  region?: string;                      // 지역 선택 (시도 + 시군구, 알림 서비스용)
+  activityRadius?: 5 | 15 | 30;        // 활동 반경 (km)
+  preferredCategories?: ('PLACE' | 'STAY' | 'DINING')[];  // 선호 카테고리
+  notifyEnabled?: boolean;              // 맞춤 알림 수신 동의
 }
 
 export interface SavedRoute {
@@ -74,13 +78,14 @@ interface AppState {
   username: string;
   email: string;
   profileImage: string;
+  isAdmin: boolean;        // 관리자 여부 (JWT role 기반, 로그인 시 세팅)
   pets: PetInfo[];                  // 다중 등록 (2026-03-13 확정)
   hasCompletedOnboarding: boolean;
   wishlist: number[];
   savedRoutes: SavedRoute[];
   userLocation: UserLocation;
 
-  login: (username: string, email?: string, userId?: number, profileImage?: string) => void;
+  login: (username: string, email?: string, userId?: number, profileImage?: string, isAdmin?: boolean) => void;
   logout: () => void;
   updateProfile: (data: { username?: string; email?: string }) => void;
   completeOnboarding: () => void;
@@ -107,6 +112,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       isLoggedIn: false,
+      isAdmin: false,
       userId: null,
       username: '게스트',
       email: '',
@@ -120,8 +126,9 @@ export const useAppStore = create<AppState>()(
       isLoadingPlaces: false,
 
       // TODO: [DB 연동] POST /api/auth/login → Step 4에서 JWT 토큰 기반으로 전환 (userId 자동 세팅)
-      login: (username, email, userId, profileImage) => set({
+      login: (username, email, userId, profileImage, isAdmin) => set({
         isLoggedIn: true,
+        isAdmin: isAdmin ?? false,
         username,
         email: email || '',
         userId: userId ?? null,
@@ -129,7 +136,7 @@ export const useAppStore = create<AppState>()(
       }),
 
       // TODO: [DB 연동] POST /api/auth/logout → JWT 토큰 블랙리스트(Redis) 처리 + 클라이언트 토큰 삭제
-      logout: () => set({ isLoggedIn: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
+      logout: () => set({ isLoggedIn: false, isAdmin: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
 
       // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE (PostgreSQL)
       updateProfile: (data) => set((state) => ({

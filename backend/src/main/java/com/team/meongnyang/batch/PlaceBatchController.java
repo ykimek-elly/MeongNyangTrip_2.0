@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
  *   1. POST /api/v1/admin/batch/places          — KTO 수집 + 네이버·카카오 이중검증 + 저장
  *   2. POST /api/v1/admin/batch/culture         — KCISA 수집 + 네이버·카카오 이중검증 + 저장 (kakaoId 중복제거)
  *   3. POST /api/v1/admin/batch/enrich-images   — 이미지 없는 장소 Naver 이미지 보강
- *   4. POST /api/v1/admin/batch/recalculate-ai-rating — AI 별점 계산
+ *   4. POST /api/v1/admin/batch/validate-images — Gemini Vision 이미지 적합성 검증 (부적합 → null화)
+ *   5. POST /api/v1/admin/batch/recalculate-ai-rating — AI 별점 계산
  *
  * [레거시 — 기존 데이터 재처리용]
  *   POST /api/v1/admin/batch/enrich            — isVerified=false 레코드 재검증
@@ -29,6 +30,7 @@ public class PlaceBatchController {
     private final CultureFacilityBatchService cultureFacilityBatchService;
     private final PlaceEnrichBatchService placeEnrichBatchService;
     private final NaverImageEnrichBatchService naverImageEnrichBatchService;
+    private final GeminiImageValidateBatchService geminiImageValidateBatchService;
 
     @PostMapping("/places")
     public ResponseEntity<String> triggerPlaceBatch() {
@@ -74,5 +76,13 @@ public class PlaceBatchController {
         return ResponseEntity.ok(String.format(
                 "깨진 이미지 교체 완료 — 초기화: %d건 / 재보강 성공: %d건 / 이미지없음: %d건 / 전체: %d건",
                 result.get("reset"), result.get("updated"), result.get("noImage"), result.get("total")));
+    }
+
+    @PostMapping("/validate-images")
+    public ResponseEntity<String> triggerValidateImagesBatch() {
+        var result = geminiImageValidateBatchService.runValidateBatch();
+        return ResponseEntity.ok(String.format(
+                "Gemini 이미지 검증 완료 — 적합: %d건 / 부적합(null화): %d건 / 오류: %d건 / 전체: %d건",
+                result.get("validated"), result.get("invalidated"), result.get("error"), result.get("total")));
     }
 }

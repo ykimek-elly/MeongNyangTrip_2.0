@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Heart, Share2, MapPin, Star, ChevronRight,
   Globe, Phone, Dog
@@ -7,37 +7,14 @@ import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { ShareSheet } from '../components/ShareSheet';
 import { PlaceImage } from '../components/PlaceImage';
-
-export interface Review {
-  id: number;
-  author: string;
-  date: string;
-  rating: number;
-  content: string;
-}
+import { reviewApi } from '../api/reviewApi';
+import { ReviewDto } from '../api/types';
 
 const CATEGORY_TAG: Record<string, string> = {
   PLACE: '#반려동물명소',
   STAY: '#반려동물숙박',
   DINING: '#반려동물식당',
 };
-
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: 1,
-    author: "멍냥이맘",
-    date: "2025.07.08",
-    rating: 5,
-    content: "사장님이 친절하시고 반려동물이 뛰어놀기 너무 좋았습니다.",
-  },
-  {
-    id: 2,
-    author: "초코아빠",
-    date: "2025.07.08",
-    rating: 4,
-    content: "주변 공간이 넓어서 자유롭습니다. 간식 자판기가 더 있으면 좋겠습니다.",
-  },
-];
 
 interface DetailProps {
   id: number;
@@ -51,11 +28,29 @@ export function Detail({ id, onNavigate }: DetailProps) {
   // 리뷰 관련 상태
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
-  const [reviews, setReviews] = useState<Review[]>(MOCK_REVIEWS);
+  const [reviews, setReviews] = useState<ReviewDto[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [avgRating, setAvgRating] = useState(0);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [showFullDesc, setShowFullDesc] = useState(false);
 
-  const { wishlist, toggleWishlist } = useAppStore();
+  const { wishlist, toggleWishlist, isLoggedIn } = useAppStore();
   const isWishlisted = place ? wishlist.includes(id) : false;
+
+  useEffect(() => {
+    if (!place) return;
+    setReviewCount(place.reviewCount ?? 0);
+    setAvgRating(place.rating ?? 0);
+    setIsLoadingReviews(true);
+    reviewApi.getReviewsByPlace(id)
+      .then((data) => {
+        setReviews(data.reviews);
+        setReviewCount(data.totalCount);
+        setAvgRating(data.averageRating);
+      })
+      .catch((err) => console.error('[Review] 불러오기 실패:', err))
+      .finally(() => setIsLoadingReviews(false));
+  }, [id]);
 
   if (!place) return null;
 
@@ -110,18 +105,17 @@ export function Detail({ id, onNavigate }: DetailProps) {
   };
 
   // 리뷰 등록 핸들러
-  const handleSubmitReview = () => {
-    if (reviewRating === 0 || !reviewText.trim()) return;
-    const newReview: Review = {
-      id: Date.now(),
-      author: '나',
-      date: new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
-      rating: reviewRating,
-      content: reviewText.trim(),
-    };
-    setReviews([newReview, ...reviews]);
-    setReviewRating(0);
-    setReviewText('');
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0 || !reviewText.trim() || !isLoggedIn) return;
+    try {
+      const saved = await reviewApi.createReview(id, { rating: reviewRating, content: reviewText.trim() });
+      setReviews([saved, ...reviews]);
+      setReviewCount(c => c + 1);
+      setReviewRating(0);
+      setReviewText('');
+    } catch (err) {
+      console.error('[Review] 등록 실패:', err);
+    }
   };
 
   return (
@@ -173,11 +167,11 @@ export function Detail({ id, onNavigate }: DetailProps) {
           {/* 제목 + 평점 */}
           <div className="pt-5 pb-4 border-b border-gray-100">
             <h2 className="text-[20px] font-bold text-gray-900 mb-1.5">{displayTitle}</h2>
-            {place.reviewCount > 0 ? (
+            {reviewCount > 0 ? (
               <div className="flex items-center gap-1.5">
                 <Star size={14} className="text-brand-point fill-brand-point" />
-                <span className="text-xs font-bold text-gray-900">{place.rating.toFixed(1)}</span>
-                <span className="text-xs text-gray-400">({place.reviewCount}개 리뷰)</span>
+                <span className="text-xs font-bold text-gray-900">{avgRating.toFixed(1)}</span>
+                <span className="text-xs text-gray-400">({reviewCount}개 리뷰)</span>
               </div>
             ) : place.aiRating ? (
               <div className="flex items-center gap-1.5">
@@ -303,7 +297,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
           {/* 리뷰 섹션 */}
           <div className="py-5">
             <h3 className="text-[15px] font-bold text-gray-900 mb-4">
-              리뷰 <span className="text-primary">{reviews.length + place.reviewCount - MOCK_REVIEWS.length}</span>
+              리뷰 <span className="text-primary">{reviewCount}</span>
             </h3>
 
             {/* 리뷰 작성 카드 */}
@@ -344,11 +338,14 @@ export function Detail({ id, onNavigate }: DetailProps) {
               />
 
               {/* 등록 버튼 */}
+              {!isLoggedIn && (
+                <p className="text-[11px] text-gray-400 text-center mt-2">로그인 후 리뷰를 작성할 수 있습니다.</p>
+              )}
               <button
                 onClick={handleSubmitReview}
-                disabled={reviewRating === 0 || !reviewText.trim()}
+                disabled={!isLoggedIn || reviewRating === 0 || !reviewText.trim()}
                 className={`w-full mt-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                  reviewRating > 0 && reviewText.trim()
+                  isLoggedIn && reviewRating > 0 && reviewText.trim()
                     ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
@@ -358,29 +355,39 @@ export function Detail({ id, onNavigate }: DetailProps) {
             </div>
 
             {/* 리뷰 목록 */}
-            <div className="space-y-4">
-              {reviews.map((review) => (
-                <div key={review.id} className="pb-4 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-gray-800">{review.author}</span>
-                    <span className="text-[11px] text-gray-400">{review.date}</span>
-                  </div>
-                  <div className="flex gap-0.5 mb-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        size={12}
-                        className={star <= review.rating 
-                          ? "text-brand-point fill-brand-point" 
-                          : "text-gray-200"
-                        }
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">{review.content}</p>
-                </div>
-              ))}
-            </div>
+            {isLoadingReviews ? (
+              <div className="text-center py-8 text-sm text-gray-400">리뷰를 불러오는 중...</div>
+            ) : (
+              <div className="space-y-4">
+                {reviews.length === 0 ? (
+                  <p className="text-center py-6 text-xs text-gray-400">아직 리뷰가 없습니다. 첫 번째 리뷰를 남겨보세요!</p>
+                ) : (
+                  reviews.map((review) => (
+                    <div key={review.reviewId} className="pb-4 border-b border-gray-50 last:border-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-gray-800">{review.nickname}</span>
+                        <span className="text-[11px] text-gray-400">
+                          {review.createdAt ? review.createdAt.slice(0, 10).replace(/-/g, '.') : ''}
+                        </span>
+                      </div>
+                      <div className="flex gap-0.5 mb-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            size={12}
+                            className={star <= review.rating
+                              ? "text-brand-point fill-brand-point"
+                              : "text-gray-200"
+                            }
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed">{review.content}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

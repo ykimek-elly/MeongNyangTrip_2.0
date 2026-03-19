@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { PlaceDto, PetRequest } from '../api/types';
 import { placeApi } from '../api/placeApi';
 import { petApi } from '../api/petApi';
+import { wishlistApi } from '../api/wishlistApi';
 
 /** PetInfo(FE) → PetRequest(BE) 변환 헬퍼 */
 const toPetRequest = (pet: PetInfo): PetRequest => ({
@@ -215,17 +216,26 @@ export const useAppStore = create<AppState>()(
         return pets.find((p) => p.isRepresentative) ?? pets[0] ?? null;
       },
 
-      // TODO: [DB 연동] POST|DELETE /api/wishlists/{placeId} → Spring Boot JPA wishlists 테이블 UPSERT/DELETE + 낙관적 업데이트
-      toggleWishlist: (id) => set((state) => {
-        const isWished = state.wishlist.includes(id);
-        if (isWished) {
-          return { wishlist: state.wishlist.filter(wId => wId !== id) };
-        } else {
-          return { wishlist: [...state.wishlist, id] };
+      // POST /api/v1/wishlists/{placeId} — 낙관적 업데이트 + API 동기화
+      toggleWishlist: (id) => {
+        const { isLoggedIn, wishlist } = get();
+        const wasWished = wishlist.includes(id);
+        // 낙관적 업데이트
+        set({ wishlist: wasWished ? wishlist.filter(wId => wId !== id) : [...wishlist, id] });
+        // 로그인 상태일 때만 API 호출
+        if (isLoggedIn) {
+          wishlistApi.toggle(id).catch((err) => {
+            console.error('[Wishlist] toggle 실패, 롤백:', err);
+            // 실패 시 원래 상태로 롤백
+            set((state) => ({
+              wishlist: wasWished
+                ? [...state.wishlist, id]
+                : state.wishlist.filter(wId => wId !== id),
+            }));
+          });
         }
-      }),
+      },
 
-      // TODO: [DB 연동] DELETE /api/wishlists → Spring Boot JPA wishlists 전체 삭제 (PostgreSQL)
       clearWishlist: () => set({ wishlist: [] }),
 
       // TODO: [DB 연동] POST /api/saved-routes → Spring Boot JPA saved_routes 테이블 INSERT (PostgreSQL)

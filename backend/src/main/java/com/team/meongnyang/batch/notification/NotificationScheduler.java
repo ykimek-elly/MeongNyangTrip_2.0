@@ -21,13 +21,19 @@ public class NotificationScheduler {
   /**
    * 매일 오전 9시에 추천 알림 배치를 실행한다.
    */
-  @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Seoul")
+  @Scheduled(cron = "${batch.notification-cron}", zone = "Asia/Seoul")
   public void runDailyNotificationBatch() {
     log.info("[스케줄러 시작] 일일 추천 알림 배치 실행");
     notificationBatchService.runDailyNotificationBatch();
     log.info("[스케줄러 종료] 일일 추천 알림 배치 종료");
   }
 
+  @Scheduled(cron = "${batch.weather-preload-cron}", zone = "Asia/Seoul")
+  public void runWeatherPreloadBatch() {
+    log.info("[스케줄러 시작] 날씨 정보 미리 로드");
+    //todo :  notificationBatchService.runWeatherPreloadBatch();
+    log.info("[스케줄러 종료] 날씨 정보 미리 로드");
+  }
 
   /**
    * 개발 중 수동 확인용 임시 실행 메서드.

@@ -28,10 +28,10 @@ public class KakaoNotificationService {
      *
      * @param user 알림 수신 대상 사용자 정보
      * @param place 알림에 포함할 추천 장소 정보
-     * @param aiComment 추천 근거가 담긴 AI 코멘트
+     * @param message 추천 근거가 담긴 AI 코멘트
      * @return 외부 알림 발송 결과 코드와 성공 여부
      */
-    public NotificationResponse send (User user, Place place, String aiComment) {
+    public NotificationResponse send (User user, Place place, String message) {
         String title = "오늘의 추천";
         String phone = user.getPhoneNumber();
 
@@ -40,6 +40,7 @@ public class KakaoNotificationService {
                 .templateCode("T0001")
                 .senderKey("sender_key")
                 .title(title)
+                .message(message)
                 .build();
 
         log.info("[카카오 알림] 발송 시도 userId={}, placeTitle={}",

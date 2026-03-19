@@ -4,6 +4,7 @@ import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
 import com.team.meongnyang.recommendation.notification.service.KakaoNotificationService;
+import com.team.meongnyang.recommendation.notification.service.NotificationMessageBuilder;
 import com.team.meongnyang.recommendation.service.RecommendationPipelineService;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
@@ -30,7 +31,7 @@ public class NotificationBatchService {
   private final PetRepository petRepository;
   private final RecommendationPipelineService recommendationPipelineService;
   private final KakaoNotificationService kakaoNotificationService;
-
+  private final NotificationMessageBuilder notificationMessageBuilder;
   /**
    *       1. 알림 대상 사용자 조회
    *       2. 사용자별 반복
@@ -42,6 +43,7 @@ public class NotificationBatchService {
    */
   public void runDailyNotificationBatch() {
     log.info("[배치 시작] 추천 알림 배치를 시작합니다.");
+    long startTime = System.currentTimeMillis();
 
     List<User> targets = getNotificationTargets();
     log.info("[배치] 알림 대상 사용자 수={}", targets.size());
@@ -54,7 +56,7 @@ public class NotificationBatchService {
       try {
         log.info("[사용자 처리 시작] userId={}, email={}", target.getUserId(), target.getEmail());
 
-        Pet pet = petRepository.findFirstByUser(target).orElse(null);
+        Pet pet = petRepository.findByUserUserIdAndIsRepresentativeTrue(target.getUserId()).orElse(null);
         if (pet == null) {
           skipCount++;
           log.info("[사용자 스킵] userId={}, email={}, 사유=반려동물 정보 없음",
@@ -76,15 +78,29 @@ public class NotificationBatchService {
           continue;
         }
 
-        log.info("[추천 top1 추출] userId={}, email={}, placeId={}, placeTitle={}",
+        log.info("[추천 top1 추출] userId={}, email={}, placeId={}, contentId={}, placeTitle={}",
                 target.getUserId(),
                 target.getEmail(),
+                topPlace.getId(),
                 topPlace.getContentId(),
                 topPlace.getTitle());
 
+        // 알림 메세지 템플릿 적용
+        String message = notificationMessageBuilder.buildMessage(
+                target,
+                pet,
+                topPlace,
+                recommendationResult.getMessage(),
+                recommendationResult.getWeatherType(),
+                recommendationResult.getWeatherWalkLevel());
+
+
+        log.info("[알림 메시지 템플릿 적용] {} ", message);
+
+
         // 알림 발송
         NotificationResponse notificationResponse =
-                kakaoNotificationService.send(target, topPlace, recommendationResult.getMessage());
+                kakaoNotificationService.send(target, topPlace, message);
 
         if (notificationResponse.isSuccess()) {
           successCount++;
@@ -113,13 +129,14 @@ public class NotificationBatchService {
                 e);
       }
     }
-
+    long endTime = System.currentTimeMillis();
     log.info("[배치 집계] total={}, success={}, failure={}, skip={}",
             targets.size(),
             successCount,
             failureCount,
             skipCount);
-    log.info("[배치 종료] 추천 알림 배치를 종료합니다.");
+    log.info("[배치 종료] 추천 알림 배치를 종료합니다. 소요 시간: {}ms , 1명 평균 소요시간: {}", endTime - startTime , (endTime - startTime) / targets.size());
+
   }
 
   public void process() {

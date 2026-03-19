@@ -1,9 +1,11 @@
 package com.team.meongnyang.recommendation.controller;
 
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
+import com.team.meongnyang.recommendation.service.RecommendationAuthenticationService;
 import com.team.meongnyang.recommendation.service.RecommendationPipelineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,16 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class RecommendationController {
 
   private final RecommendationPipelineService service;
+  private final RecommendationAuthenticationService authenticationService;
 
-  /**
-   * 로그인 된 사용자에게 추천
-   * @return
-   */
   @GetMapping("/api/v1/ai/walk-guide")
-  public RecommendationNotificationResult recommendForUser() {
-    // TODO : 인증 기능 (시큐리티 인증 객체에서 EMAIL or USERNAME)
-    String email = "testsingle2@test.com";
-
+  public RecommendationNotificationResult recommendForUser(Authentication authentication) {
+    String email = authenticationService.getAuthenticatedUserEmail(authentication);
     return service.recommendForCurrentUser(email);
   }
 }

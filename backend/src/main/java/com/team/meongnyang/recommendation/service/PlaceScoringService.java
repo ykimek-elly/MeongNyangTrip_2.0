@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.service;
 import com.team.meongnyang.recommendation.dto.ScoreBreakdown;
 import com.team.meongnyang.recommendation.dto.ScoreDetail;
 import com.team.meongnyang.recommendation.dto.ScoredPlace;
+import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
@@ -367,7 +368,7 @@ public class PlaceScoringService {
             return 0.0;
         }
 
-        String preferredPlace = normalize(pet.getPreferredPlace());
+        String preferredPlace = RecommendationTextUtils.normalizeTrimLower(pet.getPreferredPlace());
         if (preferredPlace.isBlank()) {
             return 0.0;
         }
@@ -494,7 +495,7 @@ public class PlaceScoringService {
     }
 
     private double scorePetPersonality(Place place, Pet pet, String searchable, List<ScoreDetail> details) {
-        String personality = normalize(pet.getPersonality());
+        String personality = RecommendationTextUtils.normalizeTrimLower(pet.getPersonality());
         if (personality.isBlank()) {
             details.add(detail("반려동물 적합도", "성향", 8.0, 10.0, "성향 정보가 없어 중립 점수를 적용했습니다."));
             return 8.0;
@@ -517,7 +518,7 @@ public class PlaceScoringService {
     }
 
     private double scoreBreedFit(Place place, Pet pet, String searchable, List<ScoreDetail> details) {
-        String breed = normalize(pet.getPetBreed());
+        String breed = RecommendationTextUtils.normalizeTrimLower(pet.getPetBreed());
         if (breed.isBlank()) {
             details.add(detail("반려동물 적합도", "품종", 4.5, 6.0, "품종 정보가 없어 중립 점수를 적용했습니다."));
             return 4.5;
@@ -538,7 +539,7 @@ public class PlaceScoringService {
 
     private double scoreWalkLevel(WeatherContext weather, boolean indoor, boolean outdoor, boolean mixed, List<ScoreDetail> details) {
         // 산책 가능 등급과 장소의 실내/실외 성격의 궁합을 점수화
-        String walkLevel = normalize(weather.getWalkLevel());
+        String walkLevel = RecommendationTextUtils.normalizeTrimLower(weather.getWalkLevel());
         double score = switch (walkLevel) {
             case "dangerous" -> indoor ? 8.0 : (mixed ? 5.0 : 2.5);
             case "caution" -> indoor ? 7.5 : (mixed ? 6.0 : 4.5);
@@ -788,7 +789,7 @@ public class PlaceScoringService {
     }
 
     private boolean isSensitivePet(Pet pet) {
-        String personality = normalize(pet.getPersonality());
+        String personality = RecommendationTextUtils.normalizeTrimLower(pet.getPersonality());
         return personality.contains("예민") || personality.contains("소심") || personality.contains("겁");
     }
 
@@ -813,10 +814,10 @@ public class PlaceScoringService {
      */
     private String searchablePlaceText(Place place) {
         return List.of(
-                        normalize(place.getCategory()),
-                        normalize(place.getTitle()),
-                        normalize(place.getDescription()),
-                        normalize(place.getTags())
+                        RecommendationTextUtils.normalizeTrimLower(place.getCategory()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getTitle()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getDescription()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getTags())
                 ).stream()
                 .reduce((a, b) -> a + " " + b)
                 .orElse("");
@@ -829,7 +830,8 @@ public class PlaceScoringService {
      * @return 키워드가 포함되어 있으면 true, 아니면 false
      */
     private boolean hasKeyword(String text, String keyword) {
-        return !normalize(keyword).isBlank() && text.contains(normalize(keyword));
+        String normalizedKeyword = RecommendationTextUtils.normalizeTrimLower(keyword);
+        return !normalizedKeyword.isBlank() && text.contains(normalizedKeyword);
     }
 
     /**
@@ -850,9 +852,6 @@ public class PlaceScoringService {
     /**
      * 유틸
      */
-    private String normalize(String value) {
-        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-    }
     private double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(value, max));
     }

@@ -1,6 +1,7 @@
 package com.team.meongnyang.recommendation.service;
 
 import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
 import com.team.meongnyang.place.repository.PlaceRepository;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
@@ -68,7 +69,7 @@ public class CandidatePlaceService {
     validateInput(weather, lat, lng);
 
     // 2. walkLevel을 정규화한 뒤 산책 등급별 최대 반경을 계산하고 미터 단위로 변환
-    String walkLevel = normalize(weather.getWalkLevel()); // WalkLevel
+    String walkLevel = RecommendationTextUtils.normalizeTrimLower(weather.getWalkLevel()); // WalkLevel
     double maxDistanceKm = resolveMaxDistanceKm(walkLevel); // 최대거리 기준
     int radiusMeters = toMeters(maxDistanceKm); // 미터로 변환
 
@@ -160,7 +161,7 @@ public class CandidatePlaceService {
           double userLng,
           boolean relaxWeather
   ) {
-    String walkLevel = normalize(weather.getWalkLevel());
+    String walkLevel = RecommendationTextUtils.normalizeTrimLower(weather.getWalkLevel());
     double maxDistanceKm = resolveMaxDistanceKm(walkLevel);
     List<Place> result = new ArrayList<>();
 
@@ -241,7 +242,7 @@ public class CandidatePlaceService {
    * @return 우선순위가 높은 후보 목록
    */
   private List<Place> weaklyPrioritizePreferredPlace(List<Place> candidates, Pet pet) {
-    String preferredPlace = normalize(pet == null ? null : pet.getPreferredPlace());
+    String preferredPlace = RecommendationTextUtils.normalizeTrimLower(pet == null ? null : pet.getPreferredPlace());
     if (preferredPlace.isBlank()) {
       return candidates;
     }
@@ -284,7 +285,7 @@ public class CandidatePlaceService {
       return false;
     }
 
-    String tags = normalize(place.getTags());
+    String tags = RecommendationTextUtils.normalizeTrimLower(place.getTags());
     if (tags.contains("폐업") || tags.contains("휴업") || tags.contains("운영종료")) {
       log.debug("[PLACE_FILTER][DROP] closed tag detected. title={}", place.getTitle());
       return false;
@@ -315,7 +316,7 @@ public class CandidatePlaceService {
    * @return 추천 가능한 경우 true, 그렇지 않은 경우 false
    */
   private boolean isRecommendableCategory(Place place) {
-    String category = normalize(place.getCategory()).toUpperCase(Locale.ROOT);
+    String category = RecommendationTextUtils.normalizeTrimLower(place.getCategory()).toUpperCase(Locale.ROOT);
     boolean result = RECOMMENDABLE_CATEGORIES.contains(category);
 
     if (!result) {
@@ -358,7 +359,7 @@ public class CandidatePlaceService {
    * @return 정책에 맞는 경우 true, 그렇지 않은 경우 false
    */
   private boolean matchesWeatherPolicy(Place place, WeatherContext weather, boolean relaxWeather) {
-    String walkLevel = normalize(weather.getWalkLevel());
+    String walkLevel = RecommendationTextUtils.normalizeTrimLower(weather.getWalkLevel());
 
     if (walkLevel.isBlank()) {
       return true;
@@ -385,7 +386,7 @@ public class CandidatePlaceService {
    * @return 실내 장소인 경우 true, 그렇지 않은 경우 false
    */
   private boolean isIndoorPlace(Place place) {
-    String normalized = normalize(place.getTags());
+    String normalized = RecommendationTextUtils.normalizeTrimLower(place.getTags());
     return normalized.contains("실내")
             || normalized.contains("카페")
             || normalized.contains("박물관")
@@ -399,7 +400,7 @@ public class CandidatePlaceService {
    * @return 실외 장소인 경우 true, 그렇지 않은 경우 false
    */
   private boolean isOutdoorPlace(Place place) {
-    String normalized = normalize(place.getTags());
+    String normalized = RecommendationTextUtils.normalizeTrimLower(place.getTags());
     return normalized.contains("실외")
             || normalized.contains("야외")
             || normalized.contains("공원")
@@ -415,10 +416,10 @@ public class CandidatePlaceService {
    */
   private boolean containsKeyword(Place place, String keyword) {
     String joined = List.of(
-                    normalize(place.getCategory()),
-                    normalize(place.getTitle()),
-                    normalize(place.getDescription()),
-                    normalize(place.getTags())
+                    RecommendationTextUtils.normalizeTrimLower(place.getCategory()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getTitle()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getDescription()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getTags())
             ).stream()
             .collect(Collectors.joining(" "));
     return joined.contains(keyword);
@@ -429,7 +430,7 @@ public class CandidatePlaceService {
    * @param walkLevel 걷기 수준
    * @return 최대 거리 (km)
    */
-  private double resolveMaxDistanceKm(String walkLevel) {
+  private double  resolveMaxDistanceKm(String walkLevel) {
     if ("dangerous".equals(walkLevel)) {
       return DANGEROUS_MAX_DISTANCE_KM;
     }
@@ -452,7 +453,4 @@ public class CandidatePlaceService {
     return lat >= -90.0 && lat <= 90.0 && lng >= -180.0 && lng <= 180.0;
   }
 
-  private String normalize(String value) {
-    return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-  }
 }

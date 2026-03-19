@@ -29,6 +29,9 @@ public class RecommendationNotificationResult {
   /** 날씨 유형 (SUNNY, RAINY, CLOUDY, HEATWAVE, COLD_WAVE 등) */
   private String weatherType;
 
+  /** 산책 가능 수준 (GOOD, CAUTION, DANGEROUS 등) */
+  private String weatherWalkLevel;
+
   /** 날씨 요약 문장 */
   private String weatherSummary;
 

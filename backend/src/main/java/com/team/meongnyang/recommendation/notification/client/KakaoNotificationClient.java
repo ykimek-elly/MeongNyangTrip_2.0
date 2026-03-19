@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class KakaoNotificationClient {
 
+  // todo : 카카오 알림 API 연동을 위한 클라이언트 구현
 
   public NotificationResponse send(NotificationRequest request) {
     log.info("[KAKAO MOCK SEND] phone : {}, title : {}, message : {}", request.getPhoneNumber(), request.getTitle(), request.getMessage());

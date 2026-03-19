@@ -3,10 +3,11 @@ package com.team.meongnyang.recommendation.service;
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.recommendation.cache.GeminiCacheService;
 import com.team.meongnyang.recommendation.cache.WeatherCacheService;
+import com.team.meongnyang.recommendation.context.dto.RecommendationEvidenceContext;
+import com.team.meongnyang.recommendation.context.service.RecommendationEvidenceContextService;
 import com.team.meongnyang.recommendation.dto.ScoredPlace;
 import com.team.meongnyang.recommendation.log.service.AiLogService;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
-import com.team.meongnyang.recommendation.rag.service.RagService;
 import com.team.meongnyang.recommendation.weather.dto.WeatherContext;
 import com.team.meongnyang.recommendation.weather.dto.WeatherGridPoint;
 import com.team.meongnyang.recommendation.weather.service.WeatherGridConverter;
@@ -51,9 +52,9 @@ class RecommendationPipelineServiceTest {
     @Mock
     private CandidatePlaceService candidatePlaceService;
     @Mock
-    private RagService ragService;
-    @Mock
     private PlaceScoringService placeScoringService;
+    @Mock
+    private RecommendationEvidenceContextService recommendationEvidenceContextService;
     @Mock
     private RecommendationPromptService recommendationPromptService;
     @Mock
@@ -77,16 +78,16 @@ class RecommendationPipelineServiceTest {
         WeatherContext weatherContext = fixtureWeatherContext();
         List<Place> candidates = fixtureCandidates();
         List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        String ragContext = "rag context";
+        RecommendationEvidenceContext evidenceContext = fixtureEvidenceContext();
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
         when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
         when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
         when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
         when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
-        when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext)).thenReturn(PROMPT);
+        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
+        when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
         when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
         when(geminiCacheService.get(CACHE_KEY)).thenReturn(null);
         when(geminiRecommendationService.generateRecommendation(PROMPT)).thenReturn(GEMINI_RESPONSE);
@@ -108,8 +109,8 @@ class RecommendationPipelineServiceTest {
                 weatherGridConverter,
                 weatherService,
                 candidatePlaceService,
-                ragService,
                 placeScoringService,
+                recommendationEvidenceContextService,
                 recommendationPromptService,
                 geminiCacheService,
                 geminiRecommendationService
@@ -120,9 +121,9 @@ class RecommendationPipelineServiceTest {
         inOrder.verify(weatherGridConverter).convertToGrid(37.27, 127.01);
         inOrder.verify(weatherService).getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy());
         inOrder.verify(candidatePlaceService).getInitialCandidates(user, pet, weatherContext, 37.27, 127.01);
-        inOrder.verify(ragService).searchContext(pet, weatherContext);
         inOrder.verify(placeScoringService).scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01);
-        inOrder.verify(recommendationPromptService).buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext);
+        inOrder.verify(recommendationEvidenceContextService).buildContext(user, pet, weatherContext, rankedPlaces);
+        inOrder.verify(recommendationPromptService).buildRecommendationPrompt(evidenceContext);
         inOrder.verify(geminiCacheService).generateKey(PROMPT);
         inOrder.verify(geminiCacheService).get(CACHE_KEY);
         inOrder.verify(geminiRecommendationService).generateRecommendation(PROMPT);
@@ -134,7 +135,7 @@ class RecommendationPipelineServiceTest {
                 eq(pet),
                 eq(PROMPT),
                 argThat(this::containsTopPlaceSummary),
-                eq(ragContext),
+                eq(evidenceContext.getContextSnapshot()),
                 eq(GEMINI_RESPONSE),
                 eq(false),
                 eq(false),
@@ -151,17 +152,17 @@ class RecommendationPipelineServiceTest {
         WeatherContext weatherContext = fixtureWeatherContext();
         List<Place> candidates = fixtureCandidates();
         List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        String ragContext = "rag context";
         String cachedResponse = "cached recommendation";
+        RecommendationEvidenceContext evidenceContext = fixtureEvidenceContext();
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommnedationPetReader.getPrimaryPet(user)).thenReturn(pet);
         when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
         when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
         when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
-        when(ragService.searchContext(pet, weatherContext)).thenReturn(ragContext);
         when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01)).thenReturn(rankedPlaces);
-        when(recommendationPromptService.buildRecommendationPrompt(user, pet, weatherContext, rankedPlaces, ragContext)).thenReturn(PROMPT);
+        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
+        when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
         when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
         when(geminiCacheService.get(CACHE_KEY)).thenReturn(cachedResponse);
 
@@ -179,7 +180,7 @@ class RecommendationPipelineServiceTest {
                 eq(pet),
                 eq(PROMPT),
                 argThat(this::containsTopPlaceSummary),
-                eq(ragContext),
+                eq(evidenceContext.getContextSnapshot()),
                 eq(cachedResponse),
                 eq(false),
                 eq(true),
@@ -208,9 +209,9 @@ class RecommendationPipelineServiceTest {
         assertThat(result.isCacheHit()).isFalse();
         assertThat(result.isFallbackUsed()).isFalse();
 
-        verify(ragService, never()).searchContext(any(), any());
         verify(placeScoringService, never()).scorePlaces(any(), any(), any(), any(), any(Double.class), any(Double.class));
-        verify(recommendationPromptService, never()).buildRecommendationPrompt(any(), any(), any(), any(), any());
+        verify(recommendationEvidenceContextService, never()).buildContext(any(), any(), any(), any());
+        verify(recommendationPromptService, never()).buildRecommendationPrompt(any());
         verify(geminiCacheService, never()).generateKey(any());
         verify(aiLogservice, never()).save(any(), any(), any(), any(), any(), any(), any(Boolean.class), any(Boolean.class), any(Long.class));
     }
@@ -256,6 +257,18 @@ class RecommendationPipelineServiceTest {
                 .hot(false)
                 .windy(false)
                 .walkLevel("GOOD")
+                .build();
+    }
+
+    private RecommendationEvidenceContext fixtureEvidenceContext() {
+        return RecommendationEvidenceContext.builder()
+                .userProfileSection("사용자 정보")
+                .petProfileSection("반려동물 정보")
+                .weatherSection("날씨 정보")
+                .recommendationDecisionSummary("추천 판단 요약")
+                .topPlaceEvidenceSection("상위 장소 근거")
+                .supplementalGuidelineSection("추가 지침")
+                .contextSnapshot("컨텍스트 스냅샷")
                 .build();
     }
 

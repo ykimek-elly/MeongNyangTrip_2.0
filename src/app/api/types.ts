@@ -86,6 +86,63 @@ export interface PetRequest {
 }
 
 /**
+ * 찜하기 토글 응답 타입.
+ */
+export interface WishlistToggleResponse {
+  wishlisted: boolean;
+  placeId: number;
+}
+
+/**
+ * 찜 목록 단건 타입.
+ * 백엔드 WishlistDto.Response와 1:1 매핑.
+ */
+export interface WishlistItem {
+  wishlistId: number;
+  placeId: number;
+  title: string;
+  category: string;
+  imageUrl: string | null;
+  address: string;
+  rating: number;
+  reviewCount: number;
+}
+
+/**
+ * 리뷰 단건 타입.
+ * 백엔드 ReviewDto.Response와 1:1 매핑.
+ */
+export interface ReviewDto {
+  reviewId: number;
+  userId: number;
+  nickname: string;
+  profileImage: string | null;
+  content: string;
+  rating: number;
+  imageUrl: string | null;
+  createdAt: string;
+}
+
+/**
+ * 리뷰 작성 요청 타입.
+ */
+export interface ReviewRequest {
+  content: string;
+  rating: number;
+  imageUrl?: string;
+}
+
+/**
+ * 장소 리뷰 목록 응답 (평균 별점 포함).
+ * 백엔드 ReviewDto.PlaceReviewsResponse와 1:1 매핑.
+ */
+export interface PlaceReviewsResponse {
+  averageRating: number;
+  totalCount: number;
+  reviews: ReviewDto[];
+}
+
+/**
  * 장소 등록/수정 요청 타입.
  * 백엔드 PlaceRequestDto와 1:1 매핑.
  */

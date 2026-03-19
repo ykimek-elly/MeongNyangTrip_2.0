@@ -39,7 +39,7 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/v1/admin/batch/recommendation-notification/batch/noti/run").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/admin/batch/recommendation-notification/run").permitAll()
                 .requestMatchers(
                     "/api/v1/auth/**",
                     "/api/auth/**",

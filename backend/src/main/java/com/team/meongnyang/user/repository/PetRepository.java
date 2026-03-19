@@ -14,6 +14,8 @@ public interface PetRepository extends JpaRepository<Pet, Long> {
 
     List<Pet> findByUserUserId(Long userId);
 
+    List<Pet> findAllByUserUserIdInAndIsRepresentativeTrue(List<Long> userIds);
+
     Optional<Pet> findByUserUserIdAndIsRepresentativeTrue(Long userId);
     Optional<Pet> findFirstByUser (User user);
 }

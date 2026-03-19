@@ -6,6 +6,7 @@ import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 /**
@@ -45,7 +46,10 @@ public class AiLogService {
           boolean cacheHit,
           Long latencyMs
   ) {
-    log.info("[AI 로그 저장] 저장 시작 userId={}, petId={}, fallbackUsed={}, cacheHit={}, latencyMs={}",
+    String batchExecutionId = MDC.get("batchExecutionId");
+
+    log.info("[AI 로그 저장] 저장 시작 batchExecutionId={}, userId={}, petId={}, fallbackUsed={}, cacheHit={}, latencyMs={}",
+            batchExecutionId,
             user.getUserId(),
             pet.getPetId(),
             fallbackUsed,
@@ -55,6 +59,7 @@ public class AiLogService {
     AiResponseLog aiResponseLog = AiResponseLog.builder()
             .userId(user.getUserId())
             .dogId(pet.getPetId())
+            .batchExecutionId(batchExecutionId)
             .modelName("gemini-2.5-flash-lite")
             .prompt(prompt)
             .recommendedPlaces(recommendedPlaces)
@@ -66,8 +71,9 @@ public class AiLogService {
             .build();
 
     AiResponseLog savedLog = repository.save(aiResponseLog);
-    log.info("[AI 로그 저장] 저장 완료 logId={}, userId={}, petId={}, fallbackUsed={}, cacheHit={}",
+    log.info("[AI 로그 저장] 저장 완료 logId={}, batchExecutionId={}, userId={}, petId={}, fallbackUsed={}, cacheHit={}",
             savedLog.getId(),
+            batchExecutionId,
             user.getUserId(),
             pet.getPetId(),
             fallbackUsed,

@@ -4,6 +4,7 @@ import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
 import com.team.meongnyang.recommendation.notification.service.KakaoNotificationService;
+import com.team.meongnyang.recommendation.notification.service.NotificationMessageBuilder;
 import com.team.meongnyang.recommendation.service.RecommendationPipelineService;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
@@ -18,8 +19,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,6 +38,8 @@ class NotificationBatchServiceTest {
     private RecommendationPipelineService recommendationPipelineService;
     @Mock
     private KakaoNotificationService kakaoNotificationService;
+    @Mock
+    private NotificationMessageBuilder notificationMessageBuilder;
 
     @InjectMocks
     private NotificationBatchService notificationBatchService;
@@ -67,8 +71,16 @@ class NotificationBatchServiceTest {
 
         when(userRepository.findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE))
                 .thenReturn(List.of(user));
-        when(petRepository.findFirstByUser(user)).thenReturn(Optional.of(pet));
-        when(recommendationPipelineService.recommendForNotification(user, pet)).thenReturn(recommendationResult);
+        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId()))).thenReturn(List.of(pet));
+        when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString())).thenReturn(recommendationResult);
+        when(notificationMessageBuilder.buildMessage(
+                eq(user),
+                eq(pet),
+                eq(place),
+                eq(recommendationResult.getMessage()),
+                eq(recommendationResult.getWeatherType()),
+                eq(recommendationResult.getWeatherWalkLevel())
+        )).thenReturn(recommendationResult.getMessage());
         when(kakaoNotificationService.send(user, place, recommendationResult.getMessage())).thenReturn(notificationResponse);
 
         notificationBatchService.runDailyNotificationBatch();
@@ -77,17 +89,34 @@ class NotificationBatchServiceTest {
                 userRepository,
                 petRepository,
                 recommendationPipelineService,
+                notificationMessageBuilder,
                 kakaoNotificationService
         );
 
         inOrder.verify(userRepository).findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE);
-        inOrder.verify(petRepository).findFirstByUser(user);
-        inOrder.verify(recommendationPipelineService).recommendForNotification(user, pet);
+        inOrder.verify(petRepository).findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId()));
+        inOrder.verify(recommendationPipelineService).recommendForNotification(eq(user), eq(pet), anyString());
+        inOrder.verify(notificationMessageBuilder).buildMessage(
+                eq(user),
+                eq(pet),
+                eq(place),
+                eq(recommendationResult.getMessage()),
+                eq(recommendationResult.getWeatherType()),
+                eq(recommendationResult.getWeatherWalkLevel())
+        );
         inOrder.verify(kakaoNotificationService).send(user, place, recommendationResult.getMessage());
 
         verify(userRepository, times(1)).findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE);
-        verify(petRepository, times(1)).findFirstByUser(user);
-        verify(recommendationPipelineService, times(1)).recommendForNotification(user, pet);
+        verify(petRepository, times(1)).findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId()));
+        verify(recommendationPipelineService, times(1)).recommendForNotification(eq(user), eq(pet), anyString());
+        verify(notificationMessageBuilder, times(1)).buildMessage(
+                eq(user),
+                eq(pet),
+                eq(place),
+                eq(recommendationResult.getMessage()),
+                eq(recommendationResult.getWeatherType()),
+                eq(recommendationResult.getWeatherWalkLevel())
+        );
         verify(kakaoNotificationService, times(1)).send(user, place, recommendationResult.getMessage());
     }
 

@@ -74,6 +74,7 @@ public class CandidatePlaceService {
     int radiusMeters = toMeters(maxDistanceKm); // 미터로 변환
 
     // 3. 사용자 주변 반경 내 장소를 최대 BASE_FETCH_LIMIT개까지 조회
+    // 최대 120개
     List<Place> nearbyPlaces = fetchNearbyPlaces(lat, lng, radiusMeters);
     // 비어있으면 빈 리스트 반환
     if (nearbyPlaces.isEmpty()) {

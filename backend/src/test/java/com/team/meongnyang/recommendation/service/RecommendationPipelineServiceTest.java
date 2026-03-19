@@ -41,7 +41,26 @@ class RecommendationPipelineServiceTest {
     private static final String EMAIL = "user@example.com";
     private static final String PROMPT = "recommendation prompt";
     private static final String CACHE_KEY = "gemini:test:key";
-    private static final String GEMINI_RESPONSE = "generated recommendation";
+    private static final String GEMINI_RESPONSE = """
+            - [추천설명]
+            알파 카페는 반려동물과 함께 머무르기 편안한 장소입니다.
+            실내 중심 동선이라 현재 날씨 부담이 적습니다.
+            상위 점수 근거도 균형이 좋아 1순위로 적합합니다.
+            베타 파크는 활동성은 좋지만 오늘 조건에서는 비교 우위가 낮습니다.
+
+            - [알림요약]
+            알파 카페는 오늘 반려견과 가볍게 들르기 좋아요
+            """;
+    private static final String CACHED_RESPONSE = """
+            - [추천설명]
+            알파 카페는 오늘 조건에서 가장 무난한 선택입니다.
+            실내 공간 활용성이 좋아 현재 날씨 제약을 덜 받습니다.
+            반려동물 동반 편의 정보도 충분합니다.
+            다른 후보보다 거리와 편의성 균형이 좋습니다.
+
+            - [알림요약]
+            알파 카페는 오늘 반려견과 편하게 가기 좋아요
+            """;
 
     @Mock
     private RecommendationUserReader recommendationUserReader;
@@ -99,7 +118,7 @@ class RecommendationPipelineServiceTest {
         assertThat(result.getPetId()).isEqualTo(pet.getPetId());
         assertThat(result.getPlace()).isNotNull();
         assertThat(result.getPlace().getTitle()).isEqualTo("Alpha Cafe");
-        assertThat(result.getMessage()).isEqualTo(GEMINI_RESPONSE);
+        assertThat(result.getMessage()).isEqualTo("알파 카페는 오늘 반려견과 가볍게 들르기 좋아요");
         assertThat(result.isCacheHit()).isFalse();
         assertThat(result.isFallbackUsed()).isFalse();
 
@@ -152,7 +171,6 @@ class RecommendationPipelineServiceTest {
         WeatherContext weatherContext = fixtureWeatherContext();
         List<Place> candidates = fixtureCandidates();
         List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        String cachedResponse = "cached recommendation";
         RecommendationEvidenceContext evidenceContext = fixtureEvidenceContext();
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
@@ -164,24 +182,24 @@ class RecommendationPipelineServiceTest {
         when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
         when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
         when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(cachedResponse);
+        when(geminiCacheService.get(CACHE_KEY)).thenReturn(CACHED_RESPONSE);
 
         RecommendationNotificationResult result = recommendationPipelineService.recommendForCurrentUser(EMAIL);
 
-        assertThat(result.getMessage()).isEqualTo(cachedResponse);
+        assertThat(result.getMessage()).isEqualTo("알파 카페는 오늘 반려견과 편하게 가기 좋아요");
         assertThat(result.isCacheHit()).isTrue();
         assertThat(result.isFallbackUsed()).isFalse();
 
         verify(geminiRecommendationService, never()).generateRecommendation(PROMPT);
         verify(geminiRecommendationService, never()).isFallbackResponse(any());
-        verify(geminiCacheService, never()).save(CACHE_KEY, cachedResponse);
+        verify(geminiCacheService, never()).save(CACHE_KEY, CACHED_RESPONSE);
         verify(aiLogservice, times(1)).save(
                 eq(user),
                 eq(pet),
                 eq(PROMPT),
                 argThat(this::containsTopPlaceSummary),
                 eq(evidenceContext.getContextSnapshot()),
-                eq(cachedResponse),
+                eq(CACHED_RESPONSE),
                 eq(false),
                 eq(true),
                 eq(0L)

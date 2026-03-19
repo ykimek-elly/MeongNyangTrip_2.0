@@ -19,6 +19,8 @@ public class AiResponseLog extends BaseEntity {
 
   private Long dogId;
 
+  private String batchExecutionId;
+
   private String modelName;
 
   @Column(columnDefinition = "TEXT")

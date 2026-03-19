@@ -29,8 +29,8 @@ public class RecommendationEvidenceContextService {
   private static final int MAX_PLACE_COUNT = 3;
   private static final int MAX_STRENGTH_COUNT = 3;
   private static final int MAX_CAUTION_COUNT = 2;
-  private static final int MAX_OVERVIEW_LENGTH = 120;
-  private static final int MAX_SNAPSHOT_LENGTH = 1800;
+  private static final int MAX_OVERVIEW_LENGTH = 100;
+  private static final int MAX_SNAPSHOT_LENGTH = 1200;
 
   public RecommendationEvidenceContext buildContext(
           User user,

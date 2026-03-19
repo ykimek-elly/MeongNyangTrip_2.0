@@ -16,7 +16,7 @@ public class NotificationBatchController {
 
   private final NotificationBatchService notificationBatchService;
 
-  @GetMapping("/batch/noti/run")
+  @GetMapping("/test")
   public ApiResponse<String> runRecommendationNotificationBatch() {
     log.info("[배치 API] 추천 알림 배치 수동 실행 요청");
     notificationBatchService.runDailyNotificationBatch();

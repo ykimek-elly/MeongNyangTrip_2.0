@@ -4,6 +4,7 @@ import com.team.meongnyang.recommendation.context.dto.RecommendationEvidenceCont
 import com.team.meongnyang.recommendation.context.service.RecommendationEvidenceContextService;
 import com.team.meongnyang.recommendation.log.service.AiLogService;
 import com.team.meongnyang.recommendation.cache.GeminiCacheService;
+import com.team.meongnyang.recommendation.log.RecommendationBatchTraceContext;
 import com.team.meongnyang.recommendation.dto.ScoredPlace;
 import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
 import com.team.meongnyang.place.entity.Place;
@@ -71,6 +72,15 @@ public class RecommendationPipelineService {
    * @return
    */
   public RecommendationNotificationResult recommendForNotification(User user, Pet pet) {
+    return recommendForNotification(user, pet, null);
+  }
+
+  /**
+   * 배치 실행 시에는 batchExecutionId를 함께 전달해서 사용자 단위 추적을 강화한다.
+   */
+  public RecommendationNotificationResult recommendForNotification(User user, Pet pet, String batchExecutionId) {
+    try (RecommendationBatchTraceContext.TraceScope ignored =
+                 RecommendationBatchTraceContext.open(batchExecutionId, user.getUserId(), pet.getPetId())) {
     log.info("[추천 파이프라인-알림] 시작 userId={}, petId={}", user.getUserId(), pet.getPetId());
 
     double latitude = SUWON_LAT;
@@ -235,7 +245,9 @@ public class RecommendationPipelineService {
       if (fallbackUsed) {
         log.warn("[추천 파이프라인-알림] fallback 여부 used={}", true);
       }
-      geminiCacheService.save(cacheKey, geminiMessage);
+      if (!fallbackUsed) {
+        geminiCacheService.save(cacheKey, geminiMessage);
+      }
 
       aiLogservice.save(
               user,
@@ -296,6 +308,7 @@ public class RecommendationPipelineService {
               .fallbackUsed(true)
               .cacheHit(false)
               .build();
+    }
     }
   }
 

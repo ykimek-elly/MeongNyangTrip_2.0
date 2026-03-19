@@ -10,6 +10,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 
 /**
@@ -28,10 +30,12 @@ import java.time.Duration;
 @RequiredArgsConstructor
 @Slf4j
 public class WeatherCacheService {
+  private static final String WEATHER_CACHE_KEY_PREFIX = "weather:v2";
   private final RedisTemplate<String, Object> redisTemplate;
   private final WeatherService weatherService;
   private final ObjectMapper objectMapper;
   private static final Duration WEATHER_CACHE_TTL = Duration.ofHours(3);
+  private final ConcurrentMap<String, Object> keyLocks = new ConcurrentHashMap<>();
 
   /**
    * 격자 좌표 기준 날씨 문맥을 캐시에서 우선 조회하고, 없으면 외부 조회 후 저장한다.
@@ -41,32 +45,61 @@ public class WeatherCacheService {
    * @return 추천 흐름에서 재사용할 현재 날씨 문맥
    */
   public WeatherContext getOrLoadWeather (int nx, int ny) {
-    String key = "weather:" + nx + ":" + ny;
+    String key = buildCacheKey(nx, ny);
     log.info("[날씨 캐시] cache check key={}", key);
+    WeatherContext cachedContext = readCachedWeather(key);
+    if (cachedContext != null) {
+      return cachedContext;
+    }
+
+    Object keyLock = keyLocks.computeIfAbsent(key, ignored -> new Object());
+    try {
+      synchronized (keyLock) {
+        WeatherContext reloadedContext = readCachedWeather(key);
+        if (reloadedContext != null) {
+          return reloadedContext;
+        }
+
+        // Cache Miss -> API 호출
+        WeatherContext weatherContext = weatherService.getWeather(nx, ny);
+        log.info("[날씨 캐시] CACHE MISS 결과 walkLevel={}, precipitationType={}",
+                weatherContext.getWalkLevel(),
+                weatherContext.getPrecipitationType());
+
+        // 장애 fallback 응답은 짧게 소비하고 다시 시도할 수 있게 캐시에 저장하지 않는다.
+        if (!"ERROR".equalsIgnoreCase(weatherContext.getWalkLevel())) {
+          redisTemplate.opsForValue().set(key, weatherContext, WEATHER_CACHE_TTL);
+          log.info("[날씨 캐시] CACHE SAVE key={}, ttl={}min", key, WEATHER_CACHE_TTL.toMinutes());
+        }
+
+        return weatherContext;
+      }
+    } finally {
+      keyLocks.remove(key, keyLock);
+    }
+  }
+
+  /**
+   * 시간 슬롯을 키에 포함해서 오래된 날씨가 다음 호출 윈도우까지 재사용되지 않도록 한다.
+   */
+  private String buildCacheKey(int nx, int ny) {
+    return WEATHER_CACHE_KEY_PREFIX + ":" + nx + ":" + ny + ":" + weatherService.getBaseDate() + ":" + weatherService.getBaseTime();
+  }
+
+  private WeatherContext readCachedWeather(String key) {
     // redis 조회
     Object cached = redisTemplate.opsForValue().get(key);
 
     // Cache Hit -> return
-    if (cached != null) {
-      // WeatherContext로 변환
-      WeatherContext weatherContext = objectMapper.convertValue(cached, WeatherContext.class);
-      log.info("[날씨 캐시] CACHE HIT 결과 walkLevel={}, precipitationType={}",
-              weatherContext.getWalkLevel(),
-              weatherContext.getPrecipitationType());
-      return weatherContext;
+    if (cached == null) {
+      return null;
     }
 
-    // Cache Miss -> API 호출
-    WeatherContext weatherContext = weatherService.getWeather(nx, ny);
-    log.info("[날씨 캐시] CACHE MISS 결과 walkLevel={}, precipitationType={}",
+    // WeatherContext로 변환
+    WeatherContext weatherContext = objectMapper.convertValue(cached, WeatherContext.class);
+    log.info("[날씨 캐시] CACHE HIT 결과 walkLevel={}, precipitationType={}",
             weatherContext.getWalkLevel(),
             weatherContext.getPrecipitationType());
-
-    // Redis 저장
-    redisTemplate.opsForValue().set(key, weatherContext, WEATHER_CACHE_TTL);
-    log.info("[날씨 캐시] CACHE SAVE key={}, ttl={}min", key, WEATHER_CACHE_TTL.toMinutes());
-
     return weatherContext;
   }
-
 }

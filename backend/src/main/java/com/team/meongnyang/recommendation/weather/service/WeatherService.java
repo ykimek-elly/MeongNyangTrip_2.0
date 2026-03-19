@@ -9,12 +9,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import jakarta.annotation.PreDestroy;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 기상청 초단기 실황 API를 호출해 추천 흐름에서 사용할 날씨 문맥을 만드는 서비스이다.
@@ -31,11 +38,21 @@ public class WeatherService {
   @Value("${WEATHER_API_KEY:}")
   private String weatherApiKey;
 
+  @Value("${recommendation.weather.timeout-ms:1500}")
+  private long weatherTimeoutMs;
+
+  @Value("${recommendation.weather.retry.max-attempts:2}")
+  private int weatherMaxAttempts;
+
+  @Value("${recommendation.weather.retry.backoff-ms:200}")
+  private long weatherRetryBackoffMs;
+
   private static final String HOST = "apis.data.go.kr";
   private static final String WEATHER_PATH = "/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
 
   private final RestClient restClient;
   private final WeatherRuleService ruleService;
+  private final ExecutorService weatherCallExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
 //  @PostConstruct
 //  public void checkEnv() {
@@ -57,24 +74,43 @@ public class WeatherService {
       return fallbackWeather();
     }
 
-    try {
-      WeatherApiResponse response = requestWeather(nx, ny); // 호출
-      List<WeatherItem> items = response.getResponse().getBody().getItems().getItem();
-      Map<String, String> weatherMap = weatherMap(items);
-      WeatherContext weatherContext = buildWeatherContext(weatherMap);
-      log.info("[날씨 서비스] 날씨 요약 정보 nx={}, ny={}, temp={}, humidity={}, precipitationType={}, walkLevel={}",
-              nx,
-              ny,
-              weatherContext.getTemperature(),
-              weatherContext.getHumidity(),
-              weatherContext.getPrecipitationType(),
-              weatherContext.getWalkLevel());
-      return weatherContext;
+    for (int attempt = 1; attempt <= Math.max(weatherMaxAttempts, 1); attempt++) {
+      try {
+        WeatherApiResponse response = requestWeather(nx, ny); // 호출
+        List<WeatherItem> items = response.getResponse().getBody().getItems().getItem();
+        if (items == null || items.isEmpty()) {
+          throw new IllegalStateException("weather items is empty");
+        }
 
-    } catch (Exception e) {
-        log.error("[WEATHER API ERROR] nx={}, ny={}, msg={}", nx, ny, e.getMessage());
-        return fallbackWeather();
+        Map<String, String> weatherMap = weatherMap(items);
+        WeatherContext weatherContext = buildWeatherContext(weatherMap);
+        log.info("[날씨 서비스] 날씨 요약 정보 nx={}, ny={}, temp={}, humidity={}, precipitationType={}, walkLevel={}, attempt={}",
+                nx,
+                ny,
+                weatherContext.getTemperature(),
+                weatherContext.getHumidity(),
+                weatherContext.getPrecipitationType(),
+                weatherContext.getWalkLevel(),
+                attempt);
+        return weatherContext;
+      } catch (Exception e) {
+        log.warn("[날씨 API 재시도] nx={}, ny={}, attempt={}, maxAttempts={}, error={}",
+                nx,
+                ny,
+                attempt,
+                weatherMaxAttempts,
+                e.getMessage());
+
+        if (attempt >= Math.max(weatherMaxAttempts, 1)) {
+          log.error("[WEATHER API ERROR] nx={}, ny={}, msg={}", nx, ny, e.getMessage(), e);
+          return fallbackWeather();
+        }
+
+        sleepBeforeRetry();
+      }
     }
+
+    return fallbackWeather();
   }
 
   private WeatherContext fallbackWeather() {
@@ -99,8 +135,7 @@ public class WeatherService {
   private WeatherApiResponse requestWeather(int nx, int ny) {
     String baseDate = getBaseDate();
     String baseTime = getBaseTime();
-
-    return restClient.get()
+    Future<WeatherApiResponse> future = weatherCallExecutor.submit(() -> restClient.get()
             .uri(uriBuilder -> uriBuilder
                     .scheme("https")
                     .host(HOST)
@@ -115,17 +150,45 @@ public class WeatherService {
                     .queryParam("ny", ny)
                     .build())
             .retrieve()
-            .body(WeatherApiResponse.class);
+            .body(WeatherApiResponse.class));
+
+    try {
+      return future.get(weatherTimeoutMs, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      future.cancel(true);
+      throw new IllegalStateException("weather api timeout", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("weather api interrupted", e);
+    } catch (ExecutionException e) {
+      throw new IllegalStateException("weather api failed", e.getCause());
+    }
   }
 
-  private String getBaseDate() {
+  public String getBaseDate() {
     return LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
   }
 
-  private String getBaseTime() {
+  public String getBaseTime() {
     return LocalTime.now()
             .minusHours(1)
             .format(DateTimeFormatter.ofPattern("HH00"));
+  }
+
+  /**
+   * 재시도 간격은 짧게 유지해서 외부 API 지연이 전체 배치 시간으로 전파되지 않도록 한다.
+   */
+  private void sleepBeforeRetry() {
+    try {
+      Thread.sleep(Math.max(weatherRetryBackoffMs, 0L));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  @PreDestroy
+  void shutdownExecutor() {
+    weatherCallExecutor.close();
   }
 
   private Map<String, String> weatherMap(List<WeatherItem> items) {

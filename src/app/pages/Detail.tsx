@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Heart, Share2, MapPin, Star, ChevronRight,
-  Globe, Phone, Dog
+  Globe, Phone
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
@@ -61,11 +61,8 @@ export function Detail({ id, onNavigate }: DetailProps) {
     ? `${place.address} ${place.addr2}`.trim()
     : place.address;
 
-  // 시설정보 태그: 공공데이터 기반만 표시
-  const facilityTags: { icon: React.ElementType; label: string }[] = [];
-  if (place.chkPetInside === 'Y') facilityTags.push({ icon: Dog, label: '실내 동반가능' });
-  if (place.chkPetInside === 'N') facilityTags.push({ icon: Dog, label: '실외 동반' });
-  if (place.accomCountPet?.trim()) facilityTags.push({ icon: Dog, label: `수용 ${place.accomCountPet}` });
+  // 반려동물 정책 카드 표시 여부
+  const hasPetPolicy = place.chkPetInside || place.accomCountPet?.trim() || place.petTurnAdroose || place.tags;
 
   // 소개 태그: place.tags(DB) 우선, 없으면 카테고리 기반 1개
   const descTags: string[] = place.tags
@@ -75,20 +72,12 @@ export function Detail({ id, onNavigate }: DetailProps) {
   const extra = {
     address: fullAddress,
     overview: place.overview || null,
-    petTurnAdroose: place.petTurnAdroose || null,
   };
 
   // 좌표: PlaceDto(latitude/longitude) 또는 mock 데이터(lat/lng) 모두 처리
   const placeLat: number | undefined = place.latitude ?? (place as any).lat;
   const placeLng: number | undefined = place.longitude ?? (place as any).lng;
   const hasCoords = typeof placeLat === 'number' && typeof placeLng === 'number';
-
-  // 하단 버튼 로직: homepage > phone (카카오맵 검색 폴백 비활성)
-  const bottomButton = place.homepage
-    ? { label: '홈페이지 방문', action: () => window.open(place.homepage!, '_blank') }
-    : place.phone
-      ? { label: '전화 문의', action: () => window.open(`tel:${place.phone}`) }
-      : null; // { label: '카카오맵에서 검색', action: () => window.open(`https://map.kakao.com/link/search/${encodeURIComponent(displayTitle)}`, '_blank') }
 
   // 지도 앱 바로가기 URL
   const mapLinks = {
@@ -186,18 +175,43 @@ export function Detail({ id, onNavigate }: DetailProps) {
             )}
           </div>
 
-          {/* 시설 정보 */}
-          {facilityTags.length > 0 && (
+          {/* 반려동물 정책 카드 */}
+          {hasPetPolicy && (
             <div className="py-4 border-b border-gray-100">
-              <h3 className="text-[15px] font-bold text-gray-900 mb-3">시설 정보</h3>
-              <div className="flex flex-wrap gap-2">
-                {facilityTags.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-                    <item.icon size={13} className="text-gray-400" />
-                    <span className="text-[12px] text-gray-600">{item.label}</span>
+              <h3 className="text-[15px] font-bold text-gray-900 mb-3">🐾 반려동물 정책</h3>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {place.chkPetInside === 'Y' && (
+                  <div className="flex items-center gap-1.5 bg-primary/5 border border-primary/20 px-3 py-2 rounded-xl">
+                    <span className="text-sm">🏠</span>
+                    <span className="text-[12px] font-medium text-primary">실내 동반가능</span>
                   </div>
-                ))}
+                )}
+                {place.chkPetInside === 'N' && (
+                  <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 px-3 py-2 rounded-xl">
+                    <span className="text-sm">🌳</span>
+                    <span className="text-[12px] font-medium text-green-700">실외 동반</span>
+                  </div>
+                )}
+                {place.accomCountPet?.trim() && (
+                  <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl">
+                    <span className="text-sm">🐾</span>
+                    <span className="text-[12px] font-medium text-gray-700">수용 {place.accomCountPet}</span>
+                  </div>
+                )}
               </div>
+              {place.tags && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {place.tags.split(',').map((t: string, i: number) => (
+                    <span key={i} className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{t.trim()}</span>
+                  ))}
+                </div>
+              )}
+              {place.petTurnAdroose && (
+                <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 mt-2">
+                  <p className="text-[11px] font-bold text-primary mb-1">📋 동반 안내</p>
+                  <p className="text-xs text-gray-600 leading-relaxed">{place.petTurnAdroose}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -222,12 +236,6 @@ export function Detail({ id, onNavigate }: DetailProps) {
                     {showFullDesc ? '접기' : '더보기'} <ChevronRight size={13} className={showFullDesc ? 'rotate-90' : ''} />
                   </button>
                 )}
-              </div>
-            )}
-            {extra.petTurnAdroose && (
-              <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 mt-3">
-                <p className="text-[11px] font-bold text-primary mb-1">🐾 반려동물 동반 안내</p>
-                <p className="text-xs text-gray-600 leading-relaxed">{extra.petTurnAdroose}</p>
               </div>
             )}
           </div>
@@ -392,17 +400,29 @@ export function Detail({ id, onNavigate }: DetailProps) {
         </div>
       </div>
 
-      {/* 고정 하단 바 (홈페이지 또는 전화 있을 때만 노출) */}
-      {bottomButton && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 pb-5 z-50 max-w-[600px] mx-auto">
+      {/* 고정 하단 바 — 항상 표시 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 pb-5 z-50 max-w-[600px] mx-auto">
+        <div className="flex gap-3">
           <button
-            onClick={bottomButton.action}
-            className="w-full bg-primary text-white font-bold text-[15px] py-3.5 rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all"
+            onClick={() => toggleWishlist(id)}
+            className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-[0.98] ${
+              isWishlisted
+                ? 'bg-destructive/5 border-destructive text-destructive'
+                : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300'
+            }`}
           >
-            {bottomButton.label}
+            {isWishlisted ? '❤️ 찜 완료' : '🤍 찜하기'}
           </button>
+          <a
+            href={mapLinks.kakao}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-3.5 rounded-xl text-sm font-bold bg-primary text-white text-center hover:bg-primary/90 active:scale-[0.98] transition-all"
+          >
+            🗺 길찾기
+          </a>
         </div>
-      )}
+      </div>
 
       {/* 공유 시트 */}
       <ShareSheet

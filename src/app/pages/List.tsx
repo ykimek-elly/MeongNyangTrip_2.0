@@ -168,50 +168,48 @@ export function List({ onNavigate, initialParams }: ListProps) {
           </div>
         </div>
 
-        {/* 필터 탭 & 뷰 전환 */}
-        <div className="flex items-center justify-between gap-3 px-4 pb-3">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-1">
-            <FilterButton label="전체" active={activeFilter === 'all'} onClick={() => handleFilterClick('all')} />
-            <FilterButton label="🏞️ 멍냥플레이스" active={activeFilter === 'PLACE'} onClick={() => handleFilterClick('PLACE')} />
-            <FilterButton label="🏡 멍냥스테이" active={activeFilter === 'STAY'} onClick={() => handleFilterClick('STAY')} />
-            <FilterButton label="🍽️ 멍냥다이닝" active={activeFilter === 'DINING'} onClick={() => handleFilterClick('DINING')} />
+        {/* 1행: 필터 탭 */}
+        <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
+          <FilterButton label="전체" active={activeFilter === 'all'} onClick={() => handleFilterClick('all')} />
+          <FilterButton label="🏞️ 멍냥플레이스" active={activeFilter === 'PLACE'} onClick={() => handleFilterClick('PLACE')} />
+          <FilterButton label="🏡 멍냥스테이" active={activeFilter === 'STAY'} onClick={() => handleFilterClick('STAY')} />
+          <FilterButton label="🍽️ 멍냥다이닝" active={activeFilter === 'DINING'} onClick={() => handleFilterClick('DINING')} />
+        </div>
+
+        {/* 2행: 정렬 + 카운트 + 뷰토글 */}
+        <div className="flex items-center justify-between px-4 pb-2.5">
+          <div className="relative">
+            <button
+              onClick={() => setShowSortMenu(prev => !prev)}
+              className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900"
+            >
+              {SORT_LABELS[sortKey]} <ChevronDown size={13} />
+            </button>
+            {showSortMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-20 py-1 min-w-[90px]">
+                {(Object.keys(SORT_LABELS) as SortKey[]).map(key => (
+                  <button
+                    key={key}
+                    onClick={() => handleSortChange(key)}
+                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 ${sortKey === key ? 'text-primary' : 'text-gray-700'}`}
+                  >
+                    {SORT_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          <span className="text-xs text-gray-400 flex-1 text-center">
+            {searchMsg || `전체 ${filteredPlaces.length}건`}
+          </span>
           <button
             onClick={toggleView}
-            className="p-2 text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            className="p-1.5 text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
             aria-label={viewMode === 'list' ? "그리드 뷰로 전환" : "리스트 뷰로 전환"}
           >
-            {viewMode === 'list' ? <LayoutGrid size={20} /> : <ListIcon size={20} />}
+            {viewMode === 'list' ? <LayoutGrid size={18} /> : <ListIcon size={18} />}
           </button>
         </div>
-      </div>
-
-      {/* 정렬 & 카운트 행 */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-50">
-        <div className="relative">
-          <button
-            onClick={() => setShowSortMenu(prev => !prev)}
-            className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900"
-          >
-            {SORT_LABELS[sortKey]} <ChevronDown size={13} />
-          </button>
-          {showSortMenu && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-20 py-1 min-w-[90px]">
-              {(Object.keys(SORT_LABELS) as SortKey[]).map(key => (
-                <button
-                  key={key}
-                  onClick={() => handleSortChange(key)}
-                  className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 ${sortKey === key ? 'text-primary' : 'text-gray-700'}`}
-                >
-                  {SORT_LABELS[key]}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <span className="text-xs text-gray-400">
-          {searchMsg || `전체 ${filteredPlaces.length}건`}
-        </span>
       </div>
 
       {/* 목록 컨테이너 */}

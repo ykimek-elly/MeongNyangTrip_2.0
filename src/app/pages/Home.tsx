@@ -2,7 +2,7 @@ import React from 'react';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { Search, MapPin, Calendar, Layers, TreeDeciduous, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
+import { Search, MapPin, Calendar, Layers, TreeDeciduous, PawPrint, Dog, Cat, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
 
 import { PlaceImage } from '../components/PlaceImage';
 // 더미 데이터 제거
@@ -131,7 +131,7 @@ export function Home({ onNavigate }: HomeProps) {
               <Search className="text-gray-400 shrink-0" size={18} />
               <input 
                 type="text" 
-                placeholder="지역 (예: 제주)" 
+                placeholder="지역 검색 (서울·경기)"
                 className="bg-transparent w-full outline-none text-gray-800 placeholder:text-gray-400 font-medium text-sm"
                 value={searchRegion}
                 onChange={(e) => setSearchRegion(e.target.value)}
@@ -162,9 +162,9 @@ export function Home({ onNavigate }: HomeProps) {
               className="[&>div]:!bg-green-50 [&>div]:!text-green-500 [&>span]:!text-gray-800 [&>span]:!font-bold"
             />
           </div>
-          <div className="snap-start shrink-0"><CategoryItem icon={TreeDeciduous} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'PLACE' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Bed} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Coffee} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={PawPrint} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'PLACE' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={Dog} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={Cat} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Map} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={MessageCircle} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
         </div>
@@ -196,7 +196,7 @@ export function Home({ onNavigate }: HomeProps) {
           {places.slice(0, 8).map((place, idx) => (
             <div 
               key={place.id} 
-              className="!w-[140px] pr-4 cursor-pointer active:scale-95 transition-transform"
+              className="!w-[160px] pr-4 cursor-pointer active:scale-95 transition-transform"
               onClick={() => onNavigate('detail', { id: place.id })}
             >
               <div className="relative mb-2">
@@ -239,10 +239,10 @@ export function Home({ onNavigate }: HomeProps) {
           onClick={() => handleBannerClick('lounge')}
         >
           <div className="w-full flex justify-end mb-2">
-            <Gift size={28} className="text-primary opacity-60" />
+            <Gift size={28} className="text-primary" />
           </div>
           <h6 className="font-bold text-primary text-xs mb-1">첫 리뷰 이벤트</h6>
-          <p className="m-0 text-[10px] text-gray-500 leading-snug">산책 인증샷 올리면 간식 쿠폰 100% 증정!</p>
+          <p className="m-0 text-[12px] text-gray-500 leading-snug">산책 인증샷 올리면 간식 쿠폰 100% 증정!</p>
         </div>
 
 
@@ -252,10 +252,10 @@ export function Home({ onNavigate }: HomeProps) {
           onClick={() => handleBannerClick('visit-checkin')}
         >
           <div className="w-full flex justify-end mb-2">
-            <Camera size={28} className="text-brand-point opacity-60" />
+            <Camera size={28} className="text-brand-point" />
           </div>
           <h6 className="font-bold text-brand-point text-xs mb-1">방문인증센터</h6>
-          <p className="m-0 text-[10px] text-gray-500 leading-snug">방문 인증하고 포인트 받자! 🎁</p>
+          <p className="m-0 text-[12px] text-gray-500 leading-snug">방문 인증하고 포인트 받자! 🎁</p>
         </div>
       </div>
 

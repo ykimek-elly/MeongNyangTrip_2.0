@@ -50,6 +50,22 @@ public class Place {
     @Builder.Default
     private Boolean isVerified = false;
 
+    /**
+     * 장소 상태.
+     * ACTIVE: 노출, PENDING: 관리자 검토 대기(유사도 50~79%), REJECTED: 폐기
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private PlaceStatus status = PlaceStatus.ACTIVE;
+
+    /**
+     * 보류 사유 — Stage2 검증 결과 저장 (JSON 문자열)
+     * 예) {"similarity":65,"sourceTitle":"개들의수다","kakaoTitle":"샌드피피","kakaoLat":37.123,"kakaoLng":126.456}
+     */
+    @Column(name = "pending_reason", columnDefinition = "TEXT")
+    private String pendingReason;
+
     /** 장소명 */
     @Column(nullable = false, length = 100)
     private String title;
@@ -128,6 +144,29 @@ public class Place {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    /** Stage2: 유사도 50~79% → 관리자 검토 큐로 이동 */
+    public void markPending(String reason) {
+        this.status = PlaceStatus.PENDING;
+        this.pendingReason = reason;
+        this.isVerified = false;
+    }
+
+    /** 관리자 승인 — PENDING → ACTIVE */
+    public void approveFromPending(Double lat, Double lng, Point geom) {
+        if (lat != null) this.latitude = lat;
+        if (lng != null) this.longitude = lng;
+        if (geom != null) this.geom = geom;
+        this.status = PlaceStatus.ACTIVE;
+        this.pendingReason = null;
+        this.isVerified = true;
+    }
+
+    /** 관리자 거절 — PENDING → REJECTED */
+    public void rejectFromPending() {
+        this.status = PlaceStatus.REJECTED;
+        this.isVerified = false;
+    }
 
     /** 장소 정보 수정 (관리자용) */
     public void update(String title, String description, String address,

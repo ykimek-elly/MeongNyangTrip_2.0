@@ -4,16 +4,17 @@ import {
   ArrowLeft, Heart, MessageCircle, Send, Eye, EyeOff, Trash2,
   AlertTriangle, BarChart3, Users, TrendingUp, Mail, Image as ImageIcon,
   ChevronDown, ChevronUp, Search, Shield, Settings,
-  Play, CheckCircle, XCircle, Loader, ImageOff, Star, Database, Wrench
+  Play, CheckCircle, XCircle, Loader, ImageOff, Star, Database, Wrench,
+  MapPin, ExternalLink, Check, X, Edit3
 } from 'lucide-react';
 import { useFeedStore, type FeedPost } from '../store/useFeedStore';
-import { adminApi } from '../api/adminApi';
+import { adminApi, type PendingPlaceDto } from '../api/adminApi';
 
 interface AdminDashboardProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
-type TabType = 'overview' | 'batch' | 'posts' | 'comments' | 'dms';
+type TabType = 'overview' | 'batch' | 'places' | 'posts' | 'comments' | 'dms';
 type SortType = 'latest' | 'likes' | 'comments' | 'dms' | 'reported';
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
@@ -39,6 +40,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           {([
             { key: 'overview', label: '현황', icon: BarChart3 },
             { key: 'batch',    label: '배치',  icon: Settings },
+            { key: 'places',   label: '장소검토', icon: MapPin },
             { key: 'posts',    label: '게시글', icon: ImageIcon },
             { key: 'comments', label: '댓글',  icon: MessageCircle },
             { key: 'dms',      label: 'DM',    icon: Mail },
@@ -64,6 +66,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && <OverviewTab key="overview" posts={posts} />}
         {activeTab === 'batch'    && <BatchTab    key="batch" />}
+        {activeTab === 'places'   && <PlacesReviewTab key="places" />}
         {activeTab === 'posts'    && <PostsTab    key="posts" posts={posts} />}
         {activeTab === 'comments' && <CommentsTab key="comments" posts={posts} />}
         {activeTab === 'dms'      && <DMsTab      key="dms" posts={posts} />}
@@ -583,6 +586,201 @@ function CommentsTab({ posts }: { posts: FeedPost[] }) {
             </div>
           </div>
         ))
+      )}
+    </motion.div>
+  );
+}
+
+// ─── 장소 검토 탭 ──────────────────────────────────────────────────────────────
+
+function PlacesReviewTab() {
+  const [places, setPlaces] = React.useState<PendingPlaceDto[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [editForm, setEditForm] = React.useState({ title: '', address: '', lat: '', lng: '' });
+  const [actionLoading, setActionLoading] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    adminApi.getPendingPlaces()
+      .then(setPlaces)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const parsedReason = (raw: string | null) => {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  };
+
+  const handleApprove = async (id: number, coords?: { lat: number; lng: number }) => {
+    setActionLoading(id);
+    try {
+      await adminApi.approvePlace(id, coords);
+      setPlaces(prev => prev.filter(p => p.id !== id));
+    } finally {
+      setActionLoading(null);
+      setEditingId(null);
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    if (!confirm('이 장소를 거절하시겠습니까?')) return;
+    setActionLoading(id);
+    try {
+      await adminApi.rejectPlace(id);
+      setPlaces(prev => prev.filter(p => p.id !== id));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleManualApprove = async (id: number) => {
+    setActionLoading(id);
+    try {
+      await adminApi.manualApprovePlace(id, {
+        title: editForm.title || undefined,
+        address: editForm.address || undefined,
+        lat: editForm.lat ? parseFloat(editForm.lat) : undefined,
+        lng: editForm.lng ? parseFloat(editForm.lng) : undefined,
+      });
+      setPlaces(prev => prev.filter(p => p.id !== id));
+    } finally {
+      setActionLoading(null);
+      setEditingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center py-20">
+        <Loader size={24} className="text-primary animate-spin" />
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 pb-24 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+          <MapPin size={16} className="text-amber-500" /> 검토 대기 장소
+        </h3>
+        <span className="text-xs text-gray-500 font-medium">{places.length}건</span>
+      </div>
+
+      {places.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <CheckCircle size={32} className="mx-auto mb-2 opacity-30" />
+          <p className="text-sm">검토 대기 중인 장소가 없습니다.</p>
+        </div>
+      ) : (
+        places.map(place => {
+          const reason = parsedReason(place.pendingReason);
+          const isEditing = editingId === place.id;
+          const isActing = actionLoading === place.id;
+
+          return (
+            <div key={place.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-amber-100">
+              {/* 이미지 + 기본정보 */}
+              <div className="flex gap-3 p-3">
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                  {place.imageUrl
+                    ? <img src={place.imageUrl} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center"><ImageOff size={20} className="text-gray-300" /></div>
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="text-sm font-bold text-gray-800 truncate">{place.title}</p>
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold shrink-0">보류</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5 truncate">{place.address}</p>
+                  <p className="text-[11px] text-gray-400">{place.category}</p>
+                  {reason && (
+                    <div className="mt-1 text-[10px] text-amber-700 bg-amber-50 rounded-lg px-2 py-1 space-y-0.5">
+                      <p>유사도 <span className="font-bold">{reason.similarity}%</span></p>
+                      <p>원본: <span className="font-bold">{reason.sourceTitle}</span> → 카카오: <span className="font-bold">{reason.kakaoTitle}</span></p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 수동 편집 폼 */}
+              {isEditing && (
+                <div className="px-3 pb-3 border-t border-gray-100 pt-3 space-y-2">
+                  <p className="text-[11px] font-bold text-gray-500">수동 수정 (빈칸은 기존값 유지)</p>
+                  {[
+                    { label: '상호명', key: 'title', placeholder: place.title },
+                    { label: '주소', key: 'address', placeholder: place.address },
+                    { label: '위도', key: 'lat', placeholder: String(place.latitude) },
+                    { label: '경도', key: 'lng', placeholder: String(place.longitude) },
+                  ].map(f => (
+                    <div key={f.key} className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-500 w-10 shrink-0">{f.label}</span>
+                      <input
+                        type="text"
+                        placeholder={f.placeholder}
+                        value={editForm[f.key as keyof typeof editForm]}
+                        onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-primary"
+                      />
+                    </div>
+                  ))}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => handleManualApprove(place.id)}
+                      disabled={isActing}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-primary text-white flex items-center justify-center gap-1"
+                    >
+                      {isActing ? <Loader size={12} className="animate-spin" /> : <Check size={12} />} 수정 후 승인
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="py-2 px-4 rounded-xl text-xs font-bold bg-gray-100 text-gray-600"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 액션 버튼 */}
+              {!isEditing && (
+                <div className="flex gap-2 px-3 pb-3 border-t border-gray-100 pt-2.5">
+                  <a
+                    href={place.kakaoMapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-yellow-50 text-yellow-700"
+                  >
+                    <ExternalLink size={12} /> 지도확인
+                  </a>
+                  <button
+                    onClick={() => handleApprove(place.id)}
+                    disabled={isActing}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-50 text-green-700 flex items-center justify-center gap-1"
+                  >
+                    {isActing ? <Loader size={12} className="animate-spin" /> : <Check size={12} />} 승인
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingId(place.id);
+                      setEditForm({ title: '', address: '', lat: '', lng: '' });
+                    }}
+                    className="py-2 px-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 flex items-center gap-1"
+                  >
+                    <Edit3 size={12} /> 수정
+                  </button>
+                  <button
+                    onClick={() => handleReject(place.id)}
+                    disabled={isActing}
+                    className="py-2 px-3 rounded-xl text-xs font-bold bg-red-50 text-red-600 flex items-center gap-1"
+                  >
+                    <X size={12} /> 거절
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })
       )}
     </motion.div>
   );

@@ -33,6 +33,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
   const [avgRating, setAvgRating] = useState(0);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [showFullDesc, setShowFullDesc] = useState(false);
+  const [showAiPolicy, setShowAiPolicy] = useState(false);
 
   const { wishlist, toggleWishlist, isLoggedIn } = useAppStore();
   const isWishlisted = place ? wishlist.includes(id) : false;
@@ -84,6 +85,20 @@ export function Detail({ id, onNavigate }: DetailProps) {
     address: fullAddress,
     overview: place.overview || null,
   };
+
+  // AI 점수 항목별 역산 (Place.java computeAiRating 루브릭 기준)
+  const aiBreakdown = place.aiRating != null ? (() => {
+    if (place.aiRating === 0) return null; // 폐업
+    const aScore = 2.0;
+    let bScore = 0.0;
+    const petFriendly = place.chkPetInside === 'Y' || place.tags?.includes('대형견');
+    if (petFriendly) bScore += 0.4;
+    if (place.imageUrl && place.overview && place.overview.length >= 50) bScore += 0.3;
+    if (place.phone && place.homepage) bScore += 0.3;
+    bScore = Math.round(bScore * 10) / 10;
+    const cdScore = Math.max(0, Math.round((place.aiRating! - aScore - bScore) * 10) / 10);
+    return { aScore, bScore, cdScore };
+  })() : null;
 
   // 좌표: PlaceDto(latitude/longitude) 또는 mock 데이터(lat/lng) 모두 처리
   const placeLat: number | undefined = place.latitude ?? (place as any).lat;
@@ -174,10 +189,34 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 <span className="text-xs text-gray-400">({reviewCount}개 리뷰)</span>
               </div>
             ) : place.aiRating ? (
-              <div className="flex items-center gap-1.5">
-                <Star size={14} className="fill-[#008BFF] text-[#008BFF]" />
-                <span className="text-xs font-bold text-gray-900">{place.aiRating.toFixed(1)}</span>
-                <span className="text-[10px] text-gray-400">[AI 추천]</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Star size={14} className="fill-[#008BFF] text-[#008BFF]" />
+                  <span className="text-xs font-bold text-gray-900">{place.aiRating.toFixed(1)}</span>
+                  <button 
+                    onClick={() => setShowAiPolicy(true)}
+                    className="flex items-center gap-1 bg-[#008BFF]/10 hover:bg-[#008BFF]/20 text-[#008BFF] text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors active:scale-95"
+                  >
+                    <span className="flex items-center justify-center w-[12px] h-[12px] bg-[#008BFF] text-white rounded-full text-[8px] font-black leading-none">i</span>
+                    AI 추천
+                  </button>
+                </div>
+                {aiBreakdown && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 bg-green-50/80 border border-green-100/50 px-1.5 py-0.5 rounded-md text-green-600">
+                      <span className="text-[10px]">운영</span>
+                      <span className="text-[11px] font-bold">{aiBreakdown.aScore.toFixed(1)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-blue-50/80 border border-blue-100/50 px-1.5 py-0.5 rounded-md text-[#008BFF]">
+                      <span className="text-[10px]">친화도</span>
+                      <span className="text-[11px] font-bold">{aiBreakdown.bScore.toFixed(1)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-orange-50/80 border border-orange-100/50 px-1.5 py-0.5 rounded-md text-orange-500">
+                      <span className="text-[10px]">화제성</span>
+                      <span className="text-[11px] font-bold">{aiBreakdown.cdScore.toFixed(1)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-1.5">
@@ -440,6 +479,62 @@ export function Detail({ id, onNavigate }: DetailProps) {
         postImage={place.imageUrl || (place as any).img || ""}
         postUser={displayTitle}
       />
+
+      {/* AI 추천 안내 모달 */}
+      {showAiPolicy && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowAiPolicy(false)}
+        >
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-5 max-w-[320px] w-full shadow-xl"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-[15px] font-bold text-gray-900 flex items-center gap-1.5">
+                <span className="flex items-center justify-center w-4 h-4 bg-[#008BFF] text-white rounded-full text-[10px] font-black">i</span>
+                AI 추천 가이드
+              </h3>
+              <button onClick={() => setShowAiPolicy(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="space-y-3 text-xs text-gray-600 leading-relaxed">
+              <p>
+                <strong className="text-[#008BFF]">멍냥트립 AI 추천 점수</strong>는 최신 데이터를 기반으로 신뢰도와 사용자 만족도를 종합하여 추천합니다.
+              </p>
+              <div className="bg-gray-50 rounded-xl p-3 space-y-2.5">
+                <div className="flex gap-2">
+                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
+                   <div>
+                     <strong className="text-gray-800">운영</strong>
+                     <p className="mt-0.5 text-[11px] text-gray-500">지속적인 운영 안정성 및 반려동물 친화적 환경(실내외 동반, 대형견 등)을 반영합니다.</p>
+                   </div>
+                </div>
+                <div className="flex gap-2">
+                   <span className="w-1.5 h-1.5 rounded-full bg-[#008BFF] mt-1.5 shrink-0" />
+                   <div>
+                     <strong className="text-gray-800">친화도</strong>
+                     <p className="mt-0.5 text-[11px] text-gray-500">상세 소개, 리뷰 수, 연락처 등 여행객을 위한 정보 제공 충실도를 나타냅니다.</p>
+                   </div>
+                </div>
+                <div className="flex gap-2">
+                   <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 shrink-0" />
+                   <div>
+                     <strong className="text-gray-800">화제성</strong>
+                     <p className="mt-0.5 text-[11px] text-gray-500">현재 여행객들의 관심도와 인기 트렌드를 분석하여 산정됩니다.</p>
+                   </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-400 text-center pt-2 border-t border-gray-100">
+                AI 추천 점수는 지속적인 학습을 통해 업데이트됩니다.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
     </motion.div>
   );

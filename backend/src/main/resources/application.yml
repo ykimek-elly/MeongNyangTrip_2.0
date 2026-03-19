@@ -76,6 +76,13 @@ google:
     api-key: ${GOOGLE_PLACES_API_KEY:}
     base-url: https://places.googleapis.com/v1
 
+# Google Gemini Vision API (이미지 적합성 검증 배치)
+# 키 소진 시 자동 전환 — 최대 2개 키 지원
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    key2: ${GEMINI_API_KEY_2:}
+
 # 네이버 지역 검색 API (이미지 보강 — imageUrl 없는 장소 대상)
 naver:
   local:

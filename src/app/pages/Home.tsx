@@ -1,8 +1,11 @@
 import React from 'react';
 import Slider from 'react-slick';
+import mainBanner1 from '../../assets/main_banner_1080_1.jpg';
+import mainBanner2 from '../../assets/main_banner_1080_2.jpg';
+import mainBanner3 from '../../assets/main_banner_1080_3.jpg';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { Search, MapPin, Calendar, Layers, TreeDeciduous, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
+import { Search, MapPin, Calendar, Layers, TreeDeciduous, PawPrint, Dog, Cat, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
 
 import { PlaceImage } from '../components/PlaceImage';
 // 더미 데이터 제거
@@ -55,7 +58,7 @@ export function Home({ onNavigate }: HomeProps) {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -70,16 +73,16 @@ export function Home({ onNavigate }: HomeProps) {
             {/* 슬라이드 1: 플레이스 */}
             <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'PLACE' })}>
               <img
-                src="https://images.unsplash.com/photo-1759914915081-b206224de813?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjBmcmllbmRseSUyMHBhcmslMjBkb2d8ZW58MXx8fHwxNzcyNjgxMzU0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" 
-                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                alt="멍냥플레이스" 
+                src={mainBanner1}
+                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                alt="멍냥플레이스"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end px-7 pt-7 pb-12">
                 <span className="inline-flex items-center gap-1 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full w-fit mb-3 shadow-sm">
                   <TreeDeciduous size={12} strokeWidth={2.5} /> 멍냥플레이스
                 </span>
                 <h3 className="text-white text-2xl font-bold leading-tight">
-                  자연 속에서 즐기는<br/>
+                  자연 속에서 즐기는<br />
                   <span className="text-green-300">신나는 야외 산책</span> 코스
                 </h3>
               </div>
@@ -88,16 +91,16 @@ export function Home({ onNavigate }: HomeProps) {
             {/* 슬라이드 2: 스테이 */}
             <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'STAY' })}>
               <img
-                src="https://images.unsplash.com/photo-1620937003051-b1749b6a6cb5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjBmcmllbmRseSUyMGhvdGVsJTIwZG9nfGVufDF8fHx8MTc3MjY4MTM1NHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" 
-                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                alt="멍냥스테이" 
+                src={mainBanner2}
+                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                alt="멍냥스테이"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end px-7 pt-7 pb-12">
                 <span className="inline-flex items-center gap-1 bg-brand-point text-black text-[10px] font-bold px-2.5 py-1 rounded-full w-fit mb-3 shadow-sm">
                   <Bed size={12} strokeWidth={2.5} /> 멍냥스테이
                 </span>
                 <h3 className="text-white text-2xl font-bold leading-tight">
-                  반려동물과 함께 머무는<br/>
+                  반려동물과 함께 머무는<br />
                   <span className="text-brand-point">프리미엄 힐링</span> 숙소
                 </h3>
               </div>
@@ -106,16 +109,16 @@ export function Home({ onNavigate }: HomeProps) {
             {/* 슬라이드 3: 다이닝 */}
             <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'DINING' })}>
               <img
-                src="https://images.unsplash.com/photo-1712746438761-f8604b6d867b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjBmcmllbmRseSUyMGNhZmUlMjBkb2d8ZW58MXx8fHwxNzcyNjgxMzU0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" 
-                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                alt="멍냥다이닝" 
+                src={mainBanner3}
+                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                alt="멍냥다이닝"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end px-7 pt-7 pb-12">
                 <span className="inline-flex items-center gap-1 bg-primary text-white text-[10px] font-bold px-2.5 py-1 rounded-full w-fit mb-3 shadow-sm">
                   <Coffee size={12} strokeWidth={2.5} /> 멍냥다이닝
                 </span>
                 <h3 className="text-white text-2xl font-bold leading-tight">
-                  눈치 보지 않고 즐기는<br/>
+                  눈치 보지 않고 즐기는<br />
                   <span className="text-pink-200">동반 가능</span> 맛집 & 카페
                 </h3>
               </div>
@@ -129,9 +132,9 @@ export function Home({ onNavigate }: HomeProps) {
           <div className="flex gap-2 h-[3.25rem]">
             <div className="bg-gray-50 border border-gray-200 rounded-2xl px-3 flex items-center gap-2 flex-1 min-w-0">
               <Search className="text-gray-400 shrink-0" size={18} />
-              <input 
-                type="text" 
-                placeholder="지역 (예: 제주)" 
+              <input
+                type="text"
+                placeholder="지역 검색 (서울·경기)"
                 className="bg-transparent w-full outline-none text-gray-800 placeholder:text-gray-400 font-medium text-sm"
                 value={searchRegion}
                 onChange={(e) => setSearchRegion(e.target.value)}
@@ -141,7 +144,7 @@ export function Home({ onNavigate }: HomeProps) {
               value={searchDate}
               onChange={(date) => setSearchDate(date)}
             />
-            <button 
+            <button
               className="bg-primary text-white rounded-2xl aspect-square h-full flex items-center justify-center shadow-lg active:scale-95 transition-all shrink-0"
               onClick={handleSearch}
             >
@@ -155,16 +158,16 @@ export function Home({ onNavigate }: HomeProps) {
       <div className="px-4 mb-8">
         <div className="flex justify-start md:justify-center gap-4 overflow-x-auto scrollbar-hide snap-x px-[4px] pt-[0px] pb-[10px]">
           <div className="snap-start shrink-0">
-            <CategoryItem 
-              icon={Sparkles} 
-              label="AI 추천산책" 
+            <CategoryItem
+              icon={Sparkles}
+              label="AI 추천산책"
               onClick={() => onNavigate('ai-walk-guide')}
               className="[&>div]:!bg-green-50 [&>div]:!text-green-500 [&>span]:!text-gray-800 [&>span]:!font-bold"
             />
           </div>
-          <div className="snap-start shrink-0"><CategoryItem icon={TreeDeciduous} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'PLACE' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Bed} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Coffee} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={PawPrint} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'PLACE' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={Dog} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={Cat} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Map} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={MessageCircle} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
         </div>
@@ -178,7 +181,7 @@ export function Home({ onNavigate }: HomeProps) {
             더보기 <ChevronRight size={12} />
           </span>
         </div>
-        
+
         <Slider
           dots={false}
           infinite={true}
@@ -194,9 +197,9 @@ export function Home({ onNavigate }: HomeProps) {
           className="[&_.slick-track]:flex [&_.slick-track]:gap-4 [&_.slick-slide]:!w-auto [&_.slick-slide>div]:h-full"
         >
           {places.slice(0, 8).map((place, idx) => (
-            <div 
-              key={place.id} 
-              className="!w-[140px] pr-4 cursor-pointer active:scale-95 transition-transform"
+            <div
+              key={place.id}
+              className="!w-[160px] pr-4 cursor-pointer active:scale-95 transition-transform"
               onClick={() => onNavigate('detail', { id: place.id })}
             >
               <div className="relative mb-2">
@@ -227,35 +230,35 @@ export function Home({ onNavigate }: HomeProps) {
       </div>
 
       {/* 개인 맞춤 서비스 (Pill 버튼) */}
-      
+
 
       {/* 카테고리별 베스트 랭킹 */}
       <CategoryBestRanking places={places} onNavigate={onNavigate} />
 
       {/* 프로모션 배너 */}
       <div className="px-4 grid grid-cols-2 gap-2.5">
-        <div 
+        <div
           className="bg-primary/10 rounded-2xl p-3.5 flex flex-col items-start cursor-pointer hover:bg-primary/20 transition-colors active:scale-[0.98]"
           onClick={() => handleBannerClick('lounge')}
         >
           <div className="w-full flex justify-end mb-2">
-            <Gift size={28} className="text-primary opacity-60" />
+            <Gift size={28} className="text-primary" />
           </div>
           <h6 className="font-bold text-primary text-xs mb-1">첫 리뷰 이벤트</h6>
-          <p className="m-0 text-[10px] text-gray-500 leading-snug">산책 인증샷 올리면 간식 쿠폰 100% 증정!</p>
+          <p className="m-0 text-[12px] text-gray-500 leading-snug">산책 인증샷 올리면 간식 쿠폰 100% 증정!</p>
         </div>
 
 
         {/* 방문인증센터 배너 */}
-        <div 
+        <div
           className="bg-brand-point/10 rounded-2xl p-3.5 flex flex-col items-start cursor-pointer hover:bg-brand-point/20 transition-colors active:scale-[0.98]"
           onClick={() => handleBannerClick('visit-checkin')}
         >
           <div className="w-full flex justify-end mb-2">
-            <Camera size={28} className="text-brand-point opacity-60" />
+            <Camera size={28} className="text-brand-point" />
           </div>
           <h6 className="font-bold text-brand-point text-xs mb-1">방문인증센터</h6>
-          <p className="m-0 text-[10px] text-gray-500 leading-snug">방문 인증하고 포인트 받자! 🎁</p>
+          <p className="m-0 text-[12px] text-gray-500 leading-snug">방문 인증하고 포인트 받자! 🎁</p>
         </div>
       </div>
 

@@ -87,4 +87,14 @@ public class User extends BaseEntity {
     public void updateNickname(String nickname) {
         this.nickname = nickname;
     }
+
+    /** 비밀번호 업데이트 (BCrypt 인코딩된 값으로 교체) */
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    /** 회원 탈퇴 — DELETED 상태로 변경 (소프트 딜리트) */
+    public void markAsDeleted() {
+        this.status = Status.DELETED;
+    }
 }

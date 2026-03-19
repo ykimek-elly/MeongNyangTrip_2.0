@@ -47,6 +47,7 @@ export interface AuthResponseDto {
   email: string;
   nickname: string;
   profileImage?: string;
+  role?: 'USER' | 'ADMIN';
 }
 
 /**

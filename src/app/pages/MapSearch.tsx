@@ -22,6 +22,7 @@ interface KakaoVet {
 
 export interface MapSearchProps {
   onNavigate: (page: string, params?: any) => void;
+  initialPlaceId?: number;
 }
 
 // 확장된(Tag, Desc 포함) UI 사용용 임시 타입 단언
@@ -45,7 +46,7 @@ const FILTERS = [
   { id: '동물병원', label: '#동물병원' },
 ];
 
-export function MapSearch({ onNavigate }: MapSearchProps) {
+export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   const setUserLocation = useAppStore(state => state.setUserLocation);
   const { lat, lng, address, error, getLocation } = useGeolocation();
 
@@ -137,6 +138,36 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
     fetchPlaces();
   }, [lat, lng]);
 
+  // 길찾기 모드: 진입 시 현재 위치 자동 요청
+  React.useEffect(() => {
+    if (initialPlaceId) getLocation();
+  }, []);
+
+  // 장소 데이터 준비되면 자동 선택 (위치 없을 때는 목적지만 중앙)
+  React.useEffect(() => {
+    if (!initialPlaceId || places.length === 0) return;
+    const target = places.find(p => p.id === initialPlaceId);
+    if (!target) return;
+    setSelectedPlace(target);
+    if (!lat && mapRef.current) {
+      mapRef.current.setLevel(4);
+      mapRef.current.setCenter(new window.kakao.maps.LatLng(target.latitude, target.longitude));
+      setMapLevel(4);
+    }
+  }, [initialPlaceId, places]);
+
+  // 현재 위치 + 목적지 둘 다 준비되면 bounds fit
+  React.useEffect(() => {
+    if (!initialPlaceId || !lat || !lng || places.length === 0 || !mapRef.current) return;
+    const target = places.find(p => p.id === initialPlaceId);
+    if (!target) return;
+    const bounds = new window.kakao.maps.LatLngBounds();
+    bounds.extend(new window.kakao.maps.LatLng(lat, lng));
+    bounds.extend(new window.kakao.maps.LatLng(target.latitude, target.longitude));
+    // 하단 팝업 카드 공간 확보: bottom 300px 패딩
+    mapRef.current.setBounds(bounds, 80, 40, 300, 40);
+  }, [initialPlaceId, lat, lng, places]);
+
   const filteredSpots = activeFilter === 'all'
     ? places
     : activeFilter === '동물병원'
@@ -191,6 +222,18 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
               </motion.div>
             </CustomOverlayMap>
           ))}
+
+          {/* 현재 위치 마커 — 길찾기 모드에서만 표시 */}
+          {initialPlaceId && lat && lng && (
+            <CustomOverlayMap position={{ lat, lng }} clickable={false}>
+              <div className="relative w-5 h-5 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-40" />
+                <div className="w-5 h-5 bg-blue-500 rounded-full border-2 border-white shadow-lg z-10 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full" />
+                </div>
+              </div>
+            </CustomOverlayMap>
+          )}
 
           {filteredSpots.map((spot) => (
             <CustomOverlayMap
@@ -337,20 +380,24 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
 
               <div className="grid grid-cols-2 gap-2">
                 <a
-                  href={selectedVet.place_url}
+                  href={lat && lng
+                    ? `https://map.kakao.com/link/from/내위치,${lat},${lng}/to/${encodeURIComponent(selectedVet.place_name)},${parseFloat(selectedVet.y)},${parseFloat(selectedVet.x)}`
+                    : selectedVet.place_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-white text-xs font-bold rounded-xl hover:bg-yellow-500 active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-95 transition-all"
                 >
-                  <ExternalLink size={13} /> 카카오맵
+                  <ExternalLink size={13} /> 카카오 길찾기
                 </a>
                 <a
-                  href={`https://map.naver.com/v5/search/${encodeURIComponent(selectedVet.place_name + ' ' + (selectedVet.road_address_name || selectedVet.address_name))}`}
+                  href={lat && lng
+                    ? `https://m.map.naver.com/route.nhn?menu=route&sname=내위치&sx=${lng}&sy=${lat}&ename=${encodeURIComponent(selectedVet.place_name)}&ex=${selectedVet.x}&ey=${selectedVet.y}&pathType=0&showMap=true`
+                    : `https://map.naver.com/v5/search/${encodeURIComponent(selectedVet.place_name + ' ' + (selectedVet.road_address_name || selectedVet.address_name))}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl hover:bg-green-600 active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
                 >
-                  <ExternalLink size={13} /> 네이버맵
+                  <ExternalLink size={13} /> 네이버 길찾기
                 </a>
               </div>
             </div>
@@ -418,6 +465,28 @@ export function MapSearch({ onNavigate }: MapSearchProps) {
                   </div>
                 </div>
               </div>
+
+              {/* 길찾기 앱 연결 — 현재 위치 확보 시 표시 */}
+              {initialPlaceId && lat && lng && (
+                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <a
+                    href={`https://map.kakao.com/link/from/내위치,${lat},${lng}/to/${encodeURIComponent(selectedPlace.name || selectedPlace.title || '')},${selectedPlace.latitude},${selectedPlace.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  >
+                    <ExternalLink size={13} /> 카카오 길찾기
+                  </a>
+                  <a
+                    href={`https://m.map.naver.com/route.nhn?menu=route&sname=내위치&sx=${lng}&sy=${lat}&ename=${encodeURIComponent(selectedPlace.name || selectedPlace.title || '')}&ex=${selectedPlace.longitude}&ey=${selectedPlace.latitude}&pathType=0&showMap=true`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  >
+                    <ExternalLink size={13} /> 네이버 길찾기
+                  </a>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

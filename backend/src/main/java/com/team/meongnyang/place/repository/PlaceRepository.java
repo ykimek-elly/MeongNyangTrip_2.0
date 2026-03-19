@@ -28,6 +28,10 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("SELECT p FROM Place p WHERE (p.imageUrl IS NULL OR p.imageUrl = '') AND (p.tags IS NULL OR p.tags NOT LIKE '%폐업%')")
     List<Place> findByImageUrlIsNullOrEmpty();
 
+    /** Gemini 이미지 검증 대상 조회 — 이미지 있고 폐업 아닌 장소 */
+    @Query("SELECT p FROM Place p WHERE p.imageUrl IS NOT NULL AND p.imageUrl <> '' AND (p.tags IS NULL OR p.tags NOT LIKE '%폐업%')")
+    List<Place> findByImageUrlIsNotNullAndNotEmpty();
+
     /** 깨진 이미지 URL 대상 조회 — Instagram/Facebook/Pinterest CDN (핫링크 차단 또는 403) */
     @Query("SELECT p FROM Place p WHERE p.imageUrl LIKE '%cdninstagram%' OR p.imageUrl LIKE '%fbcdn%' OR p.imageUrl LIKE '%pinimg%' OR p.imageUrl LIKE '%pinterest%'")
     List<Place> findByBrokenImageUrls();

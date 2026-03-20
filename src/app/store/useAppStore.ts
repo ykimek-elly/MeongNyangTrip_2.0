@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { PlaceDto, PetRequest } from '../api/types';
 import { placeApi } from '../api/placeApi';
 import { petApi } from '../api/petApi';
+import { wishlistApi } from '../api/wishlistApi';
 
 /** PetInfo(FE) → PetRequest(BE) 변환 헬퍼 */
 const toPetRequest = (pet: PetInfo): PetRequest => ({
@@ -50,6 +51,10 @@ export interface PetInfo {
   personality?: string;                 // personality, 최대 100자, 선택
   preferredPlace?: string;              // preferred_place, 최대 50자, 선택
   isRepresentative?: boolean;           // is_representative — 알림 수신 대표 동물 (1마리만 true)
+  region?: string;                      // 지역 선택 (시도 + 시군구, 알림 서비스용)
+  activityRadius?: 5 | 15 | 30;        // 활동 반경 (km)
+  preferredCategories?: ('PLACE' | 'STAY' | 'DINING')[];  // 선호 카테고리
+  notifyEnabled?: boolean;              // 맞춤 알림 수신 동의
 }
 
 export interface SavedRoute {
@@ -73,13 +78,14 @@ interface AppState {
   username: string;
   email: string;
   profileImage: string;
+  isAdmin: boolean;        // 관리자 여부 (JWT role 기반, 로그인 시 세팅)
   pets: PetInfo[];                  // 다중 등록 (2026-03-13 확정)
   hasCompletedOnboarding: boolean;
   wishlist: number[];
   savedRoutes: SavedRoute[];
   userLocation: UserLocation;
 
-  login: (username: string, email?: string, userId?: number, profileImage?: string) => void;
+  login: (username: string, email?: string, userId?: number, profileImage?: string, isAdmin?: boolean) => void;
   logout: () => void;
   updateProfile: (data: { username?: string; email?: string }) => void;
   completeOnboarding: () => void;
@@ -106,6 +112,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       isLoggedIn: false,
+      isAdmin: false,
       userId: null,
       username: '게스트',
       email: '',
@@ -119,8 +126,9 @@ export const useAppStore = create<AppState>()(
       isLoadingPlaces: false,
 
       // TODO: [DB 연동] POST /api/auth/login → Step 4에서 JWT 토큰 기반으로 전환 (userId 자동 세팅)
-      login: (username, email, userId, profileImage) => set({
+      login: (username, email, userId, profileImage, isAdmin) => set({
         isLoggedIn: true,
+        isAdmin: isAdmin ?? false,
         username,
         email: email || '',
         userId: userId ?? null,
@@ -128,7 +136,7 @@ export const useAppStore = create<AppState>()(
       }),
 
       // TODO: [DB 연동] POST /api/auth/logout → JWT 토큰 블랙리스트(Redis) 처리 + 클라이언트 토큰 삭제
-      logout: () => set({ isLoggedIn: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
+      logout: () => set({ isLoggedIn: false, isAdmin: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
 
       // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE (PostgreSQL)
       updateProfile: (data) => set((state) => ({
@@ -215,17 +223,26 @@ export const useAppStore = create<AppState>()(
         return pets.find((p) => p.isRepresentative) ?? pets[0] ?? null;
       },
 
-      // TODO: [DB 연동] POST|DELETE /api/wishlists/{placeId} → Spring Boot JPA wishlists 테이블 UPSERT/DELETE + 낙관적 업데이트
-      toggleWishlist: (id) => set((state) => {
-        const isWished = state.wishlist.includes(id);
-        if (isWished) {
-          return { wishlist: state.wishlist.filter(wId => wId !== id) };
-        } else {
-          return { wishlist: [...state.wishlist, id] };
+      // POST /api/v1/wishlists/{placeId} — 낙관적 업데이트 + API 동기화
+      toggleWishlist: (id) => {
+        const { isLoggedIn, wishlist } = get();
+        const wasWished = wishlist.includes(id);
+        // 낙관적 업데이트
+        set({ wishlist: wasWished ? wishlist.filter(wId => wId !== id) : [...wishlist, id] });
+        // 로그인 상태일 때만 API 호출
+        if (isLoggedIn) {
+          wishlistApi.toggle(id).catch((err) => {
+            console.error('[Wishlist] toggle 실패, 롤백:', err);
+            // 실패 시 원래 상태로 롤백
+            set((state) => ({
+              wishlist: wasWished
+                ? [...state.wishlist, id]
+                : state.wishlist.filter(wId => wId !== id),
+            }));
+          });
         }
-      }),
+      },
 
-      // TODO: [DB 연동] DELETE /api/wishlists → Spring Boot JPA wishlists 전체 삭제 (PostgreSQL)
       clearWishlist: () => set({ wishlist: [] }),
 
       // TODO: [DB 연동] POST /api/saved-routes → Spring Boot JPA saved_routes 테이블 INSERT (PostgreSQL)

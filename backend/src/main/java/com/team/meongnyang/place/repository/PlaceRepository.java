@@ -1,7 +1,7 @@
 package com.team.meongnyang.place.repository;
 
 import com.team.meongnyang.place.entity.Place;
-import org.springframework.data.domain.Pageable;
+import com.team.meongnyang.place.entity.PlaceStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,6 +29,10 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("SELECT p FROM Place p WHERE (p.imageUrl IS NULL OR p.imageUrl = '') AND (p.tags IS NULL OR p.tags NOT LIKE '%폐업%')")
     List<Place> findByImageUrlIsNullOrEmpty();
 
+    /** Gemini 이미지 검증 대상 조회 — 이미지 있고 폐업 아닌 장소 */
+    @Query("SELECT p FROM Place p WHERE p.imageUrl IS NOT NULL AND p.imageUrl <> '' AND (p.tags IS NULL OR p.tags NOT LIKE '%폐업%')")
+    List<Place> findByImageUrlIsNotNullAndNotEmpty();
+
     /** 깨진 이미지 URL 대상 조회 — Instagram/Facebook/Pinterest CDN (핫링크 차단 또는 403) */
     @Query("SELECT p FROM Place p WHERE p.imageUrl LIKE '%cdninstagram%' OR p.imageUrl LIKE '%fbcdn%' OR p.imageUrl LIKE '%pinimg%' OR p.imageUrl LIKE '%pinterest%'")
     List<Place> findByBrokenImageUrls();
@@ -52,6 +56,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("SELECT p FROM Place p WHERE p.aiRating IS NULL AND (p.tags IS NULL OR p.tags NOT LIKE '%폐업%')")
     List<Place> findByAiRatingIsNull();
 
+    /** 상태별 장소 조회 — PENDING(관리자 검토 큐) 등 */
+    List<Place> findByStatusOrderByCreatedAtDesc(PlaceStatus status);
+
     /** 카테고리별 장소 목록 조회 */
     List<Place> findByCategory(String category);
 
@@ -60,7 +67,6 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
 
     /** 카테고리 + 키워드 복합 검색 */
     List<Place> findByCategoryAndTitleContainingIgnoreCase(String category, String keyword);
-
 
     /**
      * PostGIS ST_DWithin — 위경도 기준 반경 내 장소 검색 (거리 오름차순)
@@ -115,9 +121,4 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
         @Param("category") String category,
         @Param("limit") int limit
     );
-
-    /**
-     *  tag가 포함된 장소 검색
-     */
-    List<Place> findByTagsContaining(String tag, Pageable pageable);
 }

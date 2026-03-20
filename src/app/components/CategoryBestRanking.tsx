@@ -21,7 +21,11 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
 
   const filteredPlaces = places
     .filter(p => p.category === activeCategory)
-    .sort((a, b) => b.rating - a.rating)
+    .sort((a, b) => {
+      const ratingA = a.reviewCount > 0 ? a.rating : (a.aiRating ?? 0);
+      const ratingB = b.reviewCount > 0 ? b.rating : (b.aiRating ?? 0);
+      return ratingB - ratingA;
+    })
     .slice(0, 4);
 
   return (

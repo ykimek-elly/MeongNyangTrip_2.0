@@ -13,7 +13,10 @@ import { MyPage } from './pages/MyPage';
 import { AIWalkGuide } from './pages/AIWalkGuide';
 import { VisitCheckIn } from './pages/VisitCheckIn';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { AdminLogin } from './pages/AdminLogin';
 import { TeamPage } from './pages/TeamPage';
+import { DMList } from './pages/DMList';
+import { DMDetail } from './pages/DMDetail';
 import { OAuthCallback } from './pages/OAuthCallback';
 import { NotFound } from './pages/NotFound';
 import { Onboarding } from './pages/Onboarding';
@@ -35,7 +38,11 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
         break;
       }
       case 'detail': navigate(`/detail/${params.id}`); break;
-      case 'map': navigate('/map'); break;
+      case 'map': {
+        const placeId = params?.placeId;
+        navigate(`/map${placeId ? `?placeId=${placeId}` : ''}`);
+        break;
+      }
       case 'lounge': navigate('/lounge'); break;
       case 'login': navigate('/login'); break;
       case 'signup': navigate('/signup'); break;
@@ -55,7 +62,10 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
       case 'visit-checkin': navigate('/visit-checkin'); break;
       case 'edit-profile': navigate('/edit-profile'); break;
       case 'admin': navigate('/admin'); break;
+      case 'admin-login': navigate('/admin/login'); break;
       case 'team': navigate('/team'); break;
+      case 'dm': navigate('/dm'); break;
+      case 'dm-detail': navigate(`/dm/${encodeURIComponent(params?.partner ?? '')}`); break;
       default: navigate('/');
     }
     window.scrollTo(0, 0);
@@ -63,8 +73,8 @@ function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boo
 }
 
 /** 헤더/GNB 숨김 대상 페이지 목록 */
-const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team', 'oauth2/callback'];
-const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'onboarding', 'edit-profile', 'team', 'oauth2/callback'];
+const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'admin/login', 'onboarding', 'edit-profile', 'team', 'oauth2/callback', 'dm'];
+const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'admin/login', 'onboarding', 'edit-profile', 'team', 'oauth2/callback', 'dm'];
 
 /** 루트 레이아웃 — 헤더, GNB, AI챗 표시 제어 */
 function RootAdapter() {
@@ -76,14 +86,14 @@ function RootAdapter() {
 
   const currentPath = location.pathname.substring(1) || 'home';
 
-  /* detail/:id 경로도 숨김 처리 */
-  const showHeader = !HIDDEN_HEADER_PAGES.includes(currentPath) && !currentPath.startsWith('detail');
-  const showBottomNav = !HIDDEN_NAV_PAGES.includes(currentPath) && !currentPath.startsWith('detail');
+  /* detail/:id, dm/:partner 경로도 숨김 처리 */
+  const showHeader = !HIDDEN_HEADER_PAGES.includes(currentPath) && !currentPath.startsWith('detail') && !currentPath.startsWith('dm');
+  const showBottomNav = !HIDDEN_NAV_PAGES.includes(currentPath) && !currentPath.startsWith('detail') && !currentPath.startsWith('dm');
   const showAIChat = showBottomNav;
 
   return (
-    <div className="bg-background min-h-screen flex justify-center font-sans text-foreground">
-      <div className="w-full max-w-[600px] min-h-screen bg-white shadow-[0_0_30px_rgba(227,99,148,0.1)] relative overflow-hidden flex flex-col">
+    <div className="bg-background h-screen flex justify-center font-sans text-foreground">
+      <div className="w-full max-w-[600px] h-full bg-white shadow-[0_0_30px_rgba(227,99,148,0.1)] relative overflow-hidden flex flex-col">
         
         {/* 상단 헤더 — 메인 탭에서만 표시 */}
         {showHeader && (
@@ -98,12 +108,10 @@ function RootAdapter() {
             </div>
             
             <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end">
-                <div className="flex items-center gap-1 ml-[0px] mr-[10px] my-[0px]">
-                  <Sun size={14} className="text-orange-400 fill-orange-400" />
-                  <span className="text-sm font-bold text-gray-800">23°C</span>
-                  <span className="text-[10px] text-primary font-medium tracking-tight ml-1 -order-1">산책하기 좋은 날씨예요!</span>
-                </div>
+              <div className="flex items-center gap-1">
+                <Sun size={14} className="text-orange-400 fill-orange-400" />
+                <span className="text-sm font-bold text-gray-800">23°C</span>
+                <span className="text-[10px] text-primary font-medium tracking-tight ml-1 -order-1">산책하기 좋은 날씨예요!</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -126,7 +134,7 @@ function RootAdapter() {
           </header>
         )}
 
-        <main className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden relative ${currentPath === 'map' ? 'pt-0' : 'pt-2.5'}`}>
+        <main className={`flex-1 flex flex-col overflow-x-hidden relative min-h-0 ${currentPath === 'map' || currentPath === 'list' ? 'overflow-hidden pt-0' : 'overflow-y-auto pt-2.5'}`}>
           <Outlet context={{ onNavigate: handleNavigate }} />
         </main>
 
@@ -168,6 +176,32 @@ function DetailWrapper() {
   return <WrappedDetail id={Number(id)} />;
 }
 
+/** 관리자 전용 라우트 — isAdmin 아닐 경우 /admin/login으로 리다이렉트 */
+function AdminRoute() {
+  const { isAdmin } = useAppStore();
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    if (!isAdmin) navigate('/admin/login', { replace: true });
+  }, [isAdmin, navigate]);
+  if (!isAdmin) return null;
+  return withNavigation(AdminDashboard)({});
+}
+
+/** DM 상세 페이지 — partner 파라미터 전달 */
+const WrappedDMDetail = withNavigation(DMDetail);
+function DMDetailWrapper() {
+  const { partner } = useParams();
+  return <WrappedDMDetail partner={decodeURIComponent(partner || '')} />;
+}
+
+/** 지도 페이지 — placeId 쿼리 파라미터 전달 */
+const WrappedMapSearch = withNavigation(MapSearch);
+function MapWrapper() {
+  const [searchParams] = useSearchParams();
+  const placeId = searchParams.get('placeId');
+  return <WrappedMapSearch initialPlaceId={placeId ? Number(placeId) : undefined} />;
+}
+
 /** 라우터 설정 */
 export const router = createBrowserRouter([
   {
@@ -178,7 +212,7 @@ export const router = createBrowserRouter([
       { index: true, Component: withNavigation(Home) },
       { path: "list", Component: ListWrapper },
       { path: "detail/:id", Component: DetailWrapper },
-      { path: "map", Component: withNavigation(MapSearch) },
+      { path: "map", Component: MapWrapper },
       { path: "lounge", Component: withNavigation(Lounge) },
       { path: "mypage", Component: withNavigation(MyPage) },
       { path: "login", Component: withNavigation(Login) },
@@ -189,8 +223,11 @@ export const router = createBrowserRouter([
       { path: "ai-walk-guide", Component: withNavigation(AIWalkGuide) },
       { path: "visit-checkin", Component: withNavigation(VisitCheckIn) },
       { path: "edit-profile", Component: withNavigation(EditProfile) },
-      { path: "admin", Component: withNavigation(AdminDashboard) },
+      { path: "admin", Component: AdminRoute },
+      { path: "admin/login", Component: withNavigation(AdminLogin) },
       { path: "team",  Component: withNavigation(TeamPage) },
+      { path: "dm", Component: withNavigation(DMList) },
+      { path: "dm/:partner", Component: DMDetailWrapper },
       { path: "oauth2/callback", Component: OAuthCallback },
       { path: "*", Component: withNavigation(NotFound) },
     ],

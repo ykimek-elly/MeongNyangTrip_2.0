@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.dummy;
 import com.team.meongnyang.checkin.entity.CheckIn;
 import com.team.meongnyang.checkin.repository.CheckInRepository;
 import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.place.entity.PlaceStatus;
 import com.team.meongnyang.place.repository.PlaceRepository;
 import com.team.meongnyang.recommendation.log.entity.AiResponseLog;
 import com.team.meongnyang.recommendation.log.repository.AiResponseLogRepository;
@@ -402,6 +403,7 @@ public class DummyDataInitializer implements CommandLineRunner {
                     .imageUrl(imageUrl)
                     .phone(phone)
                     .tags(tags)
+                    .status(PlaceStatus.ACTIVE)
                     .overview(description + " 더미 로더 v2에서 생성한 테스트 장소입니다.")
                     .chkPetInside(tags.contains("실내") ? "Y" : "N")
                     .build()

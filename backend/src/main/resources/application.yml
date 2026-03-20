@@ -121,3 +121,12 @@ oauth2:
 batch:
   weather-preload-cron: 0 50 8 * * *
   notification-cron: 0 0 9 * * *
+  notification-parallelism: 5
+
+redis:
+  daily-recommendation-cache-key: recommendation:daily
+  daily-recommendation-cache-ttl: 24h
+  weather-cache-key: weather
+  weather-cache-ttl: 3h
+  gemini-cache-key: gemini
+  gemini-cache-ttl: 6h

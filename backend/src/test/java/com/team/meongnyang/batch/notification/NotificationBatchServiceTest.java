@@ -1,6 +1,7 @@
 package com.team.meongnyang.batch.notification;
 
 import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.recommendation.cache.DailyRecommendationCacheService;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
 import com.team.meongnyang.recommendation.notification.service.KakaoNotificationService;
@@ -13,16 +14,15 @@ import com.team.meongnyang.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,12 +40,14 @@ class NotificationBatchServiceTest {
     private KakaoNotificationService kakaoNotificationService;
     @Mock
     private NotificationMessageBuilder notificationMessageBuilder;
+    @Mock
+    private DailyRecommendationCacheService dailyRecommendationCacheService;
 
     @InjectMocks
     private NotificationBatchService notificationBatchService;
 
     @Test
-    @DisplayName("배치 실행 시 추천 생성 후 알림 전송까지 성공한다")
+    @DisplayName("알림 전송 성공 후 daily recommendation cache를 저장한다")
     void runDailyNotificationBatch_success() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
@@ -56,11 +58,14 @@ class NotificationBatchServiceTest {
                 .petId(pet.getPetId())
                 .petName(pet.getPetName())
                 .weatherType("SUNNY")
-                .weatherSummary("산책하기 좋은 날씨")
+                .weatherWalkLevel("GOOD")
+                .weatherSummary("sunny day")
                 .place(place)
-                .message("오늘은 공원 산책을 추천해요.")
+                .message("alpha park is a good choice")
                 .fallbackUsed(false)
                 .cacheHit(false)
+                .aiResponse("full gemini response")
+                .geminiCacheKey("gemini:v2:model:hash")
                 .build();
 
         NotificationResponse notificationResponse = NotificationResponse.builder()
@@ -71,8 +76,10 @@ class NotificationBatchServiceTest {
 
         when(userRepository.findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE))
                 .thenReturn(List.of(user));
-        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId()))).thenReturn(List.of(pet));
-        when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString())).thenReturn(recommendationResult);
+        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId())))
+                .thenReturn(List.of(pet));
+        when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString()))
+                .thenReturn(recommendationResult);
         when(notificationMessageBuilder.buildMessage(
                 eq(user),
                 eq(pet),
@@ -80,44 +87,17 @@ class NotificationBatchServiceTest {
                 eq(recommendationResult.getMessage()),
                 eq(recommendationResult.getWeatherType()),
                 eq(recommendationResult.getWeatherWalkLevel())
-        )).thenReturn(recommendationResult.getMessage());
-        when(kakaoNotificationService.send(user, place, recommendationResult.getMessage())).thenReturn(notificationResponse);
+        )).thenReturn("notification body");
+        when(kakaoNotificationService.send(user, place, "notification body")).thenReturn(notificationResponse);
+        when(userRepository.save(any(User.class))).thenReturn(user);
 
         notificationBatchService.runDailyNotificationBatch();
 
-        InOrder inOrder = inOrder(
-                userRepository,
-                petRepository,
-                recommendationPipelineService,
-                notificationMessageBuilder,
-                kakaoNotificationService
-        );
-
-        inOrder.verify(userRepository).findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE);
-        inOrder.verify(petRepository).findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId()));
-        inOrder.verify(recommendationPipelineService).recommendForNotification(eq(user), eq(pet), anyString());
-        inOrder.verify(notificationMessageBuilder).buildMessage(
-                eq(user),
-                eq(pet),
-                eq(place),
-                eq(recommendationResult.getMessage()),
-                eq(recommendationResult.getWeatherType()),
-                eq(recommendationResult.getWeatherWalkLevel())
-        );
-        inOrder.verify(kakaoNotificationService).send(user, place, recommendationResult.getMessage());
-
-        verify(userRepository, times(1)).findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE);
-        verify(petRepository, times(1)).findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId()));
         verify(recommendationPipelineService, times(1)).recommendForNotification(eq(user), eq(pet), anyString());
-        verify(notificationMessageBuilder, times(1)).buildMessage(
-                eq(user),
-                eq(pet),
-                eq(place),
-                eq(recommendationResult.getMessage()),
-                eq(recommendationResult.getWeatherType()),
-                eq(recommendationResult.getWeatherWalkLevel())
-        );
-        verify(kakaoNotificationService, times(1)).send(user, place, recommendationResult.getMessage());
+        verify(kakaoNotificationService, times(1)).send(user, place, "notification body");
+        verify(userRepository, times(1)).save(any(User.class));
+        verify(dailyRecommendationCacheService, times(1))
+                .saveToday(eq(user.getUserId()), eq(recommendationResult), anyString());
     }
 
     private User fixtureUser() {

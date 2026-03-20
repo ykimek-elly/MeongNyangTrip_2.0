@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.cache;
 import com.team.meongnyang.recommendation.service.GeminiRecommendationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -22,8 +23,11 @@ import java.time.Duration;
 @Slf4j
 public class GeminiCacheService {
 
-  private static final String GEMINI_CACHE_KEY_PREFIX = "gemini:v2:" + GeminiRecommendationService.MODEL_NAME + ":";
-  private static final Duration GEMINI_CACHE_TTL = Duration.ofHours(24);
+  @Value("${redis.gemini-cache-ttl}")
+  private Duration GEMINI_CACHE_TTL;
+  @Value("${redis.gemini-cache-key}")
+  private String GEMINI_CACHE_KEY_PREFIX;
+
 
   private final RedisTemplate<String, Object> redisTemplate;
 
@@ -34,7 +38,7 @@ public class GeminiCacheService {
    * @return 동일 모델과 프롬프트 조합에 대응하는 Redis 캐시 키
    */
   public String generateKey(String prompt) {
-    String key = GEMINI_CACHE_KEY_PREFIX + sha256(prompt);
+    String key = GEMINI_CACHE_KEY_PREFIX + ":" + sha256(prompt);
     log.info("[Gemini 캐시] cache key 생성 promptLength={}, key={}", prompt == null ? 0 : prompt.length(), key);
     return key;
   }

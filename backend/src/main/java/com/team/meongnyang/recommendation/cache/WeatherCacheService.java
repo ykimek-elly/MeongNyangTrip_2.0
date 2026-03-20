@@ -6,6 +6,7 @@ import com.team.meongnyang.recommendation.weather.dto.WeatherContext;
 import com.team.meongnyang.recommendation.weather.service.WeatherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,11 +31,15 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 @Slf4j
 public class WeatherCacheService {
-  private static final String WEATHER_CACHE_KEY_PREFIX = "weather:v2";
+
+  @Value("${redis.weather-cache-key}")
+  private String WEATHER_CACHE_KEY_PREFIX;
+  @Value("${redis.weather-cache-ttl}")
+  private Duration WEATHER_CACHE_TTL;
+
   private final RedisTemplate<String, Object> redisTemplate;
   private final WeatherService weatherService;
   private final ObjectMapper objectMapper;
-  private static final Duration WEATHER_CACHE_TTL = Duration.ofHours(3);
   private final ConcurrentMap<String, Object> keyLocks = new ConcurrentHashMap<>();
 
   /**
@@ -47,14 +52,20 @@ public class WeatherCacheService {
   public WeatherContext getOrLoadWeather (int nx, int ny) {
     String key = buildCacheKey(nx, ny);
     log.info("[날씨 캐시] cache check key={}", key);
+    // Cache 확인
     WeatherContext cachedContext = readCachedWeather(key);
+    // Cache Hit
     if (cachedContext != null) {
       return cachedContext;
     }
+    // Cache Miss
 
+    // 이 캐시 key 전용 lock 객체를 가져온다 이때 없으면 새로 만든다
     Object keyLock = keyLocks.computeIfAbsent(key, ignored -> new Object());
     try {
+      // 이 key에 대해서는 한 번에 한 스레드만 처리하게 한다
       synchronized (keyLock) {
+        // lock 기다리는 동안 다른 스레드가 캐시를 채웠는지 다시 확인한다
         WeatherContext reloadedContext = readCachedWeather(key);
         if (reloadedContext != null) {
           return reloadedContext;
@@ -80,22 +91,25 @@ public class WeatherCacheService {
   }
 
   /**
-   * 시간 슬롯을 키에 포함해서 오래된 날씨가 다음 호출 윈도우까지 재사용되지 않도록 한다.
+   * WEATHER CACHE KEY 생성
    */
   private String buildCacheKey(int nx, int ny) {
-    return WEATHER_CACHE_KEY_PREFIX + ":" + nx + ":" + ny + ":" + weatherService.getBaseDate() + ":" + weatherService.getBaseTime();
+    return WEATHER_CACHE_KEY_PREFIX + ":" + nx + ":" + ny;
   }
 
+  /**
+   * 캐시에서 날씨 정보를 읽어온다.
+   * @param key 날씨 정보를 저장한 Redis 키
+   * @return 캐시에 저장된 날씨 정보, 캐시 미스인 경우 null
+   */
   private WeatherContext readCachedWeather(String key) {
     // redis 조회
     Object cached = redisTemplate.opsForValue().get(key);
-
-    // Cache Hit -> return
+    // Cache miss -> return
     if (cached == null) {
       return null;
     }
-
-    // WeatherContext로 변환
+    // Cache hit -> return WeatherContext
     WeatherContext weatherContext = objectMapper.convertValue(cached, WeatherContext.class);
     log.info("[날씨 캐시] CACHE HIT 결과 walkLevel={}, precipitationType={}",
             weatherContext.getWalkLevel(),

@@ -15,11 +15,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotificationBatchController {
 
   private final NotificationBatchService notificationBatchService;
+  private final WeatherBatchService weatherBatchService;
 
   @GetMapping("/test")
   public ApiResponse<String> runRecommendationNotificationBatch() {
     log.info("[배치 API] 추천 알림 배치 수동 실행 요청");
     notificationBatchService.runDailyNotificationBatch();
+    return ApiResponse.success(
+            "추천 알림 배치 실행 완료",
+            "/api/v1/admin/batch/recommendation-notification/run"
+    );
+  }
+
+
+  @GetMapping("/weather")
+  public ApiResponse<String> runPreloadWeatherBatch() {
+    log.info("[배치 API] 날씨 정보 미리 로드 배치 수동 실행 요청");
+    weatherBatchService.runWeatherPreloadBatch();
     return ApiResponse.success(
             "추천 알림 배치 실행 완료",
             "/api/v1/admin/batch/recommendation-notification/run"

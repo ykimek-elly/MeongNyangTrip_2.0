@@ -228,6 +228,8 @@ public class RecommendationPipelineService {
                 .message(notificationSummary)
                 .fallbackUsed(false)
                 .cacheHit(true)
+                .aiResponse(cachedResponse)
+                .geminiCacheKey(cacheKey)
                 .build();
       }
 
@@ -275,6 +277,8 @@ public class RecommendationPipelineService {
               .message(notificationSummary)
               .fallbackUsed(fallbackUsed)
               .cacheHit(false)
+              .aiResponse(geminiMessage)
+              .geminiCacheKey(cacheKey)
               .build();
 
     } catch (Exception e) {
@@ -307,6 +311,8 @@ public class RecommendationPipelineService {
               .message(fallbackResponse)
               .fallbackUsed(true)
               .cacheHit(false)
+              .aiResponse(fallbackResponse)
+              .geminiCacheKey(null)
               .build();
     }
     }

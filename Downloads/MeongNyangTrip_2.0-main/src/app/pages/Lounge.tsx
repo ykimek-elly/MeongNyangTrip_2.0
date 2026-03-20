@@ -88,6 +88,9 @@ export function Lounge({ onNavigate }: LoungeProps) {
   const { posts, addPost } = useFeedStore();
   const places = useAppStore((s) => s.places);
 
+  const [isLiveTalkModalOpen, setIsLiveTalkModalOpen] = useState(false);
+
+
 const handleCreatePost = (
   content: string,
   imgSource: any, // imgIndex 대신 imgSource로 받기
@@ -222,7 +225,7 @@ const handleCreatePost = (
                   onClick={() => { 
                     setActiveTab("talk");       // 실시간 톡 탭으로 변경
                     setIsMenuOpen(false);       // 현재 팝업 메뉴는 닫기
-                    // 만약 톡 작성 모달도 따로 있다면 여기에 추가 가능!
+                    setIsLiveTalkModalOpen(true); // 새로 만든 실시간 톡 전용 모달 열기
                   }}
                   className="flex items-center gap-4 p-4 bg-blue-50 rounded-2xl border border-blue-100 hover:bg-blue-100 transition-colors"
                 >
@@ -476,13 +479,15 @@ function WriteModal({
             </AnimatePresence>
           </div>
 
+          
           <button
             className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
-            disabled={!content.trim()}
+            disabled={!content.trim() || selectedImg === null} // 이미지가 없으면 비활성화
             onClick={() => {
-              // 인덱스가 -1이면 업로드한 any 데이터를, 아니면 원래 숫자를 보냄!
-              const finalImg = selectedImg === -1 ? myImages : selectedImg;
-              onSubmit(content, finalImg as any, selectedPlaceId);
+              // selectedImg가 0 이상인 경우 myImages에서 해당 base64 값을 추출
+              if (selectedImg !== null && myImages[selectedImg]) {
+                onSubmit(content, myImages[selectedImg] as any, selectedPlaceId);
+              }
             }}
           >
             등록하기
@@ -916,5 +921,63 @@ function WalkTalkView({ talks }: { talks: typeof WALK_TALKS }) {
         <p>최근 24시간 내의 게시글만 표시됩니다.</p>
       </div>
     </motion.div>
+  );
+}
+
+// 실시간 톡 작성 모달
+function LiveTalkWriteModal({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void;
+  onSubmit: (content: string) => void;
+}) {
+  const [content, setContent] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="bg-white w-full max-w-sm rounded-3xl p-6 relative shadow-2xl z-10"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <X size={24} />
+        </button>
+
+        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+          <MessageCircle className="text-blue-500" size={20} /> 실시간 톡 작성
+        </h3>
+
+        <div className="space-y-4">
+          <textarea
+            placeholder="이웃들과 나누고 싶은 이야기를 적어보세요!"
+            className="w-full h-40 bg-gray-50 rounded-2xl p-4 text-sm outline-none resize-none placeholder:text-gray-400 focus:ring-2 focus:ring-blue-100 border-none"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            autoFocus
+          />
+
+          <button
+            className="w-full bg-blue-500 text-white font-bold py-3.5 rounded-2xl hover:bg-blue-600 active:scale-95 transition-all disabled:opacity-50 shadow-lg shadow-blue-100"
+            disabled={!content.trim()}
+            onClick={() => {
+              onSubmit(content.trim());
+              setContent("");
+            }}
+          >
+            등록하기
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }

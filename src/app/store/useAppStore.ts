@@ -126,14 +126,20 @@ export const useAppStore = create<AppState>()(
       isLoadingPlaces: false,
 
       // TODO: [DB 연동] POST /api/auth/login → Step 4에서 JWT 토큰 기반으로 전환 (userId 자동 세팅)
-      login: (username, email, userId, profileImage, isAdmin) => set({
-        isLoggedIn: true,
-        isAdmin: isAdmin ?? false,
-        username,
-        email: email || '',
-        userId: userId ?? null,
-        profileImage: profileImage || '',
-      }),
+      login: (username, email, userId, profileImage, isAdmin) => {
+        set({
+          isLoggedIn: true,
+          isAdmin: isAdmin ?? false,
+          username,
+          email: email || '',
+          userId: userId ?? null,
+          profileImage: profileImage || '',
+        });
+        // 로그인 후 서버 찜 목록 동기화
+        wishlistApi.getMyWishlists()
+          .then((items) => set({ wishlist: items.map(i => i.placeId) }))
+          .catch(() => {/* mock/오프라인 환경에서는 무시 */});
+      },
 
       // TODO: [DB 연동] POST /api/auth/logout → JWT 토큰 블랙리스트(Redis) 처리 + 클라이언트 토큰 삭제
       logout: () => set({ isLoggedIn: false, isAdmin: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),

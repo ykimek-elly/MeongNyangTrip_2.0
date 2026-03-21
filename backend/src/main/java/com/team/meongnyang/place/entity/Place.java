@@ -229,12 +229,13 @@ public class Place {
 
     /** 오프라인 AI 보강 데이터 업데이트 */
     public void updateEnrichedData(String overview, String petFacility, String petPolicy,
-                                   String operatingHours, String operationPolicy) {
-        if (overview != null) this.overview = overview;
-        if (petFacility != null) this.petFacility = petFacility;
-        if (petPolicy != null) this.petPolicy = petPolicy;
-        if (operatingHours != null) this.operatingHours = operatingHours;
-        if (operationPolicy != null) this.operationPolicy = operationPolicy;
+                                   String operatingHours, String operationPolicy, String tags) {
+        if (overview != null && !overview.isBlank()) this.overview = overview;
+        if (petFacility != null && !petFacility.isBlank()) this.petFacility = petFacility;
+        if (petPolicy != null && !petPolicy.isBlank()) this.petPolicy = petPolicy;
+        if (operatingHours != null && !operatingHours.isBlank()) this.operatingHours = operatingHours;
+        if (operationPolicy != null && !operationPolicy.isBlank()) this.operationPolicy = operationPolicy;
+        if (tags != null && !tags.isBlank()) this.tags = tags;
     }
 
     /**

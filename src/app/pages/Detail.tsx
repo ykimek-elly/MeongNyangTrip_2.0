@@ -319,7 +319,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                   {aiBreakdown && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[13px] font-bold text-gray-800">🤖 AI 추천 분석</span>
+                        <span className="text-[13px] font-bold text-gray-800">🤖 AI 추천 별점 근거</span>
                         <button
                           onClick={() => setShowAiPolicy(true)}
                           className="text-[10px] text-[#008BFF] underline"
@@ -327,18 +327,125 @@ export function Detail({ id, onNavigate }: DetailProps) {
                           산정 기준
                         </button>
                       </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1 bg-white border border-green-100 rounded-xl p-3 text-center">
-                          <p className="text-[10px] text-gray-500 mb-1">운영 안정성</p>
-                          <p className="text-[18px] font-black text-green-600">{aiBreakdown.aScore.toFixed(1)}</p>
+
+                      {/* 총점 바 */}
+                      <div className="bg-white border border-[#008BFF]/20 rounded-2xl px-3.5 py-3 mb-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] text-gray-500 font-medium">AI 종합 점수</span>
+                          <span className="text-[15px] font-black text-[#008BFF]">
+                            {place.aiRating!.toFixed(1)} <span className="text-[11px] font-normal text-gray-400">/ 5.0</span>
+                          </span>
                         </div>
-                        <div className="flex-1 bg-white border border-[#008BFF]/20 rounded-xl p-3 text-center">
-                          <p className="text-[10px] text-gray-500 mb-1">반려동물 친화도</p>
-                          <p className="text-[18px] font-black text-[#008BFF]">{aiBreakdown.bScore.toFixed(1)}</p>
+                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-[#008BFF] to-blue-300 rounded-full"
+                            style={{ width: `${(place.aiRating! / 5) * 100}%` }}
+                          />
                         </div>
-                        <div className="flex-1 bg-white border border-orange-100 rounded-xl p-3 text-center">
-                          <p className="text-[10px] text-gray-500 mb-1">화제성</p>
-                          <p className="text-[18px] font-black text-orange-500">{aiBreakdown.cdScore.toFixed(1)}</p>
+                        <p className="text-[10px] text-gray-400 mt-1.5">운영 안정성 + 반려동물 친화도 + 화제성 합산</p>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {/* 1. 운영 안정성 */}
+                        <div className="bg-white border border-green-100 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[13px]">🏢</span>
+                              <span className="text-[12px] font-bold text-gray-800">운영 안정성</span>
+                              <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">공공DB 등재</span>
+                            </div>
+                            <span className="text-[14px] font-black text-green-600">{aiBreakdown.aScore.toFixed(1)}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-gray-100 rounded-full mb-2.5 overflow-hidden">
+                            <div className="h-full bg-green-400 rounded-full" style={{ width: `${(aiBreakdown.aScore / 5) * 100}%` }} />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                              <span className="text-green-500 font-black text-[10px]">✓</span>
+                              한국관광공사 공공DB 정식 등록 업소
+                            </p>
+                            <p className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                              <span className="text-green-500 font-black text-[10px]">✓</span>
+                              폐업·운영 중단 이력 없음
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* 2. 반려동물 친화도 */}
+                        <div className="bg-white border border-[#008BFF]/20 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[13px]">🐾</span>
+                              <span className="text-[12px] font-bold text-gray-800">반려동물 친화도</span>
+                              <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">최대 1.0</span>
+                            </div>
+                            <span className="text-[14px] font-black text-[#008BFF]">{aiBreakdown.bScore.toFixed(1)}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-gray-100 rounded-full mb-2.5 overflow-hidden">
+                            <div className="h-full bg-[#008BFF] rounded-full" style={{ width: `${aiBreakdown.bScore * 100}%` }} />
+                          </div>
+                          {(() => {
+                            const petFriendly = place.chkPetInside === 'Y' || place.tags?.includes('대형견');
+                            const hasMedia = !!(place.imageUrl && place.overview && place.overview.length >= 50);
+                            const hasContact = !!(place.phone && place.homepage);
+                            return (
+                              <div className="space-y-1">
+                                <p className={`flex items-center gap-1.5 text-[11px] ${petFriendly ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  <span className={`font-black text-[10px] ${petFriendly ? 'text-[#008BFF]' : 'text-gray-300'}`}>
+                                    {petFriendly ? '✓' : '–'}
+                                  </span>
+                                  실내 동반 허용 또는 대형견 가능
+                                  <span className="text-[10px] text-gray-400 ml-auto">+0.4</span>
+                                </p>
+                                <p className={`flex items-center gap-1.5 text-[11px] ${hasMedia ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  <span className={`font-black text-[10px] ${hasMedia ? 'text-[#008BFF]' : 'text-gray-300'}`}>
+                                    {hasMedia ? '✓' : '–'}
+                                  </span>
+                                  사진 및 상세 소개글 등록
+                                  <span className="text-[10px] text-gray-400 ml-auto">+0.3</span>
+                                </p>
+                                <p className={`flex items-center gap-1.5 text-[11px] ${hasContact ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  <span className={`font-black text-[10px] ${hasContact ? 'text-[#008BFF]' : 'text-gray-300'}`}>
+                                    {hasContact ? '✓' : '–'}
+                                  </span>
+                                  전화번호 · 홈페이지 모두 등록
+                                  <span className="text-[10px] text-gray-400 ml-auto">+0.3</span>
+                                </p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* 3. 화제성 */}
+                        <div className="bg-white border border-orange-100 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[13px]">📰</span>
+                              <span className="text-[12px] font-bold text-gray-800">화제성</span>
+                              <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">블로그/SNS</span>
+                            </div>
+                            <span className="text-[14px] font-black text-orange-500">{aiBreakdown.cdScore.toFixed(1)}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-gray-100 rounded-full mb-2.5 overflow-hidden">
+                            <div className="h-full bg-orange-400 rounded-full" style={{ width: `${Math.min((aiBreakdown.cdScore / 2) * 100, 100)}%` }} />
+                          </div>
+                          <div className="space-y-1">
+                            <p className={`flex items-center gap-1.5 text-[11px] ${(place.blogCount ?? 0) > 0 ? 'text-gray-600' : 'text-gray-400'}`}>
+                              <span className={`font-black text-[10px] ${(place.blogCount ?? 0) > 0 ? 'text-orange-400' : 'text-gray-300'}`}>
+                                {(place.blogCount ?? 0) > 0 ? '✓' : '–'}
+                              </span>
+                              "애견동반" 블로그 후기{' '}
+                              {(place.blogCount ?? 0) > 0
+                                ? <span className="font-bold text-orange-500">{place.blogCount!.toLocaleString()}건</span>
+                                : '후기 없음'}
+                            </p>
+                            <p className={`flex items-center gap-1.5 text-[11px] ${(place.blogCount ?? 0) >= 100 ? 'text-gray-600' : 'text-gray-400'}`}>
+                              <span className={`font-black text-[10px] ${(place.blogCount ?? 0) >= 100 ? 'text-orange-400' : 'text-gray-300'}`}>
+                                {(place.blogCount ?? 0) >= 100 ? '✓' : '–'}
+                              </span>
+                              100건 이상 → 높은 화제성 가산점
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, PawPrint, Pencil, Plus, Star, Smile, Meh, Frown } from 'lucide-react';
-import { places } from '../data/places';
 import { useAppStore } from '../store/useAppStore';
 import { useFeedStore } from '../store/useFeedStore';
 import { useDMStore } from '../store/useDMStore';
 import { PetProfileForm } from '../components/PetProfileForm';
+import { PlaceImage } from '../components/PlaceImage';
 import type { PetInfo } from '../store/useAppStore';
 import { AnimatePresence } from 'motion/react';
 import { motion } from 'motion/react';
@@ -14,7 +14,7 @@ interface MyPageProps {
 }
 
 export function MyPage({ onNavigate }: MyPageProps) {
-  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet, isAdmin, username } = useAppStore();
+  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet, isAdmin, username, places, fetchPlaces } = useAppStore();
   const { posts } = useFeedStore();
   const { conversations, getUnreadTotal } = useDMStore();
 
@@ -23,6 +23,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const [deleteTargetIndex, setDeleteTargetIndex] = React.useState<number | null>(null);
   const [petMood, setPetMood] = React.useState<'good' | 'normal' | 'bad' | null>(null);
 
+  React.useEffect(() => { if (places.length === 0) fetchPlaces(); }, []);
   const wishItems = places.filter(p => wishlist.includes(p.id));
 
   // 나의 활동 통계 (일반 유저용)
@@ -336,7 +337,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 className="bg-white p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
                 onClick={() => onNavigate('detail', { id: p.id })}
               >
-                <img src={p.imageUrl || ""} className="w-full aspect-square rounded-2xl mb-2 object-cover bg-gray-100" alt={p.title} />
+                <PlaceImage imageUrl={p.imageUrl} category={p.category} className="w-full aspect-square rounded-2xl mb-2 object-cover" />
                 <h6 className="font-bold text-gray-900 text-sm truncate px-1">{p.title}</h6>
                 <span className="text-gray-400 text-[10px] px-1">{p.address}</span>
               </div>

@@ -38,7 +38,8 @@ public class PlaceExportService {
      */
     @Transactional(readOnly = true)
     public String exportToEnrichJson() throws IOException {
-        List<Place> targets = placeRepository.findByIsVerified(true);
+        List<Place> targets = placeRepository.findByStatusOrderByCreatedAtDesc(
+                com.team.meongnyang.place.entity.PlaceStatus.ACTIVE);
         log.info("===== AI 보강용 데이터 추출 시작: {}건 =====", targets.size());
 
         List<Map<String, Object>> exportData = targets.stream()
@@ -47,10 +48,16 @@ public class PlaceExportService {
                     map.put("id", p.getId());
                     map.put("title", p.getTitle());
                     map.put("address", p.getAddress());
+                    map.put("addr2", p.getAddr2() != null ? p.getAddr2() : "");
                     map.put("category", p.getCategory());
                     map.put("current_overview", p.getOverview() != null ? p.getOverview() : "");
-                    map.put("pet_info", String.format("실내:%s / 안내:%s", p.getChkPetInside(), p.getPetTurnAdroose()));
+                    map.put("chk_pet_inside", p.getChkPetInside() != null ? p.getChkPetInside() : "");
+                    map.put("accom_count_pet", p.getAccomCountPet() != null ? p.getAccomCountPet() : "");
+                    map.put("pet_turn_adroose", p.getPetTurnAdroose() != null ? p.getPetTurnAdroose() : "");
                     map.put("homepage", p.getHomepage() != null ? p.getHomepage() : "");
+                    map.put("phone", p.getPhone() != null ? p.getPhone() : "");
+                    map.put("current_tags", p.getTags() != null ? p.getTags() : "");
+                    map.put("has_image", p.getImageUrl() != null && !p.getImageUrl().isBlank());
                     return map;
                 })
                 .collect(Collectors.toList());
@@ -85,15 +92,16 @@ public class PlaceExportService {
             Object idObj = item.get("id");
             if (idObj == null) continue;
             
-            Long id = Long.valueOf(idObj.toString());
+            long id = Long.parseLong(idObj.toString());
             String overview = (String) item.get("overview");
             String petFacility = (String) item.get("pet_facility");
             String petPolicy = (String) item.get("pet_policy");
             String operatingHours = (String) item.get("operating_hours");
             String operationPolicy = (String) item.get("operation_policy");
+            String tags = (String) item.get("tags");
 
             placeRepository.findById(id).ifPresent(place -> {
-                place.updateEnrichedData(overview, petFacility, petPolicy, operatingHours, operationPolicy);
+                place.updateEnrichedData(overview, petFacility, petPolicy, operatingHours, operationPolicy, tags);
                 log.debug("[보강수신] id={} | overview_len={}", id, overview != null ? overview.length() : 0);
             });
             updatedCount++;

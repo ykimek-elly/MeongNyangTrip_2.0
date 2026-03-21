@@ -3,6 +3,7 @@ package com.team.meongnyang.place.service;
 import com.team.meongnyang.place.dto.PlaceRequestDto;
 import com.team.meongnyang.place.dto.PlaceResponseDto;
 import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.place.entity.PlaceStatus;
 import com.team.meongnyang.place.repository.PlaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -26,9 +27,11 @@ public class PlaceService {
 
     private final PlaceRepository placeRepository;
 
-    /** 폐업 여부 판단 — tags에 "폐업" 포함 시 노출 제외 */
+    /** 노출 여부 판단 — status=ACTIVE, 폐업 아님, imageUrl 있음 */
     private boolean isActive(Place p) {
-        return p.getTags() == null || !p.getTags().contains("폐업");
+        return PlaceStatus.ACTIVE.equals(p.getStatus())
+                && (p.getTags() == null || !p.getTags().contains("폐업"))
+                && p.getImageUrl() != null && !p.getImageUrl().isBlank();
     }
 
     /**

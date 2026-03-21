@@ -59,6 +59,17 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
     /** 상태별 장소 조회 — PENDING(관리자 검토 큐) 등 */
     List<Place> findByStatusOrderByCreatedAtDesc(PlaceStatus status);
 
+    /** 재검증 랜덤 샘플 조회 — ACTIVE 장소 N건 (DB 전체에서 무작위 추출) */
+    @Query(value = "SELECT * FROM places WHERE status = 'ACTIVE' ORDER BY RANDOM() LIMIT :limit", nativeQuery = true)
+    List<Place> findRandomActiveSample(@Param("limit") int limit);
+
+    /** 상태별 건수 집계 */
+    long countByStatus(PlaceStatus status);
+
+    /** 이름이 숫자로 끝나는 ACTIVE 장소 조회 — 숫자 접미사 false positive 탐지용 */
+    @Query(value = "SELECT * FROM places WHERE status = 'ACTIVE' AND title ~ '[0-9]$'", nativeQuery = true)
+    List<Place> findActiveByTitleWithDigit();
+
     /** 카테고리별 장소 목록 조회 */
     List<Place> findByCategory(String category);
 

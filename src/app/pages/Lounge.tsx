@@ -103,9 +103,9 @@ export function Lounge({ onNavigate }: LoungeProps) {
   };
 
   return (
-    <div className="px-[0px] pt-[0px] pb-[96px]">
+    <div className="bg-white -mt-2.5">
       {/* 탭 전환 */}
-      <div className="sticky top-[0px] z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 flex">
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-100 flex">
         <button
           onClick={() => setActiveTab("feed")}
           className={`flex-1 py-3 text-sm font-bold transition-colors relative ${

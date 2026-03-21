@@ -3,6 +3,7 @@ package com.team.meongnyang.batch;
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.place.repository.PlaceRepository;
 import com.team.meongnyang.place.service.PlaceVerificationService;
+import com.team.meongnyang.place.service.KakaoImageScraperService;
 import com.team.meongnyang.pettour.dto.DetailCommonResponse;
 import com.team.meongnyang.pettour.dto.DetailPetTourResponse;
 import com.team.meongnyang.pettour.dto.PetTourApiResponse;
@@ -14,6 +15,7 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -26,16 +28,12 @@ import java.util.List;
 /**
  * 공공데이터 장소 수집 배치 서비스.
  *
- * [파이프라인 2.0 — 검증 후 저장]
+ * [파이프라인 3.0]
  *   1단계: 한국관광공사 API → 서울(areaCode=1) + 경기(areaCode=31) 전체 수집
- *   2단계: PlaceVerificationService(네이버+카카오) 이중 교차검증
- *          - 이름 유사도 + 좌표 500m 일치 + 지역 컨텍스트
- *          - 둘 다 실패 시 저장 제외
- *   3단계: kakaoId 기준 데이터셋 간 중복 방지 (KCISA 교차)
- *   4단계: 확정 좌표·이미지로 DB Upsert (isVerified=true)
- *   5단계: Redis 캐시 무효화
- *
- * 수동 실행: POST /api/v1/admin/batch/places
+ *   2단계: 네이버+카카오 이중 교차검증 (폐업 확인)
+ *          공식 이미지(firstimage) 수집 + 없는 경우 카카오맵 og:image 크롤링
+ *   3단계: kakaoId 기준 중복 방지
+ *   4단계: 확정 좌표·이미지로 DB Upsert
  */
 @Slf4j
 @Service
@@ -48,6 +46,7 @@ public class PlaceDataBatchService {
 
     private final PlaceRepository placeRepository;
     private final PlaceVerificationService placeVerificationService;
+    private final KakaoImageScraperService kakaoImageScraperService;
     private final RestClient restClient;
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
@@ -55,14 +54,12 @@ public class PlaceDataBatchService {
     @Value("${pet-tour.service-key}")
     private String serviceKey;
 
-    /**
-     * 수동 실행 전용.
-     * POST /api/v1/admin/batch/places
-     */
-    @Transactional
+    // @Transactional 삭제: 1,000건 이상의 전체 배치를 하나의 트랜잭션으로 잡으면 DB 연결 시간이 너무 길어져 타임아웃이 발생할 수 있습니다.
+    // @Async: 백그라운드에서 실행하여 HTTP 타임아웃을 방지합니다.
+    @Async
     @CacheEvict(value = "places", allEntries = true)
     public void runDailyBatch() {
-        log.info("===== 장소 데이터 배치 시작 (네이버+카카오 이중검증) =====");
+        log.info("===== 장소 데이터 수집 배치 시작 (KTO + 카카오 스크래핑) =====");
         int totalSaved = 0;
         int totalSkipped = 0;
         int totalDuplicated = 0;
@@ -84,8 +81,8 @@ public class PlaceDataBatchService {
                     log.error("[처리오류] contentId={} — {}", item.getContentid(), e.getMessage());
                     totalSkipped++;
                 }
-                // Naver+Kakao API 속도 제한 (각 10 req/s) 준수
-                try { Thread.sleep(200); } catch (InterruptedException ie) {
+                // Kakao API 보호를 위해 지연 시간을 1000ms(1초)로 상향 조정 (429 에러 방지용)
+                try { Thread.sleep(1000); } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt(); break;
                 }
             }
@@ -96,7 +93,6 @@ public class PlaceDataBatchService {
                 totalSaved, totalDuplicated, totalSkipped);
     }
 
-    /** 공공API 전체 페이지 수집 (areaCode 기반) */
     private List<PetTourApiResponse.Item> fetchAllPages(int areaCode) {
         List<PetTourApiResponse.Item> allItems = new ArrayList<>();
         int pageNo = 1;
@@ -118,9 +114,7 @@ public class PlaceDataBatchService {
                     .retrieve()
                     .body(PetTourApiResponse.class);
 
-            if (response == null
-                    || response.getResponse() == null
-                    || response.getResponse().getBody() == null
+            if (response == null || response.getResponse() == null || response.getResponse().getBody() == null
                     || response.getResponse().getBody().getItems() == null
                     || response.getResponse().getBody().getItems().getItem() == null) {
                 break;
@@ -137,13 +131,9 @@ public class PlaceDataBatchService {
         return allItems;
     }
 
-    /**
-     * 단건 처리: 교차검증 → 중복체크 → 상세정보 수집 → Upsert
-     *
-     * @return 1=저장, -1=중복생략, 0=건너뜀(검증실패/오류)
-     */
     @SuppressWarnings("null")
-    private int processItem(PetTourApiResponse.Item item) {
+    @Transactional // 개별 아이템 처리마다 트랜잭션을 분리하여 안전하게 저장합니다.
+    public int processItem(PetTourApiResponse.Item item) {
         if (item.getContentid() == null || item.getMapx() == null || item.getMapy() == null
                 || item.getMapx().isBlank() || item.getMapy().isBlank()) {
             return 0;
@@ -152,29 +142,25 @@ public class PlaceDataBatchService {
         double publicLng = Double.parseDouble(item.getMapx());
         double publicLat = Double.parseDouble(item.getMapy());
 
-        // addr1 + addr2 합산 (지역 컨텍스트 추출용)
         String fullAddress = item.getAddr1();
         if (item.getAddr2() != null && !item.getAddr2().isBlank()) {
             fullAddress = item.getAddr1() + " " + item.getAddr2().trim();
         }
         final String finalAddress = fullAddress;
 
-        // ─── 2단계: 네이버+카카오 이중 교차검증 ─────────────────────────────
+        // ─── 2단계: 네이버+카카오 교차검증 ─────────────────────────────
         PlaceVerificationService.VerificationResult verify =
                 placeVerificationService.verify(item.getTitle(), finalAddress, publicLat, publicLng);
 
-        if (!verify.confirmed()) return 0; // 폐업/미존재 → 저장 제외
+        if (!verify.confirmed()) return 0; // 폐업/미존재
 
-        // ─── 중복 체크: kakaoId 기준 (KCISA 교차 dedup) ──────────────────────
         if (verify.kakaoId() != null
                 && placeRepository.findByKakaoId(verify.kakaoId()).isPresent()) {
-            log.debug("[공공데이터 중복-생략] '{}' — kakaoId={}", item.getTitle(), verify.kakaoId());
+            log.debug("[중복생략] '{}'", item.getTitle());
             return -1;
         }
 
-        // ─── 3단계: 확정 좌표 + 상세정보 수집 ───────────────────────────────
-        Point geom = geometryFactory.createPoint(
-                new Coordinate(verify.lng(), verify.lat()));
+        Point geom = geometryFactory.createPoint(new Coordinate(verify.lng(), verify.lat()));
 
         DetailPetTourResponse.Item petDetail = fetchDetailPetTour(item.getContentid());
         String chkPetInside   = petDetail != null ? petDetail.getChkpetinside()   : null;
@@ -185,59 +171,38 @@ public class PlaceDataBatchService {
         String overview = commonDetail.overview();
         String homepage = commonDetail.homepage();
 
-        // 이미지: 공공데이터 원본 우선, 없으면 Naver에서 취득한 이미지 사용
+        // [핵심] 이미지: 공공데이터 원본 우선, 없으면 Kakao Image Search API로 검색
         String imageUrl = (item.getFirstimage() != null && !item.getFirstimage().isBlank())
                 ? item.getFirstimage()
-                : verify.imageUrl();
+                : kakaoImageScraperService.scrapeImage(item.getTitle(), finalAddress);
 
-        String category     = determineCategory(item.getContenttypeid());
-        String finalAddr2   = item.getAddr2();
-        String fKakaoId     = verify.kakaoId();
-        String fChkPet      = chkPetInside;
-        String fAccomCount  = accomCountPet;
-        String fPetAdroose  = petTurnAdroose;
-        String fOverview    = overview;
-        String fHomepage    = homepage;
-        String fImageUrl    = imageUrl;
+        String category = determineCategory(item.getContenttypeid());
 
-        // ─── 4단계: contentId 기준 Upsert ────────────────────────────────────
         placeRepository.findByContentId(item.getContentid()).ifPresentOrElse(
             existing -> existing.upsertFromBatch(
-                item.getTitle(),
-                finalAddress,
-                finalAddr2,
-                verify.lat(),
-                verify.lng(),
-                geom,
-                category,
-                fImageUrl,
-                item.getTel(),
-                fOverview,
-                fHomepage,
-                fChkPet,
-                fAccomCount,
-                fPetAdroose,
-                true,
-                fKakaoId
+                item.getTitle(), finalAddress, item.getAddr2(),
+                verify.lat(), verify.lng(), geom,
+                category, imageUrl, item.getTel(), overview, homepage,
+                chkPetInside, accomCountPet, petTurnAdroose, null, true, verify.kakaoId()
             ),
             () -> {
                 Place newPlace = Place.builder()
                     .contentId(item.getContentid())
-                    .kakaoId(fKakaoId)
+                    .kakaoId(verify.kakaoId())
                     .title(item.getTitle())
                     .address(finalAddress)
-                    .addr2(finalAddr2)
+                    .addr2(item.getAddr2())
                     .latitude(verify.lat())
                     .longitude(verify.lng())
                     .geom(geom)
                     .category(category)
-                    .imageUrl(fImageUrl)
+                    .imageUrl(imageUrl)
                     .phone(item.getTel())
-                    .overview(fOverview)
-                    .homepage(fHomepage)
-                    .chkPetInside(fChkPet)
-                    .accomCountPet(fAccomCount)
-                    .petTurnAdroose(fPetAdroose)
+                    .overview(overview)
+                    .homepage(homepage)
+                    .chkPetInside(chkPetInside)
+                    .accomCountPet(accomCountPet)
+                    .petTurnAdroose(petTurnAdroose)
                     .isVerified(true)
                     .build();
                 placeRepository.save(newPlace);
@@ -246,7 +211,6 @@ public class PlaceDataBatchService {
         return 1;
     }
 
-    /** detailPetTour2 API 호출 — 반려동물 동반 상세정보 */
     private DetailPetTourResponse.Item fetchDetailPetTour(String contentId) {
         try {
             URI uri = UriComponentsBuilder.fromUriString(BASE_URL + "/detailPetTour2")
@@ -254,17 +218,9 @@ public class PlaceDataBatchService {
                     .queryParam("contentId", contentId)
                     .queryParam("MobileOS", "ETC")
                     .queryParam("MobileApp", "MeongNyangTrip")
-                    .queryParam("_type", "json")
-                    .build(true)
-                    .toUri();
-
-            DetailPetTourResponse response = restClient.get()
-                    .uri(uri)
-                    .retrieve()
-                    .body(DetailPetTourResponse.class);
-
-            if (response == null || response.getResponse() == null
-                    || response.getResponse().getBody() == null
+                    .queryParam("_type", "json").build(true).toUri();
+            DetailPetTourResponse response = restClient.get().uri(uri).retrieve().body(DetailPetTourResponse.class);
+            if (response == null || response.getResponse() == null || response.getResponse().getBody() == null
                     || response.getResponse().getBody().getItems() == null
                     || response.getResponse().getBody().getItems().getItem() == null
                     || response.getResponse().getBody().getItems().getItem().isEmpty()) {
@@ -272,12 +228,10 @@ public class PlaceDataBatchService {
             }
             return response.getResponse().getBody().getItems().getItem().get(0);
         } catch (Exception e) {
-            log.warn("[detailPetTour2 오류] contentId={} — {}", contentId, e.getMessage());
             return null;
         }
     }
 
-    /** detailCommon2 API 호출 — overview(소개글) + homepage(홈페이지) 수집 */
     private record CommonDetail(String overview, String homepage) {}
 
     private CommonDetail fetchCommonDetail(String contentId) {
@@ -287,17 +241,9 @@ public class PlaceDataBatchService {
                     .queryParam("contentId", contentId)
                     .queryParam("MobileOS", "ETC")
                     .queryParam("MobileApp", "MeongNyangTrip")
-                    .queryParam("_type", "json")
-                    .build(true)
-                    .toUri();
-
-            DetailCommonResponse response = restClient.get()
-                    .uri(uri)
-                    .retrieve()
-                    .body(DetailCommonResponse.class);
-
-            if (response == null || response.getResponse() == null
-                    || response.getResponse().getBody() == null
+                    .queryParam("_type", "json").build(true).toUri();
+            DetailCommonResponse response = restClient.get().uri(uri).retrieve().body(DetailCommonResponse.class);
+            if (response == null || response.getResponse() == null || response.getResponse().getBody() == null
                     || response.getResponse().getBody().getItems() == null
                     || response.getResponse().getBody().getItems().getItem() == null
                     || response.getResponse().getBody().getItems().getItem().isEmpty()) {
@@ -306,7 +252,6 @@ public class PlaceDataBatchService {
             DetailCommonResponse.Item it = response.getResponse().getBody().getItems().getItem().get(0);
             return new CommonDetail(it.getOverview(), it.getHomepage());
         } catch (Exception e) {
-            log.warn("[detailCommon2 오류] contentId={} — {}", contentId, e.getMessage());
             return new CommonDetail(null, null);
         }
     }

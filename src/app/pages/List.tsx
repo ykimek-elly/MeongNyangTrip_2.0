@@ -116,6 +116,12 @@ export function List({ onNavigate, initialParams }: ListProps) {
 
   const handleFilterClick = (cat: string) => {
     setActiveFilter(cat);
+    // URL 파라미터 동기화 — 뒤로가기 시 카테고리 선택 복원용
+    const url = new URL(window.location.href);
+    if (cat === 'all') url.searchParams.delete('category');
+    else url.searchParams.set('category', cat);
+    window.history.replaceState(null, '', url.toString());
+
     if (cat === 'all') {
       setFilteredPlaces(applySortAndFilter(places, sortKey));
       setSearchMsg('');

@@ -44,6 +44,13 @@ public class PlaceResponseDto {
     private String petTurnAdroose;
     private String homepage;
     private Double aiRating;
+    private Integer blogCount;
+    private String blogPositiveTags;
+    private String blogNegativeTags;
+    private String petFacility;
+    private String petPolicy;
+    private String operatingHours;
+    private String operationPolicy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -69,6 +76,13 @@ public class PlaceResponseDto {
             .petTurnAdroose(place.getPetTurnAdroose())
             .homepage(place.getHomepage())
             .aiRating(place.getAiRating())
+            .blogCount(place.getBlogCount())
+            .blogPositiveTags(place.getBlogPositiveTags())
+            .blogNegativeTags(place.getBlogNegativeTags())
+            .petFacility(place.getPetFacility())
+            .petPolicy(place.getPetPolicy())
+            .operatingHours(place.getOperatingHours())
+            .operationPolicy(place.getOperationPolicy())
             .createdAt(place.getCreatedAt())
             .updatedAt(place.getUpdatedAt())
             .build();

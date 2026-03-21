@@ -40,7 +40,7 @@ import java.util.Map;
 public class GeminiImageValidateBatchService {
 
     private static final String GEMINI_API_URL =
-            "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
 
     private final PlaceRepository placeRepository;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -143,6 +143,38 @@ public class GeminiImageValidateBatchService {
         log.info("===== Gemini 이미지 검증 완료: 적합 {}건 / 부적합(null화) {}건 / 오류 {}건 / 전체 {}건 =====",
                 validated, invalidated, error, total);
         return Map.of("validated", validated, "invalidated", invalidated, "error", error, "total", total);
+    }
+
+    /**
+     * 특정 장소 1건에 대해 독립적으로 Gemini Vision 검증 테스트.
+     */
+    public Map<String, Object> testValidatePlace(Long placeId) {
+        List<String> keys = buildKeyList();
+        if (keys.isEmpty()) {
+            return Map.of("status", "error", "message", "API 키가 설정되지 않았습니다.");
+        }
+
+        Place place = placeRepository.findById(placeId).orElse(null);
+        if (place == null) {
+            return Map.of("status", "error", "message", "해당 장소를 찾을 수 없습니다.");
+        }
+        if (place.getImageUrl() == null || place.getImageUrl().isBlank()) {
+            return Map.of("status", "error", "message", "해당 장소에 이미지가 없습니다.");
+        }
+
+        try {
+            boolean relevant = isImageRelevant(keys.get(0), place.getImageUrl(), place.getTitle(), place.getCategory());
+            return Map.of(
+                    "status", "success",
+                    "placeId", place.getId(),
+                    "title", place.getTitle(),
+                    "imageUrl", place.getImageUrl(),
+                    "isRelevant", relevant
+            );
+        } catch (Exception e) {
+            log.error("[단건 테스트 오류] id={}, {}", placeId, e.getMessage());
+            return Map.of("status", "error", "message", e.getMessage());
+        }
     }
 
     /**

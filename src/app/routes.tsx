@@ -28,9 +28,13 @@ import { useAppStore } from './store/useAppStore';
 import { Leaf, Sun } from 'lucide-react';
 
 /** 공통 네비게이션 핸들러 — 페이지 이동 로직 통합 */
-function createNavigateHandler(navigate: (path: string) => void, isLoggedIn: boolean) {
+function createNavigateHandler(navigate: ReturnType<typeof useNavigate>, isLoggedIn: boolean) {
   return (page: string, params?: any) => {
     switch (page) {
+      case 'back':
+        if (window.history.length > 1) { navigate(-1); return; }
+        navigate('/');
+        return;
       case 'home': navigate('/'); break;
       case 'list': {
         const search = params ? new URLSearchParams(params).toString() : '';
@@ -134,7 +138,10 @@ function RootAdapter() {
           </header>
         )}
 
-        <main className={`flex-1 flex flex-col overflow-x-hidden relative min-h-0 ${currentPath === 'map' || currentPath === 'list' ? 'overflow-hidden pt-0' : 'overflow-y-auto pt-2.5'}`}>
+        <main 
+          className={`flex-1 flex flex-col overflow-x-hidden relative min-h-0 ${currentPath === 'map' || currentPath === 'list' ? 'overflow-hidden pt-0' : 'overflow-y-auto pt-2.5'}`}
+          style={{ paddingBottom: showBottomNav ? 'calc(80px + env(safe-area-inset-bottom, 0px))' : '0px' }}
+        >
           <Outlet context={{ onNavigate: handleNavigate }} />
         </main>
 

@@ -25,9 +25,50 @@ public class PlaceAdminController {
 
     private final PlaceAdminService placeAdminService;
 
+    /** 전체 ACTIVE 장소 조회 — GET /api/v1/admin/places */
+    @GetMapping
+    public ResponseEntity<List<PendingPlaceDto>> getAllActivePlaces() {
+        return ResponseEntity.ok(placeAdminService.getAllActivePlaces());
+    }
+
+    /** 장소 필드 수정 — PATCH /api/v1/admin/places/{id}/edit */
+    @PatchMapping("/{id}/edit")
+    public ResponseEntity<PendingPlaceDto> editPlace(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(placeAdminService.editPlace(
+                id,
+                body.get("title"),
+                body.get("address"),
+                body.get("phone"),
+                body.get("homepage"),
+                body.get("imageUrl")));
+    }
+
     @GetMapping("/pending")
     public ResponseEntity<List<PendingPlaceDto>> getPendingPlaces() {
         return ResponseEntity.ok(placeAdminService.getPendingPlaces());
+    }
+
+    /** 거절 목록 조회 — GET /api/v1/admin/places/rejected */
+    @GetMapping("/rejected")
+    public ResponseEntity<List<PendingPlaceDto>> getRejectedPlaces() {
+        return ResponseEntity.ok(placeAdminService.getRejectedPlaces());
+    }
+
+    /** 이미지 없는 장소 목록 조회 — GET /api/v1/admin/places/no-image */
+    @GetMapping("/no-image")
+    public ResponseEntity<List<PendingPlaceDto>> getNoImagePlaces() {
+        return ResponseEntity.ok(placeAdminService.getNoImagePlaces());
+    }
+
+    /** 이미지 URL 수동 등록 — PATCH /api/v1/admin/places/{id}/image */
+    @PatchMapping("/{id}/image")
+    public ResponseEntity<Void> updateImage(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        placeAdminService.updateImage(id, body.get("imageUrl"));
+        return ResponseEntity.noContent().build();
     }
 
     /**

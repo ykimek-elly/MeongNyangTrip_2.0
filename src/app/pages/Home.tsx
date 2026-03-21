@@ -63,7 +63,6 @@ export function Home({ onNavigate }: HomeProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="pb-24"
     >
       {/* 검색 & 배너 영역 */}
       <div className="mx-[0px] mt-[0px] mb-[12px] px-[16px] py-[0px]">

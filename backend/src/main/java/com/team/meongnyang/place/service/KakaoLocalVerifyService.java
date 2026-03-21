@@ -39,7 +39,7 @@ public class KakaoLocalVerifyService {
      * @param lng       검증 후 최종 경도 (Kakao 좌표 우선)
      * @param kakaoId   카카오 장소 ID (중복 dedup 키, API 오류 시 null)
      */
-    public record VerifyResult(boolean isActive, double lat, double lng, String kakaoId) {}
+    public record VerifyResult(boolean isActive, double lat, double lng, String kakaoId, String placeUrl) {}
 
     /**
      * 장소명 + 공공데이터 좌표를 Kakao Local API로 교차검증한다.
@@ -67,7 +67,7 @@ public class KakaoLocalVerifyService {
                     .retrieve()
                     .body(Map.class);
 
-            if (response == null) return new VerifyResult(false, publicLat, publicLng, null);
+            if (response == null) return new VerifyResult(false, publicLat, publicLng, null, null);
 
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> documents = (List<Map<String, Object>>) response.get("documents");
@@ -75,7 +75,7 @@ public class KakaoLocalVerifyService {
             if (documents == null || documents.isEmpty()) {
                 // 2단계: 카카오 검색 결과 없음 → 폐업 또는 오류 장소
                 log.debug("[검증실패-폐업] {}", placeName);
-                return new VerifyResult(false, publicLat, publicLng, null);
+                return new VerifyResult(false, publicLat, publicLng, null, null);
             }
 
             Map<String, Object> top = documents.get(0);
@@ -83,12 +83,13 @@ public class KakaoLocalVerifyService {
             double kakaoLng = Double.parseDouble((String) top.get("x"));
             String kakaoName = (String) top.getOrDefault("place_name", "");
             String kakaoId = (String) top.get("id");
+            String placeUrl = (String) top.get("place_url");
 
             // 이름 유사도 검증 — 다른 업체가 같은 위치에 있는 경우 차단
             if (!isNameSimilar(placeName, kakaoName)) {
                 log.warn("[이름불일치-폐업의심] DB='{}' Kakao='{}' → 다른 업체로 판단",
                         placeName, kakaoName);
-                return new VerifyResult(false, publicLat, publicLng, null);
+                return new VerifyResult(false, publicLat, publicLng, null, null);
             }
 
             // 좌표 오차 계산
@@ -96,16 +97,16 @@ public class KakaoLocalVerifyService {
 
             if (distanceM <= COORD_THRESHOLD_METERS) {
                 log.debug("[검증성공] {} (오차 {}m)", placeName, (int) distanceM);
-                return new VerifyResult(true, publicLat, publicLng, kakaoId);
+                return new VerifyResult(true, publicLat, publicLng, kakaoId, placeUrl);
             } else {
                 log.debug("[좌표보정] {} (오차 {}m → Kakao 좌표 사용)", placeName, (int) distanceM);
-                return new VerifyResult(true, kakaoLat, kakaoLng, kakaoId);
+                return new VerifyResult(true, kakaoLat, kakaoLng, kakaoId, placeUrl);
             }
 
         } catch (Exception e) {
             log.warn("[검증오류] {} — {}", placeName, e.getMessage());
             // API 오류 시 공공데이터 좌표 그대로 사용 (검증 생략)
-            return new VerifyResult(true, publicLat, publicLng, null);
+            return new VerifyResult(true, publicLat, publicLng, null, null);
         }
     }
 

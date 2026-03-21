@@ -595,15 +595,39 @@ function CommentsTab({ posts }: { posts: FeedPost[] }) {
 
 function PlacesReviewTab() {
   const [places, setPlaces] = React.useState<PendingPlaceDto[]>([]);
+  const [rejected, setRejected] = React.useState<PendingPlaceDto[]>([]);
+  const [noImage, setNoImage] = React.useState<PendingPlaceDto[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [editForm, setEditForm] = React.useState({ title: '', address: '', lat: '', lng: '' });
   const [actionLoading, setActionLoading] = React.useState<number | null>(null);
+  const [bulkLoading, setBulkLoading] = React.useState(false);
+  const [showRejected, setShowRejected] = React.useState(false);
+  const [showNoImage, setShowNoImage] = React.useState(false);
+  const [showEditSection, setShowEditSection] = React.useState(false);
+  const [imageInputs, setImageInputs] = React.useState<Record<number, string>>({});
+  const [rejectedTitleInputs, setRejectedTitleInputs] = React.useState<Record<number, string>>({});
+  // 체크박스 선택 상태
+  const [selectedPending, setSelectedPending] = React.useState<Set<number>>(new Set());
+  const [selectedRejected, setSelectedRejected] = React.useState<Set<number>>(new Set());
+  // 장소 수정 섹션
+  const [allActive, setAllActive] = React.useState<PendingPlaceDto[]>([]);
+  const [allActiveLoading, setAllActiveLoading] = React.useState(false);
+  const [editSearch, setEditSearch] = React.useState('');
+  const [editingPlaceId, setEditingPlaceId] = React.useState<number | null>(null);
+  const [editPlaceForm, setEditPlaceForm] = React.useState({ title: '', address: '', phone: '', homepage: '', imageUrl: '' });
+  const [editPageSize] = React.useState(30);
 
   React.useEffect(() => {
-    adminApi.getPendingPlaces()
-      .then(setPlaces)
-      .finally(() => setLoading(false));
+    Promise.all([
+      adminApi.getPendingPlaces(),
+      adminApi.getRejectedPlaces(),
+      adminApi.getNoImagePlaces(),
+    ]).then(([pending, rej, noImg]) => {
+      setPlaces(pending);
+      setRejected(rej);
+      setNoImage(noImg);
+    }).finally(() => setLoading(false));
   }, []);
 
   const parsedReason = (raw: string | null) => {
@@ -616,6 +640,7 @@ function PlacesReviewTab() {
     try {
       await adminApi.approvePlace(id, coords);
       setPlaces(prev => prev.filter(p => p.id !== id));
+      setRejected(prev => prev.filter(p => p.id !== id));
     } finally {
       setActionLoading(null);
       setEditingId(null);
@@ -630,6 +655,116 @@ function PlacesReviewTab() {
       setPlaces(prev => prev.filter(p => p.id !== id));
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleRestoreApprove = async (id: number) => {
+    setActionLoading(id);
+    const newTitle = rejectedTitleInputs[id]?.trim();
+    try {
+      if (newTitle) {
+        await adminApi.manualApprovePlace(id, { title: newTitle });
+      } else {
+        await adminApi.approvePlace(id);
+      }
+      setRejected(prev => prev.filter(p => p.id !== id));
+      setRejectedTitleInputs(prev => { const n = { ...prev }; delete n[id]; return n; });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleToggleEditSection = async () => {
+    setShowEditSection(v => !v);
+    if (!showEditSection && allActive.length === 0) {
+      setAllActiveLoading(true);
+      try {
+        const data = await adminApi.getAllActivePlaces();
+        setAllActive(data);
+      } finally {
+        setAllActiveLoading(false);
+      }
+    }
+  };
+
+  const handleEditSave = async (id: number) => {
+    setActionLoading(id);
+    try {
+      const payload: Record<string, string> = {};
+      if (editPlaceForm.title.trim())    payload.title    = editPlaceForm.title.trim();
+      if (editPlaceForm.address.trim())  payload.address  = editPlaceForm.address.trim();
+      if (editPlaceForm.phone.trim())    payload.phone    = editPlaceForm.phone.trim();
+      if (editPlaceForm.homepage.trim()) payload.homepage = editPlaceForm.homepage.trim();
+      if (editPlaceForm.imageUrl.trim()) payload.imageUrl = editPlaceForm.imageUrl.trim();
+      const updated = await adminApi.editPlace(id, payload);
+      setAllActive(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setEditingPlaceId(null);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleImageSave = async (id: number) => {
+    const url = imageInputs[id]?.trim();
+    if (!url) return;
+    setActionLoading(id);
+    try {
+      await adminApi.updatePlaceImage(id, url);
+      setNoImage(prev => prev.filter(p => p.id !== id));
+      setImageInputs(prev => { const n = { ...prev }; delete n[id]; return n; });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // ── 체크박스 헬퍼 ──────────────────────────────────────────────────────────
+  const togglePending = (id: number) =>
+    setSelectedPending(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const toggleAllPending = () =>
+    setSelectedPending(prev => prev.size === places.length ? new Set() : new Set(places.map(p => p.id)));
+
+  const toggleRejected = (id: number) =>
+    setSelectedRejected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const toggleAllRejected = () =>
+    setSelectedRejected(prev => prev.size === rejected.length ? new Set() : new Set(rejected.map(p => p.id)));
+
+  // ── 일괄 액션 ──────────────────────────────────────────────────────────────
+  const handleBulkApprove = async () => {
+    if (selectedPending.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selectedPending].map(id => adminApi.approvePlace(id)));
+      setPlaces(prev => prev.filter(p => !selectedPending.has(p.id)));
+      setSelectedPending(new Set());
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedPending.size === 0) return;
+    if (!confirm(`선택한 ${selectedPending.size}건을 일괄 거절하시겠습니까?`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selectedPending].map(id => adminApi.rejectPlace(id)));
+      setPlaces(prev => prev.filter(p => !selectedPending.has(p.id)));
+      setSelectedPending(new Set());
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedRejected.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selectedRejected].map(id => adminApi.approvePlace(id)));
+      setRejected(prev => prev.filter(p => !selectedRejected.has(p.id)));
+      setSelectedRejected(new Set());
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -659,12 +794,45 @@ function PlacesReviewTab() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 pb-24 space-y-3">
+      {/* ── PENDING 헤더 + 전체선택 + 일괄 액션 ── */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
-          <MapPin size={16} className="text-amber-500" /> 검토 대기 장소
-        </h3>
-        <span className="text-xs text-gray-500 font-medium">{places.length}건</span>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={places.length > 0 && selectedPending.size === places.length}
+            onChange={toggleAllPending}
+            className="w-4 h-4 accent-amber-500 cursor-pointer"
+          />
+          <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+            <MapPin size={16} className="text-amber-500" /> 검토 대기 장소
+          </h3>
+        </label>
+        <span className="text-xs text-gray-500 font-medium">
+          {selectedPending.size > 0 ? `${selectedPending.size}건 선택 /` : ''} {places.length}건
+        </span>
       </div>
+
+      {/* 일괄 액션 버튼 — 선택 시 표시 */}
+      {selectedPending.size > 0 && (
+        <div className="flex gap-2">
+          <button
+            onClick={handleBulkApprove}
+            disabled={bulkLoading}
+            className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-500 text-white flex items-center justify-center gap-1 disabled:opacity-50"
+          >
+            {bulkLoading ? <Loader size={12} className="animate-spin" /> : <Check size={12} />}
+            일괄 승인 ({selectedPending.size})
+          </button>
+          <button
+            onClick={handleBulkReject}
+            disabled={bulkLoading}
+            className="flex-1 py-2 rounded-xl text-xs font-bold bg-red-500 text-white flex items-center justify-center gap-1 disabled:opacity-50"
+          >
+            {bulkLoading ? <Loader size={12} className="animate-spin" /> : <X size={12} />}
+            일괄 거절 ({selectedPending.size})
+          </button>
+        </div>
+      )}
 
       {places.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
@@ -678,9 +846,18 @@ function PlacesReviewTab() {
           const isActing = actionLoading === place.id;
 
           return (
-            <div key={place.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-amber-100">
+            <div key={place.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden border transition-all ${selectedPending.has(place.id) ? 'border-amber-400 ring-1 ring-amber-300' : 'border-amber-100'}`}>
               {/* 이미지 + 기본정보 */}
               <div className="flex gap-3 p-3">
+                {/* 체크박스 */}
+                <div className="flex items-start pt-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedPending.has(place.id)}
+                    onChange={() => togglePending(place.id)}
+                    className="w-4 h-4 accent-amber-500 cursor-pointer"
+                  />
+                </div>
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shrink-0">
                   {place.imageUrl
                     ? <img src={place.imageUrl} alt="" className="w-full h-full object-cover" />
@@ -782,6 +959,295 @@ function PlacesReviewTab() {
           );
         })
       )}
+
+      {/* ── 이미지 없는 장소 섹션 ──────────────────────────────────────── */}
+      <div className="mt-4">
+        <button
+          onClick={() => setShowNoImage(v => !v)}
+          className="w-full flex items-center justify-between px-3 py-2.5 bg-blue-50 rounded-xl"
+        >
+          <span className="text-sm font-bold text-blue-700 flex items-center gap-1.5">
+            <ImageOff size={15} /> 이미지 없는 장소
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-xs text-blue-500 font-medium">{noImage.length}건</span>
+            {showNoImage ? <ChevronUp size={14} className="text-blue-400" /> : <ChevronDown size={14} className="text-blue-400" />}
+          </span>
+        </button>
+
+        {showNoImage && (
+          <div className="mt-2 space-y-2">
+            {noImage.length === 0 ? (
+              <p className="text-center text-xs text-gray-400 py-6">이미지 없는 장소가 없습니다.</p>
+            ) : (
+              noImage.map(place => {
+                const isActing = actionLoading === place.id;
+                const inputVal = imageInputs[place.id] ?? '';
+                return (
+                  <div key={place.id} className="bg-white rounded-2xl shadow-sm border border-blue-100 overflow-hidden">
+                    <div className="flex gap-3 p-3">
+                      <div className="w-14 h-14 rounded-xl bg-blue-50 shrink-0 flex items-center justify-center">
+                        <ImageOff size={20} className="text-blue-300" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-800 truncate">{place.title}</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5 truncate">{place.address}</p>
+                        <p className="text-[11px] text-gray-400">{place.category}</p>
+                      </div>
+                    </div>
+                    <div className="px-3 pb-3 space-y-2">
+                      <input
+                        type="url"
+                        placeholder="이미지 URL 입력"
+                        value={inputVal}
+                        onChange={e => setImageInputs(prev => ({ ...prev, [place.id]: e.target.value }))}
+                        className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-primary"
+                      />
+                      <div className="flex gap-2">
+                        <a
+                          href={place.kakaoMapUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-2 px-3 rounded-xl text-xs font-bold bg-yellow-50 text-yellow-700 flex items-center gap-1"
+                        >
+                          <ExternalLink size={11} /> 지도확인
+                        </a>
+                        <button
+                          onClick={() => handleImageSave(place.id)}
+                          disabled={isActing || !inputVal.trim()}
+                          className="flex-1 py-2 rounded-xl text-xs font-bold bg-blue-500 text-white flex items-center justify-center gap-1 disabled:opacity-40"
+                        >
+                          {isActing ? <Loader size={12} className="animate-spin" /> : <Check size={12} />} 저장
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── REJECTED 장소 복구 섹션 ─────────────────────────────────────── */}
+      <div className="mt-6">
+        <button
+          onClick={() => setShowRejected(v => !v)}
+          className="w-full flex items-center justify-between px-3 py-2.5 bg-red-50 rounded-xl"
+        >
+          <span className="text-sm font-bold text-red-700 flex items-center gap-1.5">
+            <XCircle size={15} /> 거절된 장소 복구
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-xs text-red-500 font-medium">{rejected.length}건</span>
+            {showRejected ? <ChevronUp size={14} className="text-red-400" /> : <ChevronDown size={14} className="text-red-400" />}
+          </span>
+        </button>
+
+        {showRejected && (
+          <div className="mt-2 space-y-2">
+            {/* 전체선택 + 일괄 복구 */}
+            {rejected.length > 0 && (
+              <div className="flex items-center justify-between px-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedRejected.size === rejected.length}
+                    onChange={toggleAllRejected}
+                    className="w-4 h-4 accent-red-500 cursor-pointer"
+                  />
+                  <span className="text-xs text-gray-600 font-medium">전체선택</span>
+                </label>
+                {selectedRejected.size > 0 && (
+                  <button
+                    onClick={handleBulkRestore}
+                    disabled={bulkLoading}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-green-500 text-white flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {bulkLoading ? <Loader size={11} className="animate-spin" /> : <Check size={11} />}
+                    일괄 복구 ({selectedRejected.size})
+                  </button>
+                )}
+              </div>
+            )}
+
+            {rejected.length === 0 ? (
+              <p className="text-center text-xs text-gray-400 py-6">거절된 장소가 없습니다.</p>
+            ) : (
+              rejected.map(place => {
+                const isActing = actionLoading === place.id;
+                return (
+                  <div key={place.id} className={`bg-white rounded-2xl shadow-sm overflow-hidden border transition-all ${selectedRejected.has(place.id) ? 'border-red-400 ring-1 ring-red-200' : 'border-red-100'}`}>
+                    <div className="flex gap-3 p-3">
+                      {/* 체크박스 */}
+                      <div className="flex items-start pt-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedRejected.has(place.id)}
+                          onChange={() => toggleRejected(place.id)}
+                          className="w-4 h-4 accent-red-500 cursor-pointer"
+                        />
+                      </div>
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
+                        {place.imageUrl
+                          ? <img src={place.imageUrl} alt="" className="w-full h-full object-cover" />
+                          : <ImageOff size={18} className="text-gray-300" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-1">
+                          <p className="text-sm font-bold text-gray-800 truncate">{place.title}</p>
+                          <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold shrink-0">거절</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5 truncate">{place.address}</p>
+                        <p className="text-[11px] text-gray-400">{place.category}</p>
+                      </div>
+                    </div>
+                    <div className="px-3 pb-3 space-y-2">
+                      <input
+                        type="text"
+                        placeholder={`카카오 정확 명칭으로 수정 (선택, 현재: ${place.title})`}
+                        value={rejectedTitleInputs[place.id] ?? ''}
+                        onChange={e => setRejectedTitleInputs(prev => ({ ...prev, [place.id]: e.target.value }))}
+                        className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-primary"
+                      />
+                      <div className="flex gap-2">
+                        <a
+                          href={place.kakaoMapUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-2 px-3 rounded-xl text-xs font-bold bg-yellow-50 text-yellow-700 flex items-center gap-1"
+                        >
+                          <ExternalLink size={11} /> 지도확인
+                        </a>
+                        <button
+                          onClick={() => handleRestoreApprove(place.id)}
+                          disabled={isActing}
+                          className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-50 text-green-700 flex items-center justify-center gap-1"
+                        >
+                          {isActing ? <Loader size={12} className="animate-spin" /> : <Check size={12} />}
+                          {rejectedTitleInputs[place.id]?.trim() ? '수정 후 복구' : '복구 승인'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── 장소 수정 섹션 ───────────────────────────────────────────────── */}
+      <div className="mt-6">
+        <button
+          onClick={handleToggleEditSection}
+          className="w-full flex items-center justify-between px-3 py-2.5 bg-indigo-50 rounded-xl"
+        >
+          <span className="text-sm font-bold text-indigo-700 flex items-center gap-1.5">
+            <Edit3 size={15} /> 등록 장소 수정
+          </span>
+          <span className="flex items-center gap-2">
+            {allActive.length > 0 && <span className="text-xs text-indigo-500 font-medium">{allActive.length}건</span>}
+            {showEditSection ? <ChevronUp size={14} className="text-indigo-400" /> : <ChevronDown size={14} className="text-indigo-400" />}
+          </span>
+        </button>
+
+        {showEditSection && (
+          <div className="mt-2 space-y-2">
+            {allActiveLoading ? (
+              <div className="flex justify-center py-8"><Loader size={20} className="text-indigo-400 animate-spin" /></div>
+            ) : (
+              <>
+                {/* 검색 */}
+                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3">
+                  <Search size={14} className="text-gray-400 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="상호명 또는 주소 검색..."
+                    value={editSearch}
+                    onChange={e => setEditSearch(e.target.value)}
+                    className="flex-1 py-2.5 text-xs outline-none bg-transparent"
+                  />
+                </div>
+
+                {/* 장소 목록 */}
+                {allActive
+                  .filter(p => !editSearch || p.title.includes(editSearch) || p.address.includes(editSearch))
+                  .slice(0, editPageSize)
+                  .map(place => {
+                    const isEditing = editingPlaceId === place.id;
+                    const isActing = actionLoading === place.id;
+                    return (
+                      <div key={place.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${isEditing ? 'border-indigo-300' : 'border-gray-100'}`}>
+                        <div className="flex gap-3 p-3">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
+                            {place.imageUrl
+                              ? <img src={place.imageUrl} alt="" className="w-full h-full object-cover" />
+                              : <ImageOff size={16} className="text-gray-300" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-800 truncate">{place.title}</p>
+                            <p className="text-[11px] text-gray-500 truncate">{place.address}</p>
+                            <p className="text-[11px] text-gray-400">{place.category}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (isEditing) { setEditingPlaceId(null); return; }
+                              setEditingPlaceId(place.id);
+                              setEditPlaceForm({ title: '', address: '', phone: place.phone ?? '', homepage: place.homepage ?? '', imageUrl: place.imageUrl ?? '' });
+                            }}
+                            className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 ${isEditing ? 'bg-gray-100 text-gray-500' : 'bg-indigo-50 text-indigo-700'}`}
+                          >
+                            {isEditing ? <X size={12} /> : <Edit3 size={12} />}
+                            {isEditing ? '취소' : '수정'}
+                          </button>
+                        </div>
+
+                        {isEditing && (
+                          <div className="px-3 pb-3 border-t border-gray-100 pt-3 space-y-2">
+                            {([
+                              { label: '상호명', key: 'title',    placeholder: place.title },
+                              { label: '주소',   key: 'address',  placeholder: place.address },
+                              { label: '전화',   key: 'phone',    placeholder: place.phone ?? '없음' },
+                              { label: '홈페이지', key: 'homepage', placeholder: place.homepage ?? '없음' },
+                              { label: '이미지', key: 'imageUrl', placeholder: place.imageUrl ?? '없음' },
+                            ] as { label: string; key: keyof typeof editPlaceForm; placeholder: string }[]).map(f => (
+                              <div key={f.key} className="flex items-center gap-2">
+                                <span className="text-[10px] text-gray-500 w-12 shrink-0">{f.label}</span>
+                                <input
+                                  type="text"
+                                  placeholder={f.placeholder}
+                                  value={editPlaceForm[f.key]}
+                                  onChange={e => setEditPlaceForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                  className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-indigo-400"
+                                />
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => handleEditSave(place.id)}
+                              disabled={isActing}
+                              className="w-full py-2 rounded-xl text-xs font-bold bg-indigo-500 text-white flex items-center justify-center gap-1 disabled:opacity-50"
+                            >
+                              {isActing ? <Loader size={12} className="animate-spin" /> : <Check size={12} />} 저장
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                {allActive.filter(p => !editSearch || p.title.includes(editSearch) || p.address.includes(editSearch)).length === 0 && (
+                  <p className="text-center text-xs text-gray-400 py-6">검색 결과가 없습니다.</p>
+                )}
+                {allActive.filter(p => !editSearch || p.title.includes(editSearch) || p.address.includes(editSearch)).length > editPageSize && (
+                  <p className="text-center text-xs text-gray-400 py-2">상위 {editPageSize}건 표시 · 검색으로 필터링하세요</p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }

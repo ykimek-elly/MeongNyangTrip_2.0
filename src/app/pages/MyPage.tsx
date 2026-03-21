@@ -73,7 +73,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="min-h-screen bg-gray-50 pb-24"
+      className="bg-gray-50"
     >
       {/* Profile Header */}
       <div className="bg-white p-6 pb-8 rounded-b-[40px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] mb-6">

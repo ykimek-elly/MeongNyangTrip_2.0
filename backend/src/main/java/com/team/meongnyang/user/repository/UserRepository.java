@@ -20,4 +20,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** 소셜 로그인 — 제공자 + 제공자 고유 ID로 조회 */
     Optional<User> findByProviderAndProviderId(String provider, String providerId);
+
+    /** 아이디 찾기 — 닉네임 + 전화번호 */
+    Optional<User> findByNicknameAndPhoneNumber(String nickname, String phoneNumber);
+
+    /** 비밀번호 찾기 — 이메일 + 전화번호 */
+    Optional<User> findByEmailAndPhoneNumber(String email, String phoneNumber);
 }

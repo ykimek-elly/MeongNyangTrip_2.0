@@ -60,6 +60,9 @@ dependencies {
 	// .env 파일 자동 로드
 	implementation 'me.paulschwarz:spring-dotenv:3.0.0'
 
+	// Spring Mail (아이디 찾기 / 임시 비밀번호 발송)
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
 	// Dev & Test
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

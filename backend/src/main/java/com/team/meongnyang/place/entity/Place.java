@@ -318,24 +318,59 @@ public class Place {
         }
     }
 
-    /** 긍정 키워드 추출 — 블로그 description에서 발견된 키워드 목록 반환 */
+    /** 긍정 키워드 추출 — 카테고리별로 다른 키워드 세트 적용 */
     private List<String> extractPositiveKeywords(List<String> descriptions) {
         if (descriptions == null || descriptions.isEmpty()) return List.of();
-        List<String> keywords = Arrays.asList(
-                "추천", "강추", "맛있", "친절", "깨끗", "예쁘", "분위기",
-                "재방문", "만족", "훌륭", "편안", "최고", "좋아", "좋았"
-        );
+        List<String> keywords;
+        if ("STAY".equals(category)) {
+            // 숙박: 청결·시설·반려견 전용 환경 중심
+            keywords = Arrays.asList(
+                    "청결", "넓어", "아늑", "친절", "편안", "깨끗",
+                    "마당", "울타리", "산책로", "반려견전용", "재방문",
+                    "만족", "최고", "추천", "강추"
+            );
+        } else if ("DINING".equals(category)) {
+            // 식당·카페: 음식·서비스·반려동물 환경 중심
+            keywords = Arrays.asList(
+                    "맛있", "친절", "깨끗", "예쁘", "분위기", "강추",
+                    "추천", "재방문", "만족", "반려견동반", "애견동반",
+                    "펫프렌들리", "간식", "디저트", "인테리어"
+            );
+        } else {
+            // PLACE: 공원·명소 — 산책·자연·개방감 중심
+            keywords = Arrays.asList(
+                    "넓어", "쾌적", "산책", "자연", "뷰", "경치",
+                    "인생샷", "포토존", "힐링", "탁트인", "접근성",
+                    "추천", "강추", "만족", "재방문"
+            );
+        }
         String combined = String.join(" ", descriptions).toLowerCase();
         return keywords.stream().filter(combined::contains).toList();
     }
 
-    /** 부정 키워드 추출 — 블로그 description에서 발견된 부정 키워드 목록 반환 */
+    /** 부정 키워드 추출 — 카테고리별로 다른 키워드 세트 적용 */
     private List<String> extractNegativeKeywords(List<String> descriptions) {
         if (descriptions == null || descriptions.isEmpty()) return List.of();
-        List<String> keywords = Arrays.asList(
-                "불편", "시끄럽", "냄새", "별로", "실망",
-                "협소", "지저분", "불친절", "후회", "비싸", "좁아"
-        );
+        List<String> keywords;
+        if ("STAY".equals(category)) {
+            // 숙박: 위생·소음·시설 불만 중심
+            keywords = Arrays.asList(
+                    "냄새", "불편", "시끄럽", "좁아", "비싸", "실망",
+                    "지저분", "불친절", "위생", "후회", "청소"
+            );
+        } else if ("DINING".equals(category)) {
+            // 식당·카페: 음식·서비스·공간 불만 중심
+            keywords = Arrays.asList(
+                    "불편", "냄새", "별로", "실망", "협소", "지저분",
+                    "불친절", "비싸", "좁아", "대기", "후회"
+            );
+        } else {
+            // PLACE: 공원·명소 — 혼잡·제한·접근성 불만 중심
+            keywords = Arrays.asList(
+                    "혼잡", "좁아", "위험", "입장불가", "제한", "불편",
+                    "주차", "벌레", "더워", "별로", "실망"
+            );
+        }
         String combined = String.join(" ", descriptions).toLowerCase();
         return keywords.stream().filter(combined::contains).toList();
     }

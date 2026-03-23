@@ -245,6 +245,7 @@ public class CultureFacilityBatchService {
                 .operatingHours(finalHours)
                 .tags(finalTags)
                 .isVerified(true)
+                .status(com.team.meongnyang.place.entity.PlaceStatus.PENDING)
                 .build();
         placeRepository.save(newPlace);
         return 1;

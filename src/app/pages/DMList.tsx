@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Search, Send, X } from 'lucide-react';
 import { useDMStore } from '../store/useDMStore';
-import { useAppStore } from '../store/useAppStore';
 
 interface DMListProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
 export function DMList({ onNavigate }: DMListProps) {
-  const { username } = useAppStore();
-  const { conversations, getUnreadTotal } = useDMStore();
+  const { conversations, isLoading, fetchConversations, getUnreadTotal } = useDMStore();
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
   const sorted = [...conversations].sort(
     (a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
@@ -21,7 +23,7 @@ export function DMList({ onNavigate }: DMListProps) {
     ? sorted.filter(c => c.partnerId.includes(searchQuery.trim()))
     : sorted;
 
-  const totalUnread = getUnreadTotal(username);
+  const totalUnread = getUnreadTotal();
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -70,7 +72,12 @@ export function DMList({ onNavigate }: DMListProps) {
 
       {/* 대화 목록 */}
       <div className="flex-1 divide-y divide-gray-50 pb-4">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+            <p className="text-sm">불러오는 중...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-gray-400">
             <Send size={40} className="mb-4 opacity-25" />
             <p className="text-sm font-medium">메시지가 없습니다</p>
@@ -80,10 +87,7 @@ export function DMList({ onNavigate }: DMListProps) {
           </div>
         ) : (
           filtered.map((conv, idx) => {
-            const unreadCount = conv.messages.filter(
-              m => m.from !== username && !m.isRead
-            ).length;
-            const lastMsg = conv.messages[conv.messages.length - 1];
+            const unreadCount = conv.unreadCount;
 
             return (
               <motion.button
@@ -119,23 +123,15 @@ export function DMList({ onNavigate }: DMListProps) {
                 {/* 내용 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span
-                      className={`font-bold text-sm ${unreadCount > 0 ? 'text-gray-900' : 'text-gray-600'}`}
-                    >
+                    <span className={`font-bold text-sm ${unreadCount > 0 ? 'text-gray-900' : 'text-gray-600'}`}>
                       {conv.partnerId}
                     </span>
                     <span className="text-[11px] text-gray-400 shrink-0 ml-2">
-                      {lastMsg?.time}
+                      {new Date(conv.lastActivity).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
                     </span>
                   </div>
-                  <p
-                    className={`text-xs truncate ${
-                      unreadCount > 0 ? 'text-gray-700 font-medium' : 'text-gray-400'
-                    }`}
-                  >
-                    {lastMsg?.from === username
-                      ? `나: ${lastMsg.content}`
-                      : lastMsg?.content}
+                  <p className={`text-xs truncate ${unreadCount > 0 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+                    {conv.lastMessage}
                   </p>
                 </div>
               </motion.button>

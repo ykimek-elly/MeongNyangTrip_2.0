@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Heart, Share2, MapPin, Star, ChevronRight,
-  Globe, Phone, ChevronDown, ChevronUp
+  Phone, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
@@ -16,22 +16,6 @@ const CATEGORY_TAG: Record<string, string> = {
   DINING: '#반려동물식당',
 };
 
-/** homepage 필드 정규화 — HTML 태그 포함 / 프로토콜 없는 경우 모두 처리 */
-function normalizeHomepage(raw: string | null): { href: string; display: string } | null {
-  if (!raw?.trim()) return null;
-  // HTML <a> 태그에서 href 추출
-  const hrefMatch = raw.match(/href="([^"]+)"/);
-  if (hrefMatch) {
-    const url = hrefMatch[1];
-    return { href: url, display: url.replace(/^https?:\/\//, '').replace(/\/$/, '') };
-  }
-  // 프로토콜 없는 URL 보정
-  let url = raw.trim();
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    url = 'https://' + url;
-  }
-  return { href: url, display: raw.trim().replace(/^https?:\/\//, '').replace(/\/$/, '') };
-}
 
 interface DetailProps {
   id: number;
@@ -78,7 +62,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
     : place.address;
 
   // 반려동물 정책 표시 여부
-  const hasPetInfo = place.chkPetInside || place.accomCountPet?.trim() || place.petTurnAdroose || place.tags;
+  const hasPetInfo = place.chkPetInside || place.accomCountPet?.trim() || place.petTurnAdroose || place.tags || place.petFacility || place.petPolicy;
 
   // tags 파싱 — 크기/실내외 정보 추출
   const tagList = place.tags
@@ -253,16 +237,46 @@ export function Detail({ id, onNavigate }: DetailProps) {
                     <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{place.petTurnAdroose}</p>
                   </div>
                 )}
+                {place.petFacility && place.petFacility !== '정보 없음' && (
+                  <div className="bg-primary/5 border border-primary/15 rounded-xl p-3 mt-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <p className="text-[11px] font-bold text-primary">🏗️ 반려동물 전용 시설</p>
+                      <span className="text-[9px] bg-[#008BFF]/10 text-[#008BFF] border border-[#008BFF]/20 px-1 py-0.5 rounded-full font-medium">AI 보강</span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">{place.petFacility}</p>
+                  </div>
+                )}
+                {place.petPolicy && place.petPolicy !== '정보 없음' && (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mt-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <p className="text-[11px] font-bold text-amber-700">📌 반려동물 이용 규정</p>
+                      <span className="text-[9px] bg-[#008BFF]/10 text-[#008BFF] border border-[#008BFF]/20 px-1 py-0.5 rounded-full font-medium">AI 보강</span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">{place.petPolicy}</p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* 운영 정보 */}
-            {place.operatingHours && (
+            {(place.operatingHours || place.operationPolicy) && (
               <div className="pb-4 border-b border-gray-100">
                 <h3 className="text-[15px] font-bold text-gray-900 mb-3">⏰ 운영 정보</h3>
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-600 leading-relaxed">{place.operatingHours}</p>
-                </div>
+                {place.operatingHours && (
+                  <div className="bg-gray-50 rounded-xl p-3 mb-2">
+                    <p className="text-[11px] font-bold text-gray-700 mb-1">영업 시간</p>
+                    <p className="text-xs text-gray-600 leading-relaxed">{place.operatingHours}</p>
+                  </div>
+                )}
+                {place.operationPolicy && place.operationPolicy !== '정보 없음' && (
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <p className="text-[11px] font-bold text-gray-700">운영 정책</p>
+                      <span className="text-[9px] bg-[#008BFF]/10 text-[#008BFF] border border-[#008BFF]/20 px-1 py-0.5 rounded-full font-medium">AI 보강</span>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed">{place.operationPolicy}</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -280,16 +294,6 @@ export function Detail({ id, onNavigate }: DetailProps) {
                     {place.phone}
                   </a>
                 )}
-                {(() => {
-                  const link = normalizeHomepage(place.homepage);
-                  return link ? (
-                    <a href={link.href} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-xs text-primary hover:underline truncate">
-                      <Globe size={13} className="text-gray-400 shrink-0" />
-                      {link.display}
-                    </a>
-                  ) : null;
-                })()}
               </div>
             </div>
           </div>

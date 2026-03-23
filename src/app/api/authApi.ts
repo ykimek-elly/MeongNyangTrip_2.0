@@ -37,4 +37,18 @@ export const authApi = {
   deleteAccount: async (): Promise<void> => {
     await api.delete(`${USER_BASE}/me`);
   },
+
+  /** POST /api/auth/find-id → 이름+휴대폰으로 이메일(아이디) 조회 */
+  findId: async (name: string, phone: string): Promise<string> => {
+    const { data } = await api.post<{ status: number; data: { email: string } }>(
+      `${AUTH_BASE}/find-id`,
+      { name, phone }
+    );
+    return data.data.email;
+  },
+
+  /** POST /api/auth/reset-password → 이메일+휴대폰으로 임시 비밀번호 발송 */
+  resetPassword: async (email: string, phone: string): Promise<void> => {
+    await api.post(`${AUTH_BASE}/reset-password`, { email, phone });
+  },
 };

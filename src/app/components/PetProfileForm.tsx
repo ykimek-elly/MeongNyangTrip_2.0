@@ -100,7 +100,15 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
 
   const [name, setName]       = useState(initialData?.name || '');
   const [type, setType]       = useState<'강아지' | '고양이'>(initialData?.type || '강아지');
-  const [breed, setBreed]     = useState(initialData?.breed || '');
+  // 품종 목록에 없으면 기타 선택 + customBreed에 실제 값
+  const initBreed = initialData?.breed
+    ? (BREEDS[initialData.type || '강아지']?.includes(initialData.breed) ? initialData.breed : '기타')
+    : '';
+  const initCustomBreed = initialData?.breed
+    ? (BREEDS[initialData.type || '강아지']?.includes(initialData.breed) ? '' : initialData.breed)
+    : '';
+  const [breed, setBreed]     = useState(initBreed);
+  const [customBreed, setCustomBreed] = useState(initCustomBreed);
   const [gender, setGender]   = useState<'남아' | '여아'>(initialData?.gender || '남아');
   const [size, setSize]       = useState<'SMALL' | 'MEDIUM' | 'LARGE'>(initialData?.size || 'MEDIUM');
   const [activity, setActivity] = useState<'LOW' | 'NORMAL' | 'HIGH'>(initialData?.activity || 'NORMAL');
@@ -119,7 +127,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
 
   const showRepresentativeToggle = !isEdit && !!hasExistingPets;
 
-  const canProceed      = name.trim() && type && breed;
+  const canProceed      = name.trim() && type && breed && (breed !== '기타' || customBreed.trim());
   const canStep2Submit  = canProceed && !!age;
   const canSubmit       = canStep2Submit && !!sido;
 
@@ -133,7 +141,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
     onSubmit({
       name: name.trim(),
       type,
-      breed,
+      breed: breed === '기타' ? customBreed.trim() : breed,
       gender,
       size,
       activity,
@@ -208,7 +216,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                     {PET_TYPES.map((t) => (
                       <button
                         key={t.id}
-                        onClick={() => { setType(t.id); setBreed(''); }}
+                        onClick={() => { setType(t.id); setBreed(''); setCustomBreed(''); }}
                         className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border-2 transition-all ${
                           type === t.id
                             ? 'border-primary bg-primary/5 text-primary'
@@ -239,6 +247,22 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                       </button>
                     ))}
                   </div>
+                  {breed === '기타' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-2"
+                    >
+                      <input
+                        type="text"
+                        value={customBreed}
+                        onChange={e => setCustomBreed(e.target.value)}
+                        placeholder="품종을 직접 입력해주세요"
+                        className="w-full px-4 py-3 rounded-2xl border-2 border-primary/40 bg-primary/5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-primary transition-colors"
+                        autoFocus
+                      />
+                    </motion.div>
+                  )}
                 </div>
 
                 <div>
@@ -413,38 +437,55 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                   <label className="text-sm font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
                     <MapPin size={14} className="text-primary" /> 활동 지역 *
                   </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={sido}
-                      onChange={(e) => handleSidoChange(e.target.value)}
-                      className={`flex-1 p-3 rounded-2xl border-2 text-sm outline-none transition-colors ${
-                        sido ? 'border-primary bg-primary/5 text-gray-800 font-bold' : 'border-gray-200 bg-gray-50 text-gray-400'
-                      }`}
-                    >
-                      <option value="">시·도 선택</option>
-                      {SIDO_LIST.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
 
-                    <select
-                      value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
-                      disabled={!sido || SIDO_DISTRICTS[sido]?.length <= 1}
-                      className={`flex-1 p-3 rounded-2xl border-2 text-sm outline-none transition-colors ${
-                        district
-                          ? 'border-primary bg-primary/5 text-gray-800 font-bold'
-                          : sido
-                          ? 'border-gray-200 bg-gray-50 text-gray-400'
-                          : 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                      }`}
-                    >
-                      <option value="">시·군·구 선택</option>
-                      {(sido ? SIDO_DISTRICTS[sido] || [] : []).map(d => (
-                        <option key={d} value={d}>{d}</option>
+                  {/* 좌우 2단 목록 */}
+                  <div className="flex gap-2 h-44 rounded-2xl overflow-hidden border-2 border-gray-100">
+                    {/* 시·도 목록 */}
+                    <ul className="w-1/3 overflow-y-auto border-r border-gray-100 bg-gray-50">
+                      {SIDO_LIST.map(s => (
+                        <li key={s}>
+                          <button
+                            type="button"
+                            onClick={() => handleSidoChange(s)}
+                            className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
+                              sido === s
+                                ? 'bg-primary text-white font-bold'
+                                : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200'
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        </li>
                       ))}
-                    </select>
+                    </ul>
+
+                    {/* 시·군·구 목록 */}
+                    <ul className="flex-1 overflow-y-auto bg-white">
+                      {!sido ? (
+                        <li className="flex items-center justify-center h-full text-xs text-gray-300">
+                          시·도를 먼저 선택하세요
+                        </li>
+                      ) : (
+                        (SIDO_DISTRICTS[sido] || []).map(d => (
+                          <li key={d}>
+                            <button
+                              type="button"
+                              onClick={() => setDistrict(prev => prev === d ? '' : d)}
+                              className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                                district === d
+                                  ? 'text-primary font-bold bg-primary/5'
+                                  : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+                              }`}
+                            >
+                              {d}
+                              {district === d && <Check size={14} className="text-primary shrink-0" />}
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
                   </div>
+
                   {sido && (
                     <p className="text-xs text-primary font-medium mt-1.5 ml-1">
                       📍 {sido}{district ? ` ${district}` : ''}

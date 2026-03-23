@@ -29,8 +29,8 @@ export function MyPage({ onNavigate }: MyPageProps) {
   // 나의 활동 통계 (일반 유저용)
   const myTotalLikes    = posts.reduce((acc, p) => acc + p.likes, 0);
   const myTotalComments = posts.reduce((acc, p) => acc + p.comments, 0);
-  const dmUnreadCount   = getUnreadTotal(username);
-  const dmTotalCount    = conversations.reduce((acc, c) => acc + c.messages.filter(m => m.from !== username).length, 0);
+  const dmUnreadCount   = getUnreadTotal();
+  const dmTotalCount    = conversations.length;
 
   const myStats = [
     { label: '게시글',  value: posts.length,    icon: ImageIcon,    color: 'bg-blue-50 text-blue-600',   page: null          },

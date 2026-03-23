@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
+import { walkGuideApi, WalkGuideResponse } from '../api/walkGuideApi';
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -30,7 +31,7 @@ const WEATHER_CONDITIONS = [
   { id: 'windy', label: '바람', icon: Wind, color: 'text-cyan-400', bg: 'bg-cyan-50' },
 ];
 
-const MOCK_RECOMMENDATIONS = {
+const MOCK_WALK_DATA = {
   summary: "오늘은 산책하기 아주 좋은 날씨예요!",
   temperature: 23,
   weather: 'sunny',
@@ -62,13 +63,26 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
   const [selectedDogSize, setSelectedDogSize] = useState<string>(pet?.size || 'MEDIUM');
   const [selectedActivity, setSelectedActivity] = useState<string>(pet?.activity || 'NORMAL');
 
-  const handleGenerateGuide = () => {
+  const [guideData, setGuideData] = useState<WalkGuideResponse | null>(null);
+
+  const handleGenerateGuide = async () => {
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const result = await walkGuideApi.generate({
+        petSize: (selectedDogSize as 'SMALL' | 'MEDIUM' | 'LARGE'),
+        activityLevel: (selectedActivity as 'LOW' | 'NORMAL' | 'HIGH'),
+      });
+      setGuideData(result);
+    } catch {
+      // API 미연동 / mock 모드 → 기존 mock 데이터 사용
+      setGuideData(MOCK_WALK_DATA as WalkGuideResponse);
+    } finally {
       setIsLoading(false);
       setShowRecommendation(true);
-    }, 2000);
+    }
   };
+
+  const recommendation = guideData ?? MOCK_WALK_DATA as WalkGuideResponse;
 
   const handleSaveRoute = () => {
     if (!isLoggedIn) {
@@ -80,10 +94,10 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
     addSavedRoute({
       id: Date.now().toString(),
       date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
-      weather: MOCK_RECOMMENDATIONS.weather,
-      temperature: MOCK_RECOMMENDATIONS.temperature,
-      bestTime: MOCK_RECOMMENDATIONS.bestTime,
-      routes: MOCK_RECOMMENDATIONS.routes.map(r => ({ name: r.name, distance: r.distance, type: r.type }))
+      weather: recommendation.weather,
+      temperature: recommendation.temperature,
+      bestTime: recommendation.bestTime,
+      routes: recommendation.routes.map(r => ({ name: r.name, distance: r.distance, type: r.type }))
     });
 
     setShowPopup(true);
@@ -92,7 +106,7 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
     }, 3000);
   };
 
-  const currentWeather = WEATHER_CONDITIONS.find(w => w.id === MOCK_RECOMMENDATIONS.weather);
+  const currentWeather = WEATHER_CONDITIONS.find(w => w.id === recommendation.weather);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-white pb-24">
@@ -137,7 +151,7 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
               </h3>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-4xl font-bold text-gray-900">{MOCK_RECOMMENDATIONS.temperature}°C</div>
+                  <div className="text-4xl font-bold text-gray-900">{recommendation.temperature}°C</div>
                   <div className="text-sm text-gray-500 mt-1">맑음, 산책하기 좋은 날씨</div>
                 </div>
                 <Sun className="text-orange-400 fill-orange-100" size={64} />
@@ -252,10 +266,10 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                     {currentWeather && <currentWeather.icon size={24} />}
                     <span className="text-sm opacity-90">오늘의 추천</span>
                   </div>
-                  <h3 className="text-xl font-bold leading-tight">{MOCK_RECOMMENDATIONS.summary}</h3>
+                  <h3 className="text-xl font-bold leading-tight">{recommendation.summary}</h3>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold">{MOCK_RECOMMENDATIONS.temperature}°</div>
+                  <div className="text-3xl font-bold">{recommendation.temperature}°</div>
                   <div className="text-xs opacity-80">완벽해요!</div>
                 </div>
               </div>
@@ -264,12 +278,12 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
                   <Clock size={16} className="mb-1" />
                   <div className="text-xs opacity-80">최적 시간</div>
-                  <div className="font-bold">{MOCK_RECOMMENDATIONS.bestTime}</div>
+                  <div className="font-bold">{recommendation.bestTime}</div>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
                   <Zap size={16} className="mb-1" />
                   <div className="text-xs opacity-80">추천 시간</div>
-                  <div className="font-bold">{MOCK_RECOMMENDATIONS.duration}</div>
+                  <div className="font-bold">{recommendation.duration}</div>
                 </div>
               </div>
             </div>
@@ -281,9 +295,9 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                 추천 산책로
               </h3>
               <div className="space-y-3">
-                {MOCK_RECOMMENDATIONS.routes.map((route) => (
+                {recommendation.routes.map((route) => (
                   <div
-                    key={route.id}
+                    key={route.name}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     <div className="flex-1">
@@ -308,7 +322,7 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                 산책 꿀팁
               </h3>
               <div className="space-y-2">
-                {MOCK_RECOMMENDATIONS.tips.map((tip, idx) => (
+                {recommendation.tips.map((tip, idx) => (
                   <div key={idx} className="flex items-start gap-2 text-sm text-gray-600 leading-relaxed">
                     <span className="text-primary">•</span>
                     <span>{tip}</span>
@@ -324,7 +338,7 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                 응급 연락처
               </h3>
               <div className="space-y-2">
-                {MOCK_RECOMMENDATIONS.emergency.map((contact, idx) => (
+                {recommendation.emergency?.map((contact, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl">
                     <div>
                       <div className="font-bold text-gray-900 text-sm">{contact.name}</div>

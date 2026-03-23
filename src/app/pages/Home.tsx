@@ -137,6 +137,7 @@ export function Home({ onNavigate }: HomeProps) {
                 className="bg-transparent w-full outline-none text-gray-800 placeholder:text-gray-400 font-medium text-sm"
                 value={searchRegion}
                 onChange={(e) => setSearchRegion(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
             <DatePickerPopup

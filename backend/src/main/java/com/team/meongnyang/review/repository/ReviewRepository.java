@@ -17,4 +17,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     boolean existsByUser_UserIdAndPlace_Id(Long userId, Long placeId);
 
     long countByPlace_Id(Long placeId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Review r WHERE r.place.id = :placeId")
+    void deleteByPlace_Id(Long placeId);
 }

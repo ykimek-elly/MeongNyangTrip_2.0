@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Smartphone, User, Lock, CheckCircle } from 'lucide-react';
+import { authApi } from '../api/authApi';
 
 interface FindPasswordProps {
   onNavigate: (page: string) => void;
@@ -10,14 +11,22 @@ export function FindPassword({ onNavigate }: FindPasswordProps) {
   const [id, setId] = useState('');
   const [phone, setPhone] = useState('');
   const [isSent, setIsSent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleFind = (e: React.FormEvent) => {
+  const handleFind = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !phone) return;
-    // 목업 응답 처리
-    setTimeout(() => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await authApi.resetPassword(id, phone);
       setIsSent(true);
-    }, 500);
+    } catch {
+      setError('입력하신 정보와 일치하는 계정을 찾을 수 없습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,16 +86,19 @@ export function FindPassword({ onNavigate }: FindPasswordProps) {
                 </div>
               </div>
 
-              <button 
+              {error && (
+                <p className="text-sm text-red-500 text-center">{error}</p>
+              )}
+              <button
                 type="submit"
-                disabled={!id || !phone}
+                disabled={!id || !phone || isLoading}
                 className={`w-full py-4 rounded-2xl font-bold text-lg shadow-md transition-all mt-8 ${
-                  id && phone 
-                    ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]' 
+                  id && phone && !isLoading
+                    ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                임시 비밀번호 발송
+                {isLoading ? '발송 중...' : '임시 비밀번호 발송'}
               </button>
             </form>
           </motion.div>

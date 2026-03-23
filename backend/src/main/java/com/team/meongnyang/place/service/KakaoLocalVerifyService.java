@@ -22,7 +22,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class KakaoLocalVerifyService {
 
-    private static final String KAKAO_LOCAL_URL = "https://dapi.kakao.com/v2/local/search/keyword.json";
+    private static final String KAKAO_LOCAL_URL    = "https://dapi.kakao.com/v2/local/search/keyword.json";
+    private static final String KAKAO_ADDRESS_URL  = "https://dapi.kakao.com/v2/local/search/address.json";
 
     /** 좌표 불일치 허용 오차 (미터). 이 이상이면 Kakao 좌표로 보정 */
     private static final double COORD_THRESHOLD_METERS = 100.0;
@@ -126,6 +127,40 @@ public class KakaoLocalVerifyService {
             }
         }
         return false;
+    }
+
+    /**
+     * 주소 → 좌표 변환 (Kakao Address Search API).
+     * 성공 시 [lat, lng], 실패 시 null 반환.
+     */
+    public double[] geocodeAddress(String address) {
+        try {
+            URI uri = UriComponentsBuilder.fromUriString(KAKAO_ADDRESS_URL)
+                    .queryParam("query", address)
+                    .queryParam("size", 1)
+                    .build().toUri();
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restClient.get()
+                    .uri(uri)
+                    .header("Authorization", "KakaoAK " + kakaoRestApiKey)
+                    .retrieve()
+                    .body(Map.class);
+
+            if (response == null) return null;
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> docs = (List<Map<String, Object>>) response.get("documents");
+            if (docs == null || docs.isEmpty()) return null;
+
+            Map<String, Object> first = docs.get(0);
+            double lng = Double.parseDouble((String) first.get("x"));
+            double lat = Double.parseDouble((String) first.get("y"));
+            log.debug("[주소→좌표] '{}' → lat={}, lng={}", address, lat, lng);
+            return new double[]{lat, lng};
+        } catch (Exception e) {
+            log.warn("[주소→좌표 오류] '{}' — {}", address, e.getMessage());
+            return null;
+        }
     }
 
     /** Haversine 공식으로 두 좌표 간 거리(미터) 계산 */

@@ -204,6 +204,7 @@ public class PlaceDataBatchService {
                     .accomCountPet(accomCountPet)
                     .petTurnAdroose(petTurnAdroose)
                     .isVerified(true)
+                    .status(com.team.meongnyang.place.entity.PlaceStatus.PENDING)
                     .build();
                 placeRepository.save(newPlace);
             }

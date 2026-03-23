@@ -11,12 +11,19 @@ interface DMDetailProps {
 
 export function DMDetail({ partner, onNavigate }: DMDetailProps) {
   const { username } = useAppStore();
-  const { conversations, sendMessage, markAllRead } = useDMStore();
+  const { conversations, fetchMessages, sendMessage, markAllRead } = useDMStore();
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const conv = conversations.find(c => c.partnerId === partner);
+
+  // 진입 시: 메시지 미로드 상태면 fetch
+  useEffect(() => {
+    if (partner && !conv?.messagesLoaded) {
+      fetchMessages(partner);
+    }
+  }, [partner, conv?.messagesLoaded, fetchMessages]);
 
   // 진입 시 읽음 처리
   useEffect(() => {
@@ -79,7 +86,12 @@ export function DMDetail({ partner, onNavigate }: DMDetailProps) {
 
       {/* 메시지 영역 */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {!conv || conv.messages.length === 0 ? (
+        {!conv?.messagesLoaded ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+            <p className="text-sm">메시지 불러오는 중...</p>
+          </div>
+        ) : !conv || conv.messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <Send size={36} className="mb-3 opacity-25" />
             <p className="text-sm font-medium">아직 메시지가 없어요</p>

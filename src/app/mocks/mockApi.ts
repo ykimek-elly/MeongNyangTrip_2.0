@@ -70,7 +70,7 @@ export const setupMockApi = () => {
 
     // ── 찜 여부 확인 GET /wishlists/:placeId/status ───────────
     else if (config.method === 'get' && /\/wishlists\/\d+\/status$/.test(url)) {
-      const placeId = Number(url.split('/').at(-2));
+      const parts = url.split('/'); const placeId = Number(parts[parts.length - 2]);
       config.adapter = async () => ({
         data: { status: 200, message: 'SUCCESS (MOCK)', data: mockWishlistSet.has(placeId) },
         status: 200, statusText: 'OK', headers: {}, config,

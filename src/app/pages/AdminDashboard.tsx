@@ -308,6 +308,8 @@ function BatchTab() {
   const [showScheduler, setShowScheduler] = useState(false);
   const [schedule, setSchedule] = useState<BatchSchedule>(loadSchedule);
   const [autoRunMsg, setAutoRunMsg] = useState('');
+  const [history, setHistory] = useState<BatchRunRecord[]>(loadBatchHistory);
+  const [showHistory, setShowHistory] = useState(false);
 
   // 마운트 시 자동 수집 체크
   useEffect(() => {
@@ -340,14 +342,43 @@ function BatchTab() {
   const run = async (job: BatchJob) => {
     setStatuses(s => ({ ...s, [job.id]: 'running' }));
     setMessages(m => ({ ...m, [job.id]: '' }));
+    const startedAt = new Date().toISOString();
     try {
       const res = await job.run();
+      const completedAt = new Date().toISOString();
       const serverMsg = res?.data?.message ?? res?.data ?? null;
+      const resultText = typeof serverMsg === 'string' ? serverMsg : '완료';
       setStatuses(s => ({ ...s, [job.id]: 'done' }));
-      setMessages(m => ({ ...m, [job.id]: typeof serverMsg === 'string' ? serverMsg : '완료' }));
+      setMessages(m => ({ ...m, [job.id]: resultText }));
+      const record: BatchRunRecord = {
+        id: `${job.id}-${Date.now()}`,
+        jobId: job.id,
+        jobLabel: job.label,
+        startedAt,
+        completedAt,
+        durationSec: Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000),
+        status: 'success',
+        result: resultText,
+      };
+      appendBatchRecord(record);
+      setHistory(loadBatchHistory());
     } catch (e: any) {
+      const completedAt = new Date().toISOString();
+      const errMsg = e?.response?.data?.message ?? '오류 발생';
       setStatuses(s => ({ ...s, [job.id]: 'error' }));
-      setMessages(m => ({ ...m, [job.id]: e?.response?.data?.message ?? '오류 발생' }));
+      setMessages(m => ({ ...m, [job.id]: errMsg }));
+      const record: BatchRunRecord = {
+        id: `${job.id}-${Date.now()}`,
+        jobId: job.id,
+        jobLabel: job.label,
+        startedAt,
+        completedAt,
+        durationSec: Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000),
+        status: 'error',
+        result: errMsg,
+      };
+      appendBatchRecord(record);
+      setHistory(loadBatchHistory());
     }
   };
 
@@ -515,6 +546,79 @@ function BatchTab() {
                   onRun={() => run(job)}
                 />
               ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* 실행 이력 */}
+      <div>
+        <button
+          onClick={() => setShowHistory(v => !v)}
+          className="w-full flex items-center justify-between px-1 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+        >
+          <span className="flex items-center gap-1.5">
+            실행 이력
+            {history.length > 0 && (
+              <span className="bg-gray-200 text-gray-600 text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                {history.length}
+              </span>
+            )}
+          </span>
+          <div className="flex items-center gap-2">
+            {history.length > 0 && (
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  localStorage.removeItem(BATCH_HISTORY_KEY);
+                  setHistory([]);
+                }}
+                className="text-[10px] text-red-400 hover:text-red-600 font-medium px-1.5 py-0.5 rounded"
+              >
+                전체 삭제
+              </button>
+            )}
+            {showHistory ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </div>
+        </button>
+
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mt-2"
+            >
+              {history.length === 0 ? (
+                <div className="bg-white rounded-2xl p-5 text-center text-xs text-gray-400 shadow-sm">
+                  실행 기록이 없습니다
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {history.map(rec => (
+                    <div key={rec.id} className="bg-white rounded-2xl px-4 py-3 shadow-sm flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${
+                        rec.status === 'success' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {rec.status === 'success'
+                          ? <CheckCircle size={15} className="text-green-600" />
+                          : <XCircle size={15} className="text-red-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-bold text-gray-800 truncate">{rec.jobLabel}</p>
+                          <span className="text-[10px] text-gray-400 shrink-0">{fmtDuration(rec.durationSec)}</span>
+                        </div>
+                        <p className={`text-[11px] mt-0.5 truncate ${rec.status === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                          {rec.result}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{fmtDateTime(rec.startedAt)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

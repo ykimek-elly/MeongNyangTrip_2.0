@@ -155,6 +155,28 @@ adminApi.createPlace(data)          // POST /admin/places
 
 ---
 
+### AdminDashboard — 배치 탭 "실행 이력" 기능 추가
+
+배치 수동 실행 시 결과를 **localStorage**에 자동 기록. 페이지를 닫아도 최대 50건 유지.
+
+**저장 항목:**
+| 필드 | 내용 |
+|---|---|
+| `jobLabel` | 실행한 배치 이름 |
+| `startedAt` | 실행 시작 시각 (ISO) |
+| `completedAt` | 완료 시각 (ISO) |
+| `durationSec` | 소요 시간 (초) |
+| `status` | `success` / `error` |
+| `result` | 서버 메시지 또는 오류 메시지 |
+
+**UI:**
+- 배치 탭 하단 "실행 이력" 섹션 (토글, 건수 배지)
+- 전체 삭제 버튼으로 이력 초기화 가능
+
+> 별도 BE 연동 없음 — 순수 FE localStorage 저장.
+
+---
+
 ## ⚙️ 환경변수 — 추가 필요 없음
 
 이번 변경은 기존 환경변수를 그대로 사용:

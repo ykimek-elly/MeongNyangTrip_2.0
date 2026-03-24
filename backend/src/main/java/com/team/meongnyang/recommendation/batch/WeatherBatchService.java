@@ -1,4 +1,4 @@
-package com.team.meongnyang.batch.notification;
+package com.team.meongnyang.recommendation.batch;
 
 import com.team.meongnyang.recommendation.cache.WeatherCacheService;
 import com.team.meongnyang.recommendation.dto.Coordinate;

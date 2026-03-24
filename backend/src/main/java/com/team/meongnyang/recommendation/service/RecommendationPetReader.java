@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class RecommnedationPetReader {
+public class RecommendationPetReader {
   private final PetRepository petRepository;
 
   /**

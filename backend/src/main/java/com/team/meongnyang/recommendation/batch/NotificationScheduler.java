@@ -1,4 +1,4 @@
-package com.team.meongnyang.batch.notification;
+package com.team.meongnyang.recommendation.batch;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

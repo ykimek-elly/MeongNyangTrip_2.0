@@ -55,6 +55,12 @@ public class WeatherRuleService {
    * @return 산책 가능 수준
    */
   public String evaluateWalkLevel(boolean raining, boolean cold, boolean hot, boolean windy) {
+    if ((raining && (cold || hot || windy))
+            || (cold && windy)
+            || (hot && windy)) {
+      return "DANGEROUS";
+    }
+
     if (raining || hot || windy || cold) {
       return "CAUTION";
     }

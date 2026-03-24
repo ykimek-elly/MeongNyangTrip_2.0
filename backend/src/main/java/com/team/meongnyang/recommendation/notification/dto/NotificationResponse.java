@@ -1,5 +1,6 @@
 package com.team.meongnyang.recommendation.notification.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -7,20 +8,33 @@ import lombok.NoArgsConstructor;
 
 /**
  * 알림 발송 응답 DTO.
- * 외부 알림 API 호출 결과를 내부에서 공통적으로 다루기 위한 응답 객체.
+ * 외부 알림 API 호출 결과를 서비스 계층에서 공통으로 다루기 위한 응답 객체이다.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class NotificationResponse {
-
-  /** 발송 성공 여부 */
   private boolean success;
+  private String requestId;
+  private String requestTime;
+  private String statusCode;
+  private String statusName;
 
-  /** 응답 코드 */
-  private String code;
+  public String getCode() {
+    return statusCode;
+  }
 
-  /** 응답 메시지 */
-  private String message;
+  public String getMessage() {
+    return statusName;
+  }
+
+  public static NotificationResponse failure(String statusCode, String statusName) {
+    return NotificationResponse.builder()
+            .success(false)
+            .statusCode(statusCode)
+            .statusName(statusName)
+            .build();
+  }
 }

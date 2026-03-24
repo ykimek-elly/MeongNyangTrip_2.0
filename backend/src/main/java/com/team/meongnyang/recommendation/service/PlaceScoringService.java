@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.service;
 import com.team.meongnyang.recommendation.dto.ScoreBreakdown;
 import com.team.meongnyang.recommendation.dto.ScoreDetail;
 import com.team.meongnyang.recommendation.dto.ScoredPlace;
+import com.team.meongnyang.recommendation.log.service.AiLogService;
 import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.user.entity.Pet;
@@ -69,7 +70,7 @@ public class PlaceScoringService {
      * @return 총점 내림차순으로 정렬된 장소 점수 목록
      */
     public List<ScoredPlace> scorePlaces(List<Place> candidates, User user, Pet pet, WeatherContext weather) {
-        return scorePlaces(candidates, user, pet, weather, DEFAULT_USER_LAT, DEFAULT_USER_LNG);
+        return scorePlaces(candidates, user, pet, weather, DEFAULT_USER_LAT, DEFAULT_USER_LNG, Map.of());
     }
 
     /**
@@ -86,6 +87,47 @@ public class PlaceScoringService {
      * @param userLng 거리 계산에 사용할 사용자 경도
      * @return 총점 기준 내림차순으로 정렬된 {@link ScoredPlace} 목록
      */
+    public List<ScoredPlace> scorePlaces(
+            List<Place> candidates,
+            User user,
+            Pet pet,
+            WeatherContext weather,
+            double userLat,
+            double userLng,
+            Map<Long, AiLogService.RecommendationDiversityPenalty> diversityPenalties
+    ) {
+        // 1. 후보가 없으면 즉시 종료
+        if (candidates == null || candidates.isEmpty()) {
+            log.warn("[장소 점수] 점수 계산 대상 후보가 없습니다.");
+            return List.of();
+        }
+
+        // 2. 최근 추천 이력 기반 다양성 패널티를 반영해 재점수화
+        Map<Long, AiLogService.RecommendationDiversityPenalty> safeDiversityPenalties =
+                diversityPenalties == null ? Map.of() : diversityPenalties;
+        List<ScoredPlace> rankedPlaces = candidates.stream()
+                .map(place -> scoreSinglePlace(
+                        place,
+                        user,
+                        pet,
+                        weather,
+                        userLat,
+                        userLng,
+                        resolveDiversityPenalty(place, safeDiversityPenalties, candidates.size())
+                ))
+                .sorted(Comparator.comparingDouble(ScoredPlace::getTotalScore).reversed())
+                .toList();
+
+        // 3. 최종 정렬 결과를 로그로 남김
+        log.info("[장소 점수] 다양성 반영 상위 점수 결과 count={}, topPlaces={}",
+                rankedPlaces.size(),
+                rankedPlaces.stream()
+                        .limit(3)
+                        .map(scoredPlace -> scoredPlace.getPlace().getTitle() + "|" + scoredPlace.getTotalScore())
+                        .collect(Collectors.joining(", ", "[", "]")));
+        return rankedPlaces;
+    }
+
     public List<ScoredPlace> scorePlaces(
             List<Place> candidates,
             User user,
@@ -131,7 +173,8 @@ public class PlaceScoringService {
             Pet pet,
             WeatherContext weather,
             double userLat,
-            double userLng
+            double userLng,
+            double diversityPenalty
     ) {
         // 1. 섹션별 점수 계산
         SectionResult petResult = scorePetSuitability(place, pet); // 장소에 반려동물이 적합한지 점수를 계산합니다.
@@ -141,7 +184,7 @@ public class PlaceScoringService {
         SectionResult bonusResult = scoreBonus(place, pet); // 보너스 점수를 계산합니다.
 
         // 2. 조합상 불리한 조건에 대한 감점 반영
-        double penaltyScore = applyPenaltyIfNeeded(place, pet, weather);
+        double penaltyScore = applyPenaltyIfNeeded(place, pet, weather) + diversityPenalty;
         // 3. 섹션 점수 합산하고 총점을 정규화 진행
         double rawTotal = petResult.score()
                 + weatherResult.score()
@@ -199,6 +242,53 @@ public class PlaceScoringService {
                 .summary(summary)
                 .reason(reason)
                 .build();
+    }
+
+    public ScoredPlace scoreSinglePlace(
+            Place place,
+            User user,
+            Pet pet,
+            WeatherContext weather,
+            double userLat,
+            double userLng
+    ) {
+        return scoreSinglePlace(place, user, pet, weather, userLat, userLng, 0.0);
+    }
+
+    private double resolveDiversityPenalty(
+            Place place,
+            Map<Long, AiLogService.RecommendationDiversityPenalty> diversityPenalties,
+            int candidateCount
+    ) {
+        if (place == null || place.getId() == null || diversityPenalties.isEmpty()) {
+            return 0.0;
+        }
+
+        AiLogService.RecommendationDiversityPenalty diversityPenalty = diversityPenalties.get(place.getId());
+        if (diversityPenalty == null) {
+            return 0.0;
+        }
+
+        double adjustedPenalty = diversityPenalty.penalty();
+        String reason = diversityPenalty.reason();
+
+        if (candidateCount <= 2) {
+            adjustedPenalty = 0.0;
+            reason = reason + " (후보 부족으로 패널티 무시)";
+        } else if (candidateCount <= 3) {
+            adjustedPenalty = round(diversityPenalty.penalty() / 2.0);
+            reason = reason + " (후보 부족으로 패널티 완화)";
+        }
+
+        if (adjustedPenalty <= 0.0) {
+            return 0.0;
+        }
+
+        log.info("[DIVERSITY PENALTY] placeId={}, penalty={}, reason={}",
+                place.getId(),
+                -adjustedPenalty,
+                reason);
+        return adjustedPenalty;
     }
 
     /**

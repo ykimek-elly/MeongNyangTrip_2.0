@@ -29,6 +29,8 @@ public class AiResponseLog extends BaseEntity {
   @Column(columnDefinition = "TEXT")
   private String recommendedPlaces;
 
+  private Long recommendedPlaceId;
+
   @Column(columnDefinition = "TEXT")
   private String ragContext;
 

@@ -143,3 +143,22 @@ redis:
   weather-cache-ttl: 3h
   gemini-cache-key: gemini
   gemini-cache-ttl: 6h
+
+ncloud:
+  sens:
+    base-url: ${NCLOUD_SENS_BASE_URL:https://sens.apigw.ntruss.com}
+    service-id: ${NCLOUD_SENS_SERVICE_ID:}
+    access-key: ${NCLOUD_SENS_ACCESS_KEY:}
+    secret-key: ${NCLOUD_SENS_SECRET_KEY:}
+    plus-friend-id: ${NCLOUD_SENS_PLUS_FRIEND_ID:}
+    template-code: ${NCLOUD_SENS_TEMPLATE_CODE:}
+    detail-link-prefix: ${NCLOUD_SENS_DETAIL_LINK_PREFIX:http://localhost:5173/place/}
+    delivery:
+      poll-delays-ms: ${NCLOUD_SENS_DELIVERY_POLL_DELAYS_MS:1000,3000,5000}
+    template:
+      sunny: ${NCLOUD_SENS_TEMPLATE_CODE_SUNNY:${NCLOUD_SENS_TEMPLATE_CODE_GOOD:}}
+      cloudy: ${NCLOUD_SENS_TEMPLATE_CODE_CLOUDY:${NCLOUD_SENS_TEMPLATE_CODE_GOOD:}}
+      cold: ${NCLOUD_SENS_TEMPLATE_CODE_COLD}
+      hot: ${NCLOUD_SENS_TEMPLATE_CODE_HOT}
+      rain: ${NCLOUD_SENS_TEMPLATE_CODE_RAIN}
+      default-code: ${NCLOUD_SENS_TEMPLATE_CODE_DEFAULT:${NCLOUD_SENS_TEMPLATE_CODE:}}

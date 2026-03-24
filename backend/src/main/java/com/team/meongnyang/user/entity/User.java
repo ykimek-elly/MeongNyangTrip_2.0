@@ -75,6 +75,10 @@ public class User extends BaseEntity {
     @Column
     private LocalDateTime lastNotificationSentAt;
 
+    public void markNotificationSent() {
+        this.lastNotificationSentAt = LocalDateTime.now();
+    }
+
     public enum Role {
         USER, ADMIN
     }

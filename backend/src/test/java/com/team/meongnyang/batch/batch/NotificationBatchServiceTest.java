@@ -1,11 +1,11 @@
-package com.team.meongnyang.batch.notification;
+package com.team.meongnyang.batch.batch;
 
 import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.recommendation.batch.NotificationBatchService;
 import com.team.meongnyang.recommendation.cache.DailyRecommendationCacheService;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
-import com.team.meongnyang.recommendation.notification.service.KakaoNotificationService;
-import com.team.meongnyang.recommendation.notification.service.NotificationMessageBuilder;
+import com.team.meongnyang.recommendation.notification.service.NotificationService;
 import com.team.meongnyang.recommendation.service.RecommendationPipelineService;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
@@ -23,6 +23,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,9 +38,7 @@ class NotificationBatchServiceTest {
     @Mock
     private RecommendationPipelineService recommendationPipelineService;
     @Mock
-    private KakaoNotificationService kakaoNotificationService;
-    @Mock
-    private NotificationMessageBuilder notificationMessageBuilder;
+    private NotificationService notificationService;
     @Mock
     private DailyRecommendationCacheService dailyRecommendationCacheService;
 
@@ -70,34 +69,79 @@ class NotificationBatchServiceTest {
 
         NotificationResponse notificationResponse = NotificationResponse.builder()
                 .success(true)
-                .code("200")
-                .message("mock success")
+                .requestId("request-id")
+                .requestTime("2026-03-24T09:00:00")
+                .statusCode("202")
+                .statusName("success")
                 .build();
 
         when(userRepository.findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE))
                 .thenReturn(List.of(user));
-        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrue(List.of(user.getUserId())))
+        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatus(
+                List.of(user.getUserId()),
+                User.Status.ACTIVE
+        ))
                 .thenReturn(List.of(pet));
         when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString()))
                 .thenReturn(recommendationResult);
-        when(notificationMessageBuilder.buildMessage(
-                eq(user),
-                eq(pet),
-                eq(place),
-                eq(recommendationResult.getMessage()),
-                eq(recommendationResult.getWeatherType()),
-                eq(recommendationResult.getWeatherWalkLevel())
-        )).thenReturn("notification body");
-        when(kakaoNotificationService.send(user, place, "notification body")).thenReturn(notificationResponse);
+        when(notificationService.send(
+                user,
+                pet,
+                place,
+                recommendationResult.getMessage(),
+                recommendationResult.getWeatherType()
+        )).thenReturn(notificationResponse);
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         notificationBatchService.runDailyNotificationBatch();
 
         verify(recommendationPipelineService, times(1)).recommendForNotification(eq(user), eq(pet), anyString());
-        verify(kakaoNotificationService, times(1)).send(user, place, "notification body");
+        verify(notificationService, times(1)).send(
+                user,
+                pet,
+                place,
+                recommendationResult.getMessage(),
+                recommendationResult.getWeatherType()
+        );
         verify(userRepository, times(1)).save(any(User.class));
         verify(dailyRecommendationCacheService, times(1))
                 .saveToday(eq(user.getUserId()), eq(recommendationResult), anyString());
+    }
+
+    @Test
+    @DisplayName("추천 결과가 없으면 알림 전송과 캐시 저장을 하지 않는다")
+    void runDailyNotificationBatch_noCandidate() {
+        User user = fixtureUser();
+        Pet pet = fixturePet(user);
+
+        RecommendationNotificationResult recommendationResult = RecommendationNotificationResult.builder()
+                .userId(user.getUserId())
+                .petId(pet.getPetId())
+                .petName(pet.getPetName())
+                .weatherType("SUNNY")
+                .weatherWalkLevel("GOOD")
+                .weatherSummary("sunny day")
+                .place(null)
+                .message("추천 가능한 장소가 없습니다.")
+                .fallbackUsed(false)
+                .cacheHit(false)
+                .build();
+
+        when(userRepository.findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE))
+                .thenReturn(List.of(user));
+        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatus(
+                List.of(user.getUserId()),
+                User.Status.ACTIVE
+        ))
+                .thenReturn(List.of(pet));
+        when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString()))
+                .thenReturn(recommendationResult);
+
+        notificationBatchService.runDailyNotificationBatch();
+
+        verify(notificationService, never()).send(any(User.class), any(Pet.class), any(Place.class), anyString(), anyString());
+        verify(userRepository, never()).save(any(User.class));
+        verify(dailyRecommendationCacheService, never()).saveToday(any(Long.class), any(RecommendationNotificationResult.class), anyString());
     }
 
     private User fixtureUser() {

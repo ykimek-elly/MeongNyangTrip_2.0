@@ -42,7 +42,7 @@ public class MeongNyangBackendApplication {
 			long rejected = placeRepository.countByStatus(PlaceStatus.REJECTED);
 			long total    = placeRepository.count();
 			log.info("┌─────────────────────────────────────────┐");
-			log.info("│  [DB 장소 현황]  총 {}건", String.format("%-28s", total + "건") + "│");
+			log.info("│  [DB 장소 현황]  총 {}건", String.format("%-24s", total + "건") + "│");
 			log.info("│  ACTIVE   : {}건", String.format("%-30s", active)   + "│");
 			log.info("│  PENDING  : {}건", String.format("%-30s", pending)  + "│");
 			log.info("│  REJECTED : {}건", String.format("%-30s", rejected) + "│");

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +34,7 @@ public class RecommendationPipelineService {
   private static final String DEFAULT_NOTIFICATION_SUMMARY = "오늘 컨디션에 맞는 장소로 가볍게 다녀와 보세요!";
 
   private final RecommendationUserReader recommendationUserReader;
-  private final RecommnedationPetReader recommnedationPetReader;
+  private final RecommendationPetReader recommendationPetReader;
   private final WeatherCacheService weatherService;
   private final CandidatePlaceService candidatePlaceService;
   private final PlaceScoringService placeScoringService;
@@ -59,7 +60,7 @@ public class RecommendationPipelineService {
     log.info("[추천 파이프라인] 사용자 조회 결과 email={}, userId={}, nickname={}", email, user.getUserId(), user.getNickname());
     log.info("[추천 파이프라인] 사용자 위경도 lat={}, lng={}", SUWON_LAT, SUWON_LNG);
 
-    Pet pet = recommnedationPetReader.getPrimaryPet(user);
+    Pet pet = recommendationPetReader.getPrimaryPet(user);
     log.info("[추천 파이프라인] 대표 반려견 조회 결과 petId={}, name={}, preferredPlace={}", pet.getPetId(), pet.getPetName(), pet.getPreferredPlace());
 
     return recommendForNotification(user, pet);
@@ -132,13 +133,18 @@ public class RecommendationPipelineService {
               .build();
     }
 
+    // 1. 최근 추천 이력을 조회해 다양성 패널티 후보를 준비한다.
+    Map<Long, AiLogService.RecommendationDiversityPenalty> diversityPenalties = loadDiversityPenalties(user);
+
+    // 2. 기존 점수 + 다양성 패널티를 함께 반영해 최종 순위를 계산한다.
     List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
             candidates,
             user,
             pet,
             weatherContext,
             latitude,
-            longitude
+            longitude,
+            diversityPenalties
     );
 
     log.info("[추천 파이프라인-알림] 점수 계산 결과 상위 장소 count={}, topScores={}",
@@ -207,6 +213,7 @@ public class RecommendationPipelineService {
                 pet,
                 prompt,
                 recommendedPlaces,
+                topPlace == null ? null : topPlace.getId(),
                 evidenceContext.getContextSnapshot(),
                 cachedResponse,
                 false,
@@ -256,6 +263,7 @@ public class RecommendationPipelineService {
               pet,
               prompt,
               recommendedPlaces,
+              topPlace == null ? null : topPlace.getId(),
               evidenceContext.getContextSnapshot(),
               geminiMessage,
               fallbackUsed,
@@ -290,6 +298,7 @@ public class RecommendationPipelineService {
               pet,
               prompt,
               recommendedPlaces,
+              topPlace == null ? null : topPlace.getId(),
               evidenceContext.getContextSnapshot(),
               fallbackResponse,
               true,
@@ -330,19 +339,19 @@ public class RecommendationPipelineService {
     }
 
     if (weatherContext.isRaining()) {
-      return "RAINY";
+      return "RAIN";
     }
 
     if (weatherContext.isHot()) {
-      return "HEATWAVE";
+      return "HOT";
     }
 
     if (weatherContext.isCold()) {
-      return "COLD_WAVE";
+      return "COLD";
     }
 
-    String precipitationType = weatherContext.getPrecipitationType();
-    if (precipitationType != null && !precipitationType.isBlank() && !"NONE".equalsIgnoreCase(precipitationType)) {
+    String walkLevel = weatherContext.getWalkLevel();
+    if (walkLevel != null && ("CAUTION".equalsIgnoreCase(walkLevel) || "DANGEROUS".equalsIgnoreCase(walkLevel))) {
       return "CLOUDY";
     }
 
@@ -389,6 +398,23 @@ public class RecommendationPipelineService {
               return place.getTitle() + "(" + scoredPlace.getTotalScore() + "점)";
             })
             .collect(Collectors.joining(", "));
+  }
+
+  private Map<Long, AiLogService.RecommendationDiversityPenalty> loadDiversityPenalties(User user) {
+    if (user == null) {
+      return Map.of();
+    }
+
+    Map<Long, AiLogService.RecommendationDiversityPenalty> penalties =
+            aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId());
+    if (penalties == null || penalties.isEmpty()) {
+      return Map.of();
+    }
+
+    log.info("[추천 파이프라인-알림] 다양성 패널티 대상 count={}, userId={}",
+            penalties.size(),
+            user.getUserId());
+    return penalties;
   }
 
   /**

@@ -73,7 +73,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .orElseGet(() -> userRepository.findByEmail(finalEmail)
                         .orElseGet(() -> userRepository.save(User.builder()
                                 .email(finalEmail)
-                                .password(null)
+                                .password("")
                                 .nickname(finalNickname)
                                 .profileImage(finalProfileImage)
                                 .provider(provider)

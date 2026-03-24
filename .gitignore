@@ -31,6 +31,9 @@ pnpm-debug.log*
 # misc
 *.local
 
+# local scripts (일회성 데이터 처리 스크립트 — GitHub 업로드 금지)
+scripts/
+
 # Claude IDE/Tool Files
 .claude/
 /.metadata/

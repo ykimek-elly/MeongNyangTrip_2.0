@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Smartphone, User } from 'lucide-react';
+import { authApi } from '../api/authApi';
 
 interface FindIdProps {
   onNavigate: (page: string) => void;
@@ -10,14 +11,22 @@ export function FindId({ onNavigate }: FindIdProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [result, setResult] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleFind = (e: React.FormEvent) => {
+  const handleFind = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) return;
-    // 목업 응답 처리
-    setTimeout(() => {
-      setResult('user1234');
-    }, 500);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const email = await authApi.findId(name, phone);
+      setResult(email);
+    } catch {
+      setError('입력하신 정보와 일치하는 계정을 찾을 수 없습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -76,16 +85,19 @@ export function FindId({ onNavigate }: FindIdProps) {
                 </div>
               </div>
 
-              <button 
+              {error && (
+                <p className="text-sm text-red-500 text-center">{error}</p>
+              )}
+              <button
                 type="submit"
-                disabled={!name || !phone}
+                disabled={!name || !phone || isLoading}
                 className={`w-full py-4 rounded-2xl font-bold text-lg shadow-md transition-all mt-8 ${
-                  name && phone 
-                    ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]' 
+                  name && phone && !isLoading
+                    ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                아이디 찾기
+                {isLoading ? '확인 중...' : '아이디 찾기'}
               </button>
             </form>
           </motion.div>
@@ -100,7 +112,7 @@ export function FindId({ onNavigate }: FindIdProps) {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">회원님의 아이디를 찾았어요!</h2>
             <p className="text-gray-500 mb-8">
-              가입하신 아이디는<br/>
+              가입하신 이메일은<br/>
               <span className="text-primary font-bold text-lg">{result}</span> 입니다.
             </p>
             

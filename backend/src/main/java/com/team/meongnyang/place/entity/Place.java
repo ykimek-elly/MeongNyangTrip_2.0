@@ -139,6 +139,34 @@ public class Place {
     @Column(name = "ai_rating")
     private Double aiRating;
 
+    /** 네이버 블로그 검색 결과 수 (aiRating 계산 시점 기준) */
+    @Column(name = "blog_count")
+    private Integer blogCount;
+
+    /** 블로그 감성 분석 — 긍정 키워드 (쉼표 구분 문자열, nullable) */
+    @Column(name = "blog_positive_tags", length = 200)
+    private String blogPositiveTags;
+
+    /** 블로그 감성 분석 — 부정 키워드 (쉼표 구분 문자열, nullable) */
+    @Column(name = "blog_negative_tags", length = 200)
+    private String blogNegativeTags;
+
+    /** 반려시설 정보 (AI 보강) */
+    @Column(name = "pet_facility", columnDefinition = "TEXT")
+    private String petFacility;
+
+    /** 반려정책 (AI 보강) */
+    @Column(name = "pet_policy", columnDefinition = "TEXT")
+    private String petPolicy;
+
+    /** 운영시간 (AI 보강) */
+    @Column(name = "operating_hours", columnDefinition = "TEXT")
+    private String operatingHours;
+
+    /** 일반 운영정책 (AI 보강) */
+    @Column(name = "operation_policy", columnDefinition = "TEXT")
+    private String operationPolicy;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -169,6 +197,12 @@ public class Place {
         this.isVerified = false;
     }
 
+    /** 재검증 배치 — 네이버/카카오 미검색 → REJECTED */
+    public void markRejectedByBatch() {
+        this.status = PlaceStatus.REJECTED;
+        this.isVerified = false;
+    }
+
     /** 장소 정보 수정 (관리자용) */
     public void update(String title, String description, String address,
                        Double latitude, Double longitude, String category,
@@ -182,6 +216,27 @@ public class Place {
         this.imageUrl = imageUrl;
         this.phone = phone;
         this.tags = tags;
+    }
+
+    /** 관리자 필드 부분 수정 — null은 기존값 유지 */
+    public void patchAdminFields(String title, String address, String phone,
+                                 String homepage, String imageUrl) {
+        if (title != null && !title.isBlank())   this.title    = title;
+        if (address != null && !address.isBlank()) this.address  = address;
+        if (phone != null)     this.phone    = phone;
+        if (homepage != null)  this.homepage = homepage;
+        if (imageUrl != null)  this.imageUrl = imageUrl;
+    }
+
+    /** 오프라인 AI 보강 데이터 업데이트 */
+    public void updateEnrichedData(String overview, String petFacility, String petPolicy,
+                                   String operatingHours, String operationPolicy, String tags) {
+        if (overview != null && !overview.isBlank()) this.overview = overview;
+        if (petFacility != null && !petFacility.isBlank()) this.petFacility = petFacility;
+        if (petPolicy != null && !petPolicy.isBlank()) this.petPolicy = petPolicy;
+        if (operatingHours != null && !operatingHours.isBlank()) this.operatingHours = operatingHours;
+        if (operationPolicy != null && !operationPolicy.isBlank()) this.operationPolicy = operationPolicy;
+        if (tags != null && !tags.isBlank()) this.tags = tags;
     }
 
     /**
@@ -207,10 +262,14 @@ public class Place {
      * @param descriptions    최신 5개 글 요약본 (감성 반응)
      */
     public void computeAiRating(int blogTotal, String latestPostDate, List<String> descriptions) {
+        this.blogCount = blogTotal;
+
         // A. 기본 점수 — 생존 검증 통과 필수
         boolean notClosed = tags == null || !tags.contains("폐업");
         if (!Boolean.TRUE.equals(isVerified) || !notClosed) {
             this.aiRating = 0.0;
+            this.blogPositiveTags = null;
+            this.blogNegativeTags = null;
             return;
         }
         double score = 2.0;
@@ -232,10 +291,15 @@ public class Place {
         else if (blogTotal >= 1)  blogScore = 0.1;
         score += blogScore * computeDecayFactor(latestPostDate);
 
-        // D. 감성 반응 (최대 1.0점)
-        int positiveCount = countPositiveKeywords(descriptions);
+        // D. 감성 반응 (최대 1.0점) — 키워드 추출 후 저장
+        List<String> foundPositive = extractPositiveKeywords(descriptions);
+        List<String> foundNegative = extractNegativeKeywords(descriptions);
+        int positiveCount = foundPositive.size();
         if (positiveCount >= 5)      score += 1.0;
         else if (positiveCount >= 2) score += 0.5;
+
+        this.blogPositiveTags = foundPositive.isEmpty() ? null : String.join(",", foundPositive);
+        this.blogNegativeTags = foundNegative.isEmpty() ? null : String.join(",", foundNegative);
 
         this.aiRating = Math.round(score * 10.0) / 10.0;
     }
@@ -255,15 +319,61 @@ public class Place {
         }
     }
 
-    /** 긍정 키워드 카운트 — 5개 블로그 description 분석 */
-    private int countPositiveKeywords(List<String> descriptions) {
-        if (descriptions == null || descriptions.isEmpty()) return 0;
-        List<String> keywords = Arrays.asList(
-                "추천", "강추", "맛있", "친절", "깨끗", "예쁘", "분위기",
-                "재방문", "만족", "훌륭", "편안", "최고", "좋아", "좋았"
-        );
+    /** 긍정 키워드 추출 — 카테고리별로 다른 키워드 세트 적용 */
+    private List<String> extractPositiveKeywords(List<String> descriptions) {
+        if (descriptions == null || descriptions.isEmpty()) return List.of();
+        List<String> keywords;
+        if ("STAY".equals(category)) {
+            // 숙박: 청결·시설·반려견 전용 환경 중심
+            keywords = Arrays.asList(
+                    "청결", "넓어", "아늑", "친절", "편안", "깨끗",
+                    "마당", "울타리", "산책로", "반려견전용", "재방문",
+                    "만족", "최고", "추천", "강추"
+            );
+        } else if ("DINING".equals(category)) {
+            // 식당·카페: 음식·서비스·반려동물 환경 중심
+            keywords = Arrays.asList(
+                    "맛있", "친절", "깨끗", "예쁘", "분위기", "강추",
+                    "추천", "재방문", "만족", "반려견동반", "애견동반",
+                    "펫프렌들리", "간식", "디저트", "인테리어"
+            );
+        } else {
+            // PLACE: 공원·명소 — 산책·자연·개방감 중심
+            keywords = Arrays.asList(
+                    "넓어", "쾌적", "산책", "자연", "뷰", "경치",
+                    "인생샷", "포토존", "힐링", "탁트인", "접근성",
+                    "추천", "강추", "만족", "재방문"
+            );
+        }
         String combined = String.join(" ", descriptions).toLowerCase();
-        return (int) keywords.stream().filter(combined::contains).count();
+        return keywords.stream().filter(combined::contains).toList();
+    }
+
+    /** 부정 키워드 추출 — 카테고리별로 다른 키워드 세트 적용 */
+    private List<String> extractNegativeKeywords(List<String> descriptions) {
+        if (descriptions == null || descriptions.isEmpty()) return List.of();
+        List<String> keywords;
+        if ("STAY".equals(category)) {
+            // 숙박: 위생·소음·시설 불만 중심
+            keywords = Arrays.asList(
+                    "냄새", "불편", "시끄럽", "좁아", "비싸", "실망",
+                    "지저분", "불친절", "위생", "후회", "청소"
+            );
+        } else if ("DINING".equals(category)) {
+            // 식당·카페: 음식·서비스·공간 불만 중심
+            keywords = Arrays.asList(
+                    "불편", "냄새", "별로", "실망", "협소", "지저분",
+                    "불친절", "비싸", "좁아", "대기", "후회"
+            );
+        } else {
+            // PLACE: 공원·명소 — 혼잡·제한·접근성 불만 중심
+            keywords = Arrays.asList(
+                    "혼잡", "좁아", "위험", "입장불가", "제한", "불편",
+                    "주차", "벌레", "더워", "별로", "실망"
+            );
+        }
+        String combined = String.join(" ", descriptions).toLowerCase();
+        return keywords.stream().filter(combined::contains).toList();
     }
 
     /** 리뷰 추가 시 평점·리뷰수 갱신 */
@@ -296,7 +406,8 @@ public class Place {
                                 Point geom, String category, String imageUrl, String phone,
                                 String overview, String homepage,
                                 String chkPetInside, String accomCountPet,
-                                String petTurnAdroose, boolean isVerified, String kakaoId) {
+                                String petTurnAdroose, String operatingHours,
+                                boolean isVerified, String kakaoId) {
         this.title = title;
         this.address = address;
         this.addr2 = addr2;
@@ -311,6 +422,7 @@ public class Place {
         this.chkPetInside = chkPetInside;
         this.accomCountPet = accomCountPet;
         this.petTurnAdroose = petTurnAdroose;
+        if (operatingHours != null) this.operatingHours = operatingHours;
         this.isVerified = isVerified;
         if (kakaoId != null) this.kakaoId = kakaoId;
     }

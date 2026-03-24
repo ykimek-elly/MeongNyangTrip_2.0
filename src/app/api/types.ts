@@ -33,6 +33,13 @@ export interface PlaceDto {
   petTurnAdroose: string | null;
   homepage: string | null;
   aiRating: number | null;
+  blogCount: number | null;
+  blogPositiveTags: string | null;
+  blogNegativeTags: string | null;
+  petFacility: string | null;
+  petPolicy: string | null;
+  operatingHours: string | null;
+  operationPolicy: string | null;
   createdAt: string;
   updatedAt: string;
 }

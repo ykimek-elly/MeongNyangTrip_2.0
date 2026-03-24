@@ -1,10 +1,10 @@
 import React from 'react';
 import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, PawPrint, Pencil, Plus, Star, Smile, Meh, Frown } from 'lucide-react';
-import { places } from '../data/places';
 import { useAppStore } from '../store/useAppStore';
 import { useFeedStore } from '../store/useFeedStore';
 import { useDMStore } from '../store/useDMStore';
 import { PetProfileForm } from '../components/PetProfileForm';
+import { PlaceImage } from '../components/PlaceImage';
 import type { PetInfo } from '../store/useAppStore';
 import { AnimatePresence } from 'motion/react';
 import { motion } from 'motion/react';
@@ -14,7 +14,7 @@ interface MyPageProps {
 }
 
 export function MyPage({ onNavigate }: MyPageProps) {
-  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet, isAdmin, username } = useAppStore();
+  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet, isAdmin, username, places, fetchPlaces } = useAppStore();
   const { posts } = useFeedStore();
   const { conversations, getUnreadTotal } = useDMStore();
 
@@ -23,13 +23,14 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const [deleteTargetIndex, setDeleteTargetIndex] = React.useState<number | null>(null);
   const [petMood, setPetMood] = React.useState<'good' | 'normal' | 'bad' | null>(null);
 
+  React.useEffect(() => { if (places.length === 0) fetchPlaces(); }, []);
   const wishItems = places.filter(p => wishlist.includes(p.id));
 
   // 나의 활동 통계 (일반 유저용)
   const myTotalLikes    = posts.reduce((acc, p) => acc + p.likes, 0);
   const myTotalComments = posts.reduce((acc, p) => acc + p.comments, 0);
-  const dmUnreadCount   = getUnreadTotal(username);
-  const dmTotalCount    = conversations.reduce((acc, c) => acc + c.messages.filter(m => m.from !== username).length, 0);
+  const dmUnreadCount   = getUnreadTotal();
+  const dmTotalCount    = conversations.length;
 
   const myStats = [
     { label: '게시글',  value: posts.length,    icon: ImageIcon,    color: 'bg-blue-50 text-blue-600',   page: null          },
@@ -73,7 +74,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="min-h-screen bg-gray-50 pb-24"
+      className="bg-gray-50"
     >
       {/* Profile Header */}
       <div className="bg-white p-6 pb-8 rounded-b-[40px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] mb-6">
@@ -336,7 +337,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 className="bg-white p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
                 onClick={() => onNavigate('detail', { id: p.id })}
               >
-                <img src={p.imageUrl || ""} className="w-full aspect-square rounded-2xl mb-2 object-cover bg-gray-100" alt={p.title} />
+                <PlaceImage imageUrl={p.imageUrl} category={p.category} className="w-full aspect-square rounded-2xl mb-2 object-cover" />
                 <h6 className="font-bold text-gray-900 text-sm truncate px-1">{p.title}</h6>
                 <span className="text-gray-400 text-[10px] px-1">{p.address}</span>
               </div>

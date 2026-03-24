@@ -16,6 +16,7 @@ public record PendingPlaceDto(
         String category,
         String imageUrl,
         String phone,
+        String homepage,
         String pendingReason,
         String kakaoMapUrl
 ) {
@@ -33,6 +34,7 @@ public record PendingPlaceDto(
                 p.getCategory(),
                 p.getImageUrl(),
                 p.getPhone(),
+                p.getHomepage(),
                 p.getPendingReason(),
                 kakaoMapUrl
         );

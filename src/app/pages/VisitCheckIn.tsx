@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft, Award, MapPin, Calendar, Camera, Check,
-  Clock, TrendingUp, LocateFixed, ImagePlus, AlertCircle,
+  Clock, TrendingUp, LocateFixed, ImagePlus, AlertCircle, Upload,
 } from 'lucide-react';
 import { checkInApi } from '../api/checkInApi';
 import type { CheckInStatsResponse } from '../api/checkInApi';
@@ -11,18 +11,34 @@ interface VisitCheckInProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
+type TabType = 'checkin' | 'photo' | 'history';
+
 export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
-  const [activeTab, setActiveTab] = useState<'checkin' | 'history'>('checkin');
+  const [activeTab, setActiveTab] = useState<TabType>('checkin');
+
+  // 현장 인증 상태
   const [photoTaken, setPhotoTaken] = useState(false);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'found' | 'error'>('idle');
   const [locationName, setLocationName] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+
+  // 사진 업로드 인증 상태
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
+  const [exifStatus, setExifStatus] = useState<'idle' | 'loading' | 'found' | 'error'>('idle');
+  const [exifLocationName, setExifLocationName] = useState('');
+  const [exifLat, setExifLat] = useState<number | null>(null);
+  const [exifLng, setExifLng] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 공통 상태
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [newBadge, setNewBadge] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stats, setStats] = useState<CheckInStatsResponse | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [successLocation, setSuccessLocation] = useState('');
 
   useEffect(() => {
     checkInApi.getMyStats()
@@ -34,6 +50,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   const totalVisits = stats?.totalVisits ?? 0;
   const unlockedBadges = stats?.unlockedBadges ?? 0;
 
+  // 현장 위치 가져오기
   const handleGetLocation = () => {
     setLocationStatus('loading');
     navigator.geolocation?.getCurrentPosition(
@@ -68,7 +85,63 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
     );
   };
 
-  const handleSubmit = async () => {
+  // EXIF GPS 추출
+  const handleFileUpload = async (file: File) => {
+    setUploadedFile(file);
+    setExifStatus('loading');
+    setExifLat(null);
+    setExifLng(null);
+    setExifLocationName('');
+
+    // 미리보기
+    const reader = new FileReader();
+    reader.onload = (e) => setUploadedPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+
+    try {
+      // exifr 동적 import
+      const exifr = await import('exifr');
+      const gps = await exifr.gps(file);
+
+      if (gps && gps.latitude && gps.longitude) {
+        setExifLat(gps.latitude);
+        setExifLng(gps.longitude);
+
+        // 카카오 역지오코딩
+        try {
+          const kakao = (window as any).kakao;
+          if (kakao?.maps?.services) {
+            const geocoder = new kakao.maps.services.Geocoder();
+            geocoder.coord2Address(gps.longitude, gps.latitude, (result: any, status: any) => {
+              if (status === kakao.maps.services.Status.OK && result[0]) {
+                setExifLocationName(
+                  result[0].road_address?.address_name ||
+                  result[0].address?.address_name ||
+                  '사진 촬영 위치'
+                );
+              } else {
+                setExifLocationName('사진 촬영 위치');
+              }
+              setExifStatus('found');
+            });
+          } else {
+            setExifLocationName('사진 촬영 위치');
+            setExifStatus('found');
+          }
+        } catch {
+          setExifLocationName('사진 촬영 위치');
+          setExifStatus('found');
+        }
+      } else {
+        setExifStatus('error');
+      }
+    } catch {
+      setExifStatus('error');
+    }
+  };
+
+  // 현장 인증 제출
+  const handleCheckinSubmit = async () => {
     if (!locationName || latitude === null || longitude === null) return;
     setIsSubmitting(true);
     try {
@@ -76,6 +149,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
       if (result.badgeName) setNewBadge(result.badgeName);
       const updated = await checkInApi.getMyStats();
       setStats(updated);
+      setSuccessLocation(locationName);
       setShowSuccessModal(true);
       setTimeout(() => {
         setShowSuccessModal(false);
@@ -93,7 +167,42 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
     }
   };
 
-  const canSubmit = photoTaken && locationStatus === 'found' && !isSubmitting;
+  // 사진 업로드 인증 제출
+  const handlePhotoSubmit = async () => {
+    if (!exifLocationName || exifLat === null || exifLng === null) return;
+    setIsSubmitting(true);
+    try {
+      const result = await checkInApi.createCheckIn({ placeName: exifLocationName, latitude: exifLat, longitude: exifLng });
+      if (result.badgeName) setNewBadge(result.badgeName);
+      const updated = await checkInApi.getMyStats();
+      setStats(updated);
+      setSuccessLocation(exifLocationName);
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        setUploadedFile(null);
+        setUploadedPreview(null);
+        setExifStatus('idle');
+        setExifLocationName('');
+        setExifLat(null);
+        setExifLng(null);
+        setNewBadge(null);
+      }, 2500);
+    } catch {
+      alert('인증에 실패했어요. 로그인 상태를 확인해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canCheckinSubmit = photoTaken && locationStatus === 'found' && !isSubmitting;
+  const canPhotoSubmit = exifStatus === 'found' && !isSubmitting;
+
+  const tabs = [
+    { id: 'checkin', label: '현장 인증', icon: LocateFixed },
+    { id: 'photo', label: '사진 인증', icon: Upload },
+    { id: 'history', label: '방문기록', icon: Clock },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-white pb-24">
@@ -107,6 +216,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         </div>
       </header>
 
+      {/* 통계 카드 */}
       <div className="px-5 pt-6 pb-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -132,19 +242,17 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         </motion.div>
       </div>
 
+      {/* 탭 */}
       <div className="sticky top-14 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-5 flex gap-1">
-        {[
-          { id: 'checkin', label: '사진 인증', icon: Camera },
-          { id: 'history', label: '방문기록', icon: Clock },
-        ].map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as 'checkin' | 'history')}
-            className={`flex-1 py-3 text-sm font-bold transition-colors relative flex items-center justify-center gap-1 ${
+            onClick={() => setActiveTab(tab.id as TabType)}
+            className={`flex-1 py-3 text-xs font-bold transition-colors relative flex items-center justify-center gap-1 ${
               activeTab === tab.id ? 'text-primary' : 'text-gray-400'
             }`}
           >
-            <tab.icon size={16} />
+            <tab.icon size={14} />
             {tab.label}
             {activeTab === tab.id && (
               <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
@@ -155,6 +263,8 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
 
       <div className="px-5 py-5">
         <AnimatePresence mode="wait">
+
+          {/* 현장 인증 탭 */}
           {activeTab === 'checkin' && (
             <motion.div
               key="checkin"
@@ -163,6 +273,11 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-5"
             >
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+                <p className="text-xs text-blue-600 font-medium">📍 현재 위치를 확인하고 사진을 찍어 인증해요</p>
+              </div>
+
+              {/* 위치 확인 */}
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">1</span>
@@ -202,6 +317,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 )}
               </div>
 
+              {/* 사진 촬영 */}
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
@@ -234,10 +350,10 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               </div>
 
               <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
+                onClick={handleCheckinSubmit}
+                disabled={!canCheckinSubmit}
                 className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
-                  canSubmit ? 'bg-primary text-white shadow-lg active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  canCheckinSubmit ? 'bg-primary text-white shadow-lg active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {isSubmitting ? '저장 중...' : '방문 인증 완료'}
@@ -261,6 +377,136 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
             </motion.div>
           )}
 
+          {/* 사진 업로드 인증 탭 */}
+          {activeTab === 'photo' && (
+            <motion.div
+              key="photo"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-5"
+            >
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
+                <p className="text-xs text-amber-700 font-medium">🖼️ GPS 정보가 담긴 사진을 업로드하면 위치를 자동으로 인식해요</p>
+              </div>
+
+              {/* 파일 업로드 */}
+              <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">1</span>
+                  사진 업로드
+                </h3>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                />
+
+                {!uploadedPreview ? (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-40 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-2 transition-all"
+                  >
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Upload size={22} className="text-primary" />
+                    </div>
+                    <span className="text-sm font-bold text-gray-700">사진 선택하기</span>
+                    <span className="text-xs text-gray-400">GPS 정보가 있는 사진을 선택해주세요</span>
+                  </button>
+                ) : (
+                  <div className="relative">
+                    <img
+                      src={uploadedPreview}
+                      alt="업로드된 사진"
+                      className="w-full h-48 object-cover rounded-2xl"
+                    />
+                    <button
+                      onClick={() => {
+                        setUploadedFile(null);
+                        setUploadedPreview(null);
+                        setExifStatus('idle');
+                        setExifLocationName('');
+                        setExifLat(null);
+                        setExifLng(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold hover:bg-black/70 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* EXIF 위치 결과 */}
+              {exifStatus !== 'idle' && (
+                <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
+                    위치 정보 추출
+                  </h3>
+
+                  {exifStatus === 'loading' && (
+                    <div className="w-full py-3.5 rounded-2xl bg-gray-50 text-gray-500 text-sm flex items-center justify-center gap-2">
+                      <MapPin size={18} className="animate-pulse text-primary" /> 위치 정보를 읽는 중...
+                    </div>
+                  )}
+
+                  {exifStatus === 'found' && (
+                    <div className="w-full py-3.5 px-4 rounded-2xl bg-green-50 border border-green-200 flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                        <MapPin size={16} className="text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-green-600 font-bold">위치 정보 확인 완료</div>
+                        <div className="text-sm font-bold text-gray-800 truncate">{exifLocationName}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {exifLat?.toFixed(5)}, {exifLng?.toFixed(5)}
+                        </div>
+                      </div>
+                      <Check size={18} className="text-green-600 shrink-0" />
+                    </div>
+                  )}
+
+                  {exifStatus === 'error' && (
+                    <div className="space-y-3">
+                      <div className="w-full py-3 px-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-2 text-sm text-red-600">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <div>
+                          <div className="font-bold">GPS 정보가 없어요</div>
+                          <div className="text-xs mt-0.5 text-red-500">카메라 설정에서 위치 저장이 켜진 사진을 사용해주세요</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-colors"
+                      >
+                        다른 사진 선택
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={handlePhotoSubmit}
+                disabled={!canPhotoSubmit}
+                className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
+                  canPhotoSubmit ? 'bg-primary text-white shadow-lg active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? '저장 중...' : '방문 인증 완료'}
+              </button>
+            </motion.div>
+          )}
+
+          {/* 방문기록 탭 */}
           {activeTab === 'history' && (
             <motion.div
               key="history"
@@ -332,6 +578,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         </AnimatePresence>
       </div>
 
+      {/* 성공 모달 */}
       <AnimatePresence>
         {showSuccessModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
@@ -345,7 +592,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 <Check className="text-green-600" size={40} />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">인증 완료!</h3>
-              <p className="text-gray-500 mb-4">{locationName}</p>
+              <p className="text-gray-500 mb-4">{successLocation}</p>
               <div className="bg-gradient-to-br from-primary to-secondary text-white rounded-2xl p-5">
                 <div className="text-sm font-bold mb-1">
                   {newBadge ? `🎉 "${newBadge}" 뱃지 획득!` : '🎉 방문이 기록되었어요!'}

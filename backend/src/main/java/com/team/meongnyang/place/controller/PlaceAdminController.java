@@ -25,9 +25,86 @@ public class PlaceAdminController {
 
     private final PlaceAdminService placeAdminService;
 
+    /** 전체 ACTIVE 장소 조회 — GET /api/v1/admin/places */
+    @GetMapping
+    public ResponseEntity<List<PendingPlaceDto>> getAllActivePlaces() {
+        return ResponseEntity.ok(placeAdminService.getAllActivePlaces());
+    }
+
+    /**
+     * AI 보강 미리보기 — DB 저장 없이 Naver 분석 + aiRating 계산.
+     * POST /api/v1/admin/places/analyze
+     * body: { title, address, phone?, homepage?, imageUrl?, description? }
+     */
+    @PostMapping("/analyze")
+    public ResponseEntity<Map<String, Object>> analyzePlacePreview(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(placeAdminService.analyzePlacePreview(
+                (String) body.get("title"),
+                (String) body.get("address"),
+                (String) body.get("phone"),
+                (String) body.get("homepage"),
+                (String) body.get("imageUrl"),
+                (String) body.get("description")));
+    }
+
+    /**
+     * 신규 장소 수동 등록 — POST /api/v1/admin/places
+     * body: { title, category, address, lat, lng, phone?, homepage?, imageUrl?, description?, aiRating? }
+     */
+    @PostMapping
+    public ResponseEntity<PendingPlaceDto> createPlace(@RequestBody Map<String, Object> body) {
+        String title       = (String) body.get("title");
+        String category    = (String) body.get("category");
+        String address     = (String) body.get("address");
+        Double lat         = body.get("lat")      != null ? ((Number) body.get("lat")).doubleValue()      : null;
+        Double lng         = body.get("lng")      != null ? ((Number) body.get("lng")).doubleValue()      : null;
+        Double aiRating    = body.get("aiRating") != null ? ((Number) body.get("aiRating")).doubleValue() : null;
+        String phone       = (String) body.get("phone");
+        String homepage    = (String) body.get("homepage");
+        String imageUrl    = (String) body.get("imageUrl");
+        String description = (String) body.get("description");
+        return ResponseEntity.ok(placeAdminService.createPlace(
+                title, category, address, lat, lng, phone, homepage, imageUrl, description, aiRating));
+    }
+
+    /** 장소 필드 수정 — PATCH /api/v1/admin/places/{id}/edit */
+    @PatchMapping("/{id}/edit")
+    public ResponseEntity<PendingPlaceDto> editPlace(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(placeAdminService.editPlace(
+                id,
+                body.get("title"),
+                body.get("address"),
+                body.get("phone"),
+                body.get("homepage"),
+                body.get("imageUrl")));
+    }
+
     @GetMapping("/pending")
     public ResponseEntity<List<PendingPlaceDto>> getPendingPlaces() {
         return ResponseEntity.ok(placeAdminService.getPendingPlaces());
+    }
+
+    /** 거절 목록 조회 — GET /api/v1/admin/places/rejected */
+    @GetMapping("/rejected")
+    public ResponseEntity<List<PendingPlaceDto>> getRejectedPlaces() {
+        return ResponseEntity.ok(placeAdminService.getRejectedPlaces());
+    }
+
+    /** 이미지 없는 장소 목록 조회 — GET /api/v1/admin/places/no-image */
+    @GetMapping("/no-image")
+    public ResponseEntity<List<PendingPlaceDto>> getNoImagePlaces() {
+        return ResponseEntity.ok(placeAdminService.getNoImagePlaces());
+    }
+
+    /** 이미지 URL 수동 등록 — PATCH /api/v1/admin/places/{id}/image */
+    @PatchMapping("/{id}/image")
+    public ResponseEntity<Void> updateImage(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        placeAdminService.updateImage(id, body.get("imageUrl"));
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -53,6 +130,13 @@ public class PlaceAdminController {
      * 수동 수정 후 승인.
      * body: { "title": "...", "address": "...", "lat": 37.123, "lng": 126.456 }
      */
+    /** 장소 영구 삭제 — DELETE /api/v1/admin/places/{id} */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePlace(@PathVariable Long id) {
+        placeAdminService.deletePlace(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}/manual")
     public ResponseEntity<PendingPlaceDto> manualApprove(
             @PathVariable Long id,

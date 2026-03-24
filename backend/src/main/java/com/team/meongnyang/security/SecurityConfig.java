@@ -2,6 +2,7 @@ package com.team.meongnyang.security;
 
 import com.team.meongnyang.security.oauth2.CustomOAuth2UserService;
 import com.team.meongnyang.security.oauth2.OAuth2SuccessHandler;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,17 +39,23 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write(
+                        "{\"status\":401,\"message\":\"인증이 필요합니다.\",\"data\":null}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/v1/admin/batch/recommendation-notification/test",
                                                  "/api/v1/admin/batch/weather-preload/weather").permitAll()
                 .requestMatchers(
                     "/api/v1/auth/**",
-                    "/api/auth/**",
                     "/api/v1/places/**",
                     "/api/v1/public-places/**",
                     "/api/v1/admin/**",
                     "/api/v1/pets/**",
-                    "/api/places/**",
                     "/oauth2/**",
                     "/login/oauth2/**",
                     "/swagger-ui/**",
@@ -57,7 +64,6 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
                 .requestMatchers(
-                    "/api/checkins/**",
                     "/api/v1/checkins/**",
                     "/api/v1/wishlists/**",
                     "/api/v1/reviews/**"
@@ -69,7 +75,7 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService))
                 .successHandler(oAuth2SuccessHandler)
                 .failureHandler((request, response, exception) ->
-                    response.sendRedirect("http://localhost:5173/login?error=oauth2")
+                    response.sendRedirect("https://meongnyangtrip.duckdns.org/login?error=oauth2")
                 )
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -8,6 +8,7 @@ on:
       - 'src/**'
       - 'Dockerfile.frontend'
       - 'nginx.conf'
+      - 'public/**'
   workflow_dispatch:
 
 jobs:
@@ -78,6 +79,10 @@ jobs:
               "docker run -d --name meongnyang-frontend -p 80:80 -p 443:443 -v /etc/letsencrypt:/etc/letsencrypt:ro --link meongnyang-app:app --restart=always meongnyang-frontend",
 
               "echo === 최종 상태 ===",
-              "docker ps"
+              "docker ps",
+              "echo === 오래된 이미지 정리 ===",
+              "docker image prune -af --filter until=24h || true",
+              "docker builder prune -af || true",
+              "echo 정리 완료"
             ]' \
             --region ap-northeast-2

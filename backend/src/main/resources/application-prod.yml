@@ -56,3 +56,9 @@ jwt:
 # 운영: FE 서버 URL로 리다이렉트
 oauth2:
   redirect-uri: ${OAUTH2_REDIRECT_URI:https://meongnyangtrip.duckdns.org/oauth2/callback}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

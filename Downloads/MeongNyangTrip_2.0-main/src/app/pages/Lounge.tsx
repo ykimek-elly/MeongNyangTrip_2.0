@@ -20,6 +20,7 @@ import { useFeedStore, type FeedPost } from "../store/useFeedStore";
 import { useAppStore } from "../store/useAppStore";
 import { ShareSheet } from "../components/ShareSheet";
 
+
 interface LoungeProps {
   onNavigate: (page: string, params?: any) => void;
 }
@@ -70,11 +71,12 @@ const WALK_TALKS = [
 
 // Sample images for demo post creation
 // 데모 게시글 작성용 샘플 이미지
+// 라운지.tsx 상단 SAMPLE_IMAGES 부분 수정
 const SAMPLE_IMAGES = [
-  "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80",
-  "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=800&q=80",
-  "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=800&q=80",
-  "https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800&q=80",
+  "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800&q=80",
+  "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=800&q=80",
+  "https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=800&q=80",
+  "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800&q=80",
 ];
 
 export function Lounge({ onNavigate }: LoungeProps) {
@@ -542,12 +544,21 @@ function WriteModal({
                             setPlaceQuery("");
                           }}
                         >
-                          <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                            <img
-                              src={place.imageUrl || ""}
-                              alt={place.title}
-                              className="w-full h-full object-cover"
-                            />
+                          <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0 flex items-center justify-center">
+                            {place.imageUrl ? (
+                              <img
+                                src={place.imageUrl}
+                                alt={place.title}
+                                className="w-full h-full object-cover"
+                                // 만약 URL은 있는데 서버에서 이미지를 못 찾을 경우(404)를 대비
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              // 이미지가 없을 때 보여줄 기본 아이콘 (lucide-react의 MapPin 등)
+                              <MapPin size={14} className="text-gray-400" />
+                            )}
                           </div>
                           <div className="min-w-0">
                             <div className="text-sm font-bold text-gray-800 truncate">

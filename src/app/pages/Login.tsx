@@ -182,6 +182,7 @@ export function Login({ onNavigate }: LoginProps) {
             placeholder="이메일"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"  
             className="w-full p-4 bg-white border border-gray-200 rounded-2xl shadow-sm outline-none focus:border-primary transition-colors"
           />
           <input
@@ -189,6 +190,7 @@ export function Login({ onNavigate }: LoginProps) {
             placeholder="비밀번호"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password" 
             className="w-full p-4 bg-white border border-gray-200 rounded-2xl shadow-sm outline-none focus:border-primary transition-colors mb-4"
           />
           {error && <p className="text-red-500 text-sm px-1">{error}</p>}

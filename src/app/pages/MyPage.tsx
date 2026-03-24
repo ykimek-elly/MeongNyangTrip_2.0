@@ -8,6 +8,7 @@ import { PlaceImage } from '../components/PlaceImage';
 import type { PetInfo } from '../store/useAppStore';
 import { AnimatePresence } from 'motion/react';
 import { motion } from 'motion/react';
+import { checkInApi } from '../api/checkInApi';
 
 interface MyPageProps {
   onNavigate: (page: string, params?: any) => void;
@@ -22,7 +23,13 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
   const [deleteTargetIndex, setDeleteTargetIndex] = React.useState<number | null>(null);
   const [petMood, setPetMood] = React.useState<'good' | 'normal' | 'bad' | null>(null);
+const [totalVisits, setTotalVisits] = React.useState(0);
 
+React.useEffect(() => {
+  checkInApi.getMyStats()
+    .then(stats => setTotalVisits(stats.totalVisits))
+    .catch(() => setTotalVisits(0));
+}, []);
   React.useEffect(() => { if (places.length === 0) fetchPlaces(); }, []);
   const wishItems = places.filter(p => wishlist.includes(p.id));
 
@@ -204,7 +211,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
           </div>
           <div className="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
             <span className="text-gray-500 text-xs font-medium block mb-1">다녀온 곳</span>
-            <h5 className="font-bold text-gray-900 text-xl">0</h5>
+            <h5 className="font-bold text-gray-900 text-xl">{totalVisits}</h5>
           </div>
         </div>
       </div>

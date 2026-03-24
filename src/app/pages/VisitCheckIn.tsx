@@ -1,11 +1,49 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft, Award, MapPin, Calendar, Camera, Check,
-  Clock, TrendingUp, LocateFixed, ImagePlus, AlertCircle, Upload,
+  Clock, TrendingUp, LocateFixed, ImagePlus, AlertCircle, Upload, Search, X,
 } from 'lucide-react';
 import { checkInApi } from '../api/checkInApi';
 import type { CheckInStatsResponse } from '../api/checkInApi';
+
+// ── Kakao Place 타입 ──────────────────────────────────────────────────────────
+interface KakaoPlace {
+  id: string;
+  place_name: string;
+  address_name: string;
+  road_address_name?: string;
+  category_group_name?: string;
+  x: string; // 경도
+  y: string; // 위도
+}
+
+const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY ?? '';
+
+async function searchKakaoPlaces(query: string): Promise<KakaoPlace[]> {
+  if (!query.trim()) return [];
+  // REST API 키가 없으면 더미 데이터 반환 (개발용)
+  if (!KAKAO_REST_KEY) {
+    await new Promise((r) => setTimeout(r, 400));
+    const MOCK: KakaoPlace[] = [
+      { id: '1', place_name: '경복궁', address_name: '서울 종로구 사직로 161', category_group_name: '관광명소', x: '126.977', y: '37.579' },
+      { id: '2', place_name: '해운대 해수욕장', address_name: '부산 해운대구 해운대해변로 264', category_group_name: '관광명소', x: '129.158', y: '35.158' },
+      { id: '3', place_name: '성산일출봉', address_name: '제주 서귀포시 성산읍 일출로 284-12', category_group_name: '관광명소', x: '126.942', y: '33.458' },
+      { id: '4', place_name: '북촌한옥마을', address_name: '서울 종로구 계동길 37', category_group_name: '관광명소', x: '126.985', y: '37.582' },
+      { id: '5', place_name: '광안리 해수욕장', address_name: '부산 수영구 광안해변로 219', category_group_name: '관광명소', x: '129.118', y: '35.153' },
+    ];
+    return MOCK.filter((p) =>
+      p.place_name.includes(query) || p.address_name.includes(query)
+    ).slice(0, 5).concat(MOCK).slice(0, 5);
+  }
+  const res = await fetch(
+    `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=10`,
+    { headers: { Authorization: `KakaoAK ${KAKAO_REST_KEY}` } }
+  );
+  if (!res.ok) throw new Error('Kakao API error');
+  const data = await res.json();
+  return data.documents ?? [];
+}
 
 interface VisitCheckInProps {
   onNavigate: (page: string, params?: any) => void;
@@ -32,6 +70,16 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   const [exifLng, setExifLng] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 장소 검색 상태 (GPS 없을 때)
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeResults, setPlaceResults] = useState<KakaoPlace[]>([]);
+  const [placeLoading, setPlaceLoading] = useState(false);
+  const [placeError, setPlaceError] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<KakaoPlace | null>(null);
+  const [showPlaceDropdown, setShowPlaceDropdown] = useState(false);
+  const placeSearchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const placeWrapRef = useRef<HTMLDivElement>(null);
+
   // 공통 상태
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [newBadge, setNewBadge] = useState<string | null>(null);
@@ -39,6 +87,48 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   const [stats, setStats] = useState<CheckInStatsResponse | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [successLocation, setSuccessLocation] = useState('');
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!placeWrapRef.current?.contains(e.target as Node)) setShowPlaceDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // 장소 검색 디바운스
+  const handlePlaceInput = useCallback((q: string) => {
+    setPlaceQuery(q);
+    setSelectedPlace(null);
+    setShowPlaceDropdown(true);
+    clearTimeout(placeSearchTimer.current);
+    if (!q.trim()) { setPlaceResults([]); return; }
+    placeSearchTimer.current = setTimeout(async () => {
+      setPlaceLoading(true);
+      setPlaceError(false);
+      try {
+        const results = await searchKakaoPlaces(q);
+        setPlaceResults(results);
+      } catch {
+        setPlaceError(true);
+        setPlaceResults([]);
+      } finally {
+        setPlaceLoading(false);
+      }
+    }, 350);
+  }, []);
+
+  const handleSelectPlace = (place: KakaoPlace) => {
+    setSelectedPlace(place);
+    setPlaceQuery(place.place_name);
+    setShowPlaceDropdown(false);
+  };
+
+  const clearSelectedPlace = () => {
+    setSelectedPlace(null);
+    setPlaceQuery('');
+    setPlaceResults([]);
+  };
 
   useEffect(() => {
     checkInApi.getMyStats()
@@ -92,6 +182,10 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
     setExifLat(null);
     setExifLng(null);
     setExifLocationName('');
+    // 장소 검색 초기화
+    setSelectedPlace(null);
+    setPlaceQuery('');
+    setPlaceResults([]);
 
     // 미리보기
     const reader = new FileReader();
@@ -169,14 +263,18 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
 
   // 사진 업로드 인증 제출
   const handlePhotoSubmit = async () => {
-    if (!exifLocationName || exifLat === null || exifLng === null) return;
+    // GPS 자동 인식 또는 수동 선택된 장소 중 하나 필요
+    const placeName = exifStatus === 'found' ? exifLocationName : selectedPlace?.place_name ?? '';
+    const lat = exifStatus === 'found' ? exifLat : selectedPlace ? parseFloat(selectedPlace.y) : null;
+    const lng = exifStatus === 'found' ? exifLng : selectedPlace ? parseFloat(selectedPlace.x) : null;
+    if (!placeName || lat === null || lng === null) return;
     setIsSubmitting(true);
     try {
-      const result = await checkInApi.createCheckIn({ placeName: exifLocationName, latitude: exifLat, longitude: exifLng });
+      const result = await checkInApi.createCheckIn({ placeName, latitude: lat, longitude: lng });
       if (result.badgeName) setNewBadge(result.badgeName);
       const updated = await checkInApi.getMyStats();
       setStats(updated);
-      setSuccessLocation(exifLocationName);
+      setSuccessLocation(placeName);
       setShowSuccessModal(true);
       setTimeout(() => {
         setShowSuccessModal(false);
@@ -186,6 +284,8 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         setExifLocationName('');
         setExifLat(null);
         setExifLng(null);
+        setSelectedPlace(null);
+        setPlaceQuery('');
         setNewBadge(null);
       }, 2500);
     } catch {
@@ -196,7 +296,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   };
 
   const canCheckinSubmit = photoTaken && locationStatus === 'found' && !isSubmitting;
-  const canPhotoSubmit = exifStatus === 'found' && !isSubmitting;
+  const canPhotoSubmit = (exifStatus === 'found' || (exifStatus === 'error' && !!selectedPlace)) && !isSubmitting;
 
   const tabs = [
     { id: 'checkin', label: '현장 인증', icon: LocateFixed },
@@ -449,7 +549,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                   <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
-                    위치 정보 추출
+                    방문지역
                   </h3>
 
                   {exifStatus === 'loading' && (
@@ -464,7 +564,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                         <MapPin size={16} className="text-green-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-green-600 font-bold">위치 정보 확인 완료</div>
+                        <div className="text-xs text-green-600 font-bold">위치 정보 자동 인식</div>
                         <div className="text-sm font-bold text-gray-800 truncate">{exifLocationName}</div>
                         <div className="text-xs text-gray-400 mt-0.5">
                           {exifLat?.toFixed(5)}, {exifLng?.toFixed(5)}
@@ -476,13 +576,102 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
 
                   {exifStatus === 'error' && (
                     <div className="space-y-3">
-                      <div className="w-full py-3 px-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-2 text-sm text-red-600">
-                        <AlertCircle size={16} className="shrink-0" />
+                      {/* 경고 배너 */}
+                      <div className="w-full py-3 px-4 rounded-2xl bg-orange-50 border border-orange-100 flex items-start gap-2 text-sm text-orange-700">
+                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
                         <div>
                           <div className="font-bold">GPS 정보가 없어요</div>
-                          <div className="text-xs mt-0.5 text-red-500">카메라 설정에서 위치 저장이 켜진 사진을 사용해주세요</div>
+                          <div className="text-xs mt-0.5 text-orange-500">방문한 장소를 직접 검색해서 선택해주세요</div>
                         </div>
                       </div>
+
+                      {/* 장소 검색창 */}
+                      <div ref={placeWrapRef} className="relative">
+                        <div className={`flex items-center gap-2 border-2 rounded-2xl px-3 py-3 transition-colors ${selectedPlace ? 'border-primary bg-primary/5' : 'border-gray-200 bg-white focus-within:border-primary/50'}`}>
+                          <Search size={16} className="text-gray-400 shrink-0" />
+
+                          {selectedPlace ? (
+                            /* 선택된 장소 칩 */
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                              <span className="text-sm font-bold text-gray-900 shrink-0">{selectedPlace.place_name}</span>
+                              <span className="text-xs text-gray-400 truncate">{selectedPlace.address_name}</span>
+                              <button
+                                onClick={clearSelectedPlace}
+                                className="ml-auto w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center shrink-0 hover:bg-gray-300 transition-colors"
+                              >
+                                <X size={10} className="text-gray-600" />
+                              </button>
+                            </div>
+                          ) : (
+                            <input
+                              className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
+                              placeholder="예) 경복궁, 해운대 해수욕장, 한라산..."
+                              value={placeQuery}
+                              onChange={(e) => handlePlaceInput(e.target.value)}
+                              onFocus={() => setShowPlaceDropdown(true)}
+                              autoComplete="off"
+                            />
+                          )}
+                          {placeLoading && <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin shrink-0" />}
+                        </div>
+
+                        {/* 검색 드롭다운 */}
+                        {showPlaceDropdown && !selectedPlace && (
+                          <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                            {placeError && (
+                              <div className="flex items-center gap-2 px-4 py-3 text-sm text-red-500">
+                                <AlertCircle size={14} /> 검색 중 오류가 발생했어요
+                              </div>
+                            )}
+                            {!placeError && placeQuery && !placeLoading && placeResults.length === 0 && (
+                              <div className="px-4 py-3 text-sm text-gray-400">'{placeQuery}'에 대한 결과가 없어요</div>
+                            )}
+                            {placeResults.map((place) => (
+                              <button
+                                key={place.id}
+                                onClick={() => handleSelectPlace(place)}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 text-left"
+                              >
+                                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                                  <MapPin size={14} className="text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-bold text-gray-900">{place.place_name}</div>
+                                  <div className="text-xs text-gray-400 truncate">{place.address_name}</div>
+                                  {place.category_group_name && (
+                                    <span className="inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">{place.category_group_name}</span>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                            {!placeQuery && (
+                              <div className="px-4 py-3">
+                                <div className="text-xs font-bold text-gray-400 mb-2">💡 이렇게 검색해보세요</div>
+                                {['카페, 식당, 공원 이름으로', '관광지, 해수욕장 이름으로', '지역명 + 장소 이름으로'].map((t) => (
+                                  <div key={t} className="text-xs text-gray-300 leading-relaxed">· {t}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 선택 완료 카드 */}
+                      {selectedPlace && (
+                        <div className="w-full py-3 px-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                            <MapPin size={16} className="text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-primary font-bold">방문지 선택 완료</div>
+                            <div className="text-sm font-bold text-gray-800 truncate">{selectedPlace.place_name}</div>
+                            <div className="text-xs text-gray-400 truncate">{selectedPlace.address_name}</div>
+                          </div>
+                          <Check size={18} className="text-primary shrink-0" />
+                        </div>
+                      )}
+
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-colors"

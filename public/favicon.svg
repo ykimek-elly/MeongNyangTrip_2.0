@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 핑크 배경 -->
+  <rect width="100" height="100" rx="22" fill="#FF6B8A"/>
+  <!-- 발바닥 메인 -->
+  <ellipse cx="50" cy="62" rx="22" ry="18" fill="white"/>
+  <!-- 발가락 4개 -->
+  <ellipse cx="28" cy="42" rx="9" ry="11" fill="white"/>
+  <ellipse cx="42" cy="35" rx="9" ry="11" fill="white"/>
+  <ellipse cx="58" cy="35" rx="9" ry="11" fill="white"/>
+  <ellipse cx="72" cy="42" rx="9" ry="11" fill="white"/>
+</svg>

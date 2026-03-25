@@ -414,7 +414,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
       </AnimatePresence>
 
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 h-14 flex items-center">
-        <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-800 hover:bg-gray-100 rounded-full">
+        <button onClick={() => window.history.back()} className="p-2 -ml-2 text-gray-800 hover:bg-gray-100 rounded-full">
           <ArrowLeft size={22} />
         </button>
         <div className="flex items-center gap-2 ml-2">

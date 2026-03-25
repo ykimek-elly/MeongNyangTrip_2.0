@@ -34,7 +34,7 @@ export function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
         <div
           key={item.id}
           className={`flex flex-col items-center justify-center cursor-pointer transition-colors duration-300 flex-1 ${
-            activeTab === item.id ? 'text-primary font-bold' : 'text-[#b0bec5]'
+            activeTab === item.id ? 'text-primary font-bold' : 'text-muted-foreground'
           }`}
           onClick={() => onNavigate(item.id)}
           role="button"

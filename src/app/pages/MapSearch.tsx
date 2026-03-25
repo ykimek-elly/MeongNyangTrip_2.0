@@ -181,6 +181,11 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
 
   // ─── 검색 필터 함수 (드롭다운 + 지도 마커 공용) ───
   const CATEGORY_LABEL: Record<string, string> = { PLACE: '명소 관광지 공원 놀이터', STAY: '숙박 펜션 호텔 글램핑 독채', DINING: '맛집 카페 식당 애견카페 레스토랑' };
+  const CATEGORY_COLOR: Record<string, { bg: string; bgSelected: string; text: string; dot: string; dotSelected: string; ping: string }> = {
+    PLACE:  { bg: 'bg-white', bgSelected: 'bg-primary',    text: 'text-primary',    dot: 'bg-primary/70',    dotSelected: 'bg-primary',    ping: 'bg-primary' },
+    STAY:   { bg: 'bg-white', bgSelected: 'bg-green-500',  text: 'text-green-500',  dot: 'bg-green-400/70',  dotSelected: 'bg-green-500',  ping: 'bg-green-500' },
+    DINING: { bg: 'bg-white', bgSelected: 'bg-orange-500', text: 'text-orange-500', dot: 'bg-orange-400/70', dotSelected: 'bg-orange-500', ping: 'bg-orange-500' },
+  };
   const getAreaAlias = (addr: string) => {
     const aliases: string[] = [];
     if (addr.includes('서울')) aliases.push('서울 서울시');
@@ -300,24 +305,25 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 className="cursor-pointer flex flex-col items-center"
                 onClick={() => setSelectedPlace(spot)}
               >
-                {mapLevel > 5 ? (
-                  // 축소 시: 점
-                  <div className={`w-3 h-3 rounded-full border-2 border-white shadow-md ${selectedPlace?.id === spot.id ? 'bg-primary scale-125' : 'bg-primary/70'
-                    }`} />
-                ) : (
-                  // 확대 시: 아이콘 + 상호명
-                  <>
-                    <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${selectedPlace?.id === spot.id ? 'bg-primary scale-110 z-20' : 'bg-white hover:bg-gray-50'
-                      }`}>
-                      <PawPrint size={20} className={selectedPlace?.id === spot.id ? 'text-white' : 'text-primary'} fill={selectedPlace?.id === spot.id ? 'white' : 'currentColor'} />
-                      {selectedPlace?.id === spot.id && <div className="absolute inset-0 rounded-full animate-ping bg-primary opacity-20" />}
-                    </div>
-                    <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm ${selectedPlace?.id === spot.id ? 'bg-primary text-white' : 'bg-white/80 text-gray-800'
-                      }`}>
-                      {spot.name || spot.title}
-                    </span>
-                  </>
-                )}
+                {(() => {
+                  const cc = CATEGORY_COLOR[spot.category] ?? CATEGORY_COLOR['PLACE'];
+                  const isSelected = selectedPlace?.id === spot.id;
+                  return mapLevel > 5 ? (
+                    // 축소 시: 점
+                    <div className={`w-4 h-4 rounded-full border-[3px] border-white shadow-[0_0_0_1.5px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.25)] ${isSelected ? `${cc.dotSelected} scale-150` : cc.dot}`} />
+                  ) : (
+                    // 확대 시: 아이콘 + 상호명
+                    <>
+                      <div className={`relative p-2 rounded-full shadow-lg border-2 border-white transition-transform ${isSelected ? `${cc.bgSelected} scale-110 z-20` : `${cc.bg} hover:bg-gray-50`}`}>
+                        <PawPrint size={20} className={isSelected ? 'text-white' : cc.text} fill={isSelected ? 'white' : 'currentColor'} />
+                        {isSelected && <div className={`absolute inset-0 rounded-full animate-ping ${cc.ping} opacity-20`} />}
+                      </div>
+                      <span className={`mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm backdrop-blur-sm ${isSelected ? `${cc.bgSelected} text-white` : 'bg-white/80 text-gray-800'}`}>
+                        {spot.name || spot.title}
+                      </span>
+                    </>
+                  );
+                })()}
               </motion.div>
             </CustomOverlayMap>
           ))}

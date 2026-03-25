@@ -124,6 +124,24 @@ export const setupMockApi = () => {
       });
     }
 
+    // ── SMS 인증번호 발송 POST /auth/sms/send ─────────────────
+    else if (config.method === 'post' && url.includes('/auth/sms/send')) {
+      config.adapter = async () => ({
+        data: { status: 200, message: 'SUCCESS (MOCK)', data: null },
+        status: 200, statusText: 'OK', headers: {}, config,
+      });
+    }
+
+    // ── SMS 인증번호 확인 POST /auth/sms/verify ───────────────
+    else if (config.method === 'post' && url.includes('/auth/sms/verify')) {
+      const body = typeof config.data === 'string' ? JSON.parse(config.data) : (config.data ?? {});
+      const verified = body.code === '123456';
+      config.adapter = async () => ({
+        data: { status: 200, message: 'SUCCESS (MOCK)', data: { verified } },
+        status: 200, statusText: 'OK', headers: {}, config,
+      });
+    }
+
     // ── 아이디 찾기 POST /auth/find-id ────────────────────────
     else if (config.method === 'post' && url.includes('/auth/find-id')) {
       config.adapter = async () => ({

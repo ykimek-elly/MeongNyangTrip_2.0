@@ -26,6 +26,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final SignupExportService signupExportService;
 
     public AuthResponse signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -39,9 +40,13 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
+                .phoneNumber(request.getPhoneNumber())
                 .build();
 
         User saved = userRepository.save(user);
+
+        // 비동기로 JSON 파일에 누적 저장 (AI 서비스 데이터 수집용)
+        signupExportService.export(saved);
 
         String token = jwtUtil.generateToken(saved.getEmail());
         return new AuthResponse(token, saved.getUserId(), saved.getEmail(), saved.getNickname(), saved.getProfileImage(), saved.getRole().name());

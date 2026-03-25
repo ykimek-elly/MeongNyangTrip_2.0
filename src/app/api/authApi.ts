@@ -18,9 +18,22 @@ export const authApi = {
   },
 
   /** POST /api/auth/signup → 회원가입 + JWT 토큰 발급 */
-  signup: async (email: string, password: string, nickname: string): Promise<AuthResponseDto> => {
-    const { data } = await api.post<AuthResponseDto>(`${AUTH_BASE}/signup`, { email, password, nickname });
+  signup: async (email: string, password: string, nickname: string, phone: string): Promise<AuthResponseDto> => {
+    const { data } = await api.post<AuthResponseDto>(`${AUTH_BASE}/signup`, { email, password, nickname, phone });
     return data;
+  },
+
+  /** POST /api/auth/sms/send → 휴대폰 인증번호 발송 */
+  sendSmsCode: async (phone: string): Promise<void> => {
+    await api.post(`${AUTH_BASE}/sms/send`, { phone });
+  },
+
+  /** POST /api/auth/sms/verify → 인증번호 확인 */
+  verifySmsCode: async (phone: string, code: string): Promise<boolean> => {
+    const { data } = await api.post<{ status: number; data: { verified: boolean } }>(
+      `${AUTH_BASE}/sms/verify`, { phone, code }
+    );
+    return data.data.verified;
   },
 
   /** PUT /api/v1/users/profile → 닉네임 수정 (JWT 인증 필요) */
@@ -36,6 +49,11 @@ export const authApi = {
   /** DELETE /api/v1/users/me → 회원 탈퇴 소프트 딜리트 (JWT 인증 필요) */
   deleteAccount: async (): Promise<void> => {
     await api.delete(`${USER_BASE}/me`);
+  },
+
+  /** PATCH /api/v1/users/phone → 소셜 로그인 후 휴대폰 번호 저장 (JWT 인증 필요) */
+  savePhone: async (phone: string): Promise<void> => {
+    await api.patch(`${USER_BASE}/phone`, { phone });
   },
 
   /** POST /api/auth/find-id → 이름+휴대폰으로 이메일(아이디) 조회 */

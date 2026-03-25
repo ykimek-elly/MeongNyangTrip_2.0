@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft, Award, MapPin, Calendar, Camera, Check,
-  Clock, TrendingUp, LocateFixed, ImagePlus, AlertCircle, Upload, Search, X,
+  Clock, TrendingUp, LocateFixed, ImagePlus, AlertCircle, Upload, Search, X, Sparkles,
 } from 'lucide-react';
 import { checkInApi } from '../api/checkInApi';
 import type { CheckInStatsResponse } from '../api/checkInApi';
@@ -77,7 +77,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   const [placeError, setPlaceError] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<KakaoPlace | null>(null);
   const [showPlaceDropdown, setShowPlaceDropdown] = useState(false);
-  const placeSearchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const placeSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const placeWrapRef = useRef<HTMLDivElement>(null);
 
   // 공통 상태
@@ -101,7 +101,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
     setPlaceQuery(q);
     setSelectedPlace(null);
     setShowPlaceDropdown(true);
-    clearTimeout(placeSearchTimer.current);
+    if (placeSearchTimer.current) clearTimeout(placeSearchTimer.current);
     if (!q.trim()) { setPlaceResults([]); return; }
     placeSearchTimer.current = setTimeout(async () => {
       setPlaceLoading(true);
@@ -321,7 +321,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-primary to-secondary rounded-3xl p-5 text-white shadow-lg"
+          className="bg-gradient-to-br from-primary to-secondary rounded-3xl p-5 text-white shadow-md"
         >
           {isLoadingStats ? (
             <div className="text-center text-white/80 py-2 text-sm">불러오는 중...</div>
@@ -453,7 +453,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 onClick={handleCheckinSubmit}
                 disabled={!canCheckinSubmit}
                 className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
-                  canCheckinSubmit ? 'bg-primary text-white shadow-lg active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  canCheckinSubmit ? 'bg-primary text-white shadow-md active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {isSubmitting ? '저장 중...' : '방문 인증 완료'}
@@ -735,7 +735,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                             {new Date(visit.checkedInAt).toLocaleDateString('ko-KR')}
                           </div>
                           {visit.badgeName && (
-                            <div className="mt-1.5 text-xs">🏅 {visit.badgeName}</div>
+                            <div className="mt-1.5 text-xs flex items-center gap-1"><Award size={12} className="text-brand-point" /> {visit.badgeName}</div>
                           )}
                         </div>
                       </div>
@@ -784,7 +784,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               <p className="text-gray-500 mb-4">{successLocation}</p>
               <div className="bg-gradient-to-br from-primary to-secondary text-white rounded-2xl p-5">
                 <div className="text-sm font-bold mb-1">
-                  {newBadge ? `🎉 "${newBadge}" 뱃지 획득!` : '🎉 방문이 기록되었어요!'}
+                  <span className="flex items-center gap-1.5"><Sparkles size={14} /> {newBadge ? `"${newBadge}" 뱃지 획득!` : '방문이 기록되었어요!'}</span>
                 </div>
                 <div className="text-xs opacity-80">위치 정보가 저장됐어요</div>
               </div>

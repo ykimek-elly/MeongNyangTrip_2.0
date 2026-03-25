@@ -59,10 +59,10 @@ export function Home({ onNavigate }: HomeProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
     >
       {/* 검색 & 배너 영역 */}
       <div className="mx-[0px] mt-[0px] mb-[12px] px-[16px] py-[0px]">
@@ -82,7 +82,7 @@ export function Home({ onNavigate }: HomeProps) {
                 </span>
                 <h3 className="text-white text-2xl font-bold leading-tight">
                   자연 속에서 즐기는<br />
-                  <span className="text-green-300">신나는 야외 산책</span> 코스
+                  <span className="text-white/80">신나는 야외 산책</span> 코스
                 </h3>
               </div>
             </div>
@@ -118,7 +118,7 @@ export function Home({ onNavigate }: HomeProps) {
                 </span>
                 <h3 className="text-white text-2xl font-bold leading-tight">
                   눈치 보지 않고 즐기는<br />
-                  <span className="text-pink-200">동반 가능</span> 맛집 & 카페
+                  <span className="text-white/80">동반 가능</span> 맛집 & 카페
                 </h3>
               </div>
             </div>
@@ -145,7 +145,7 @@ export function Home({ onNavigate }: HomeProps) {
               onChange={(date) => setSearchDate(date)}
             />
             <button
-              className="bg-primary text-white rounded-2xl aspect-square h-full flex items-center justify-center shadow-lg active:scale-95 transition-all shrink-0"
+              className="bg-primary text-white rounded-2xl aspect-square h-full flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0"
               onClick={handleSearch}
             >
               <Search size={20} strokeWidth={2.5} />
@@ -174,10 +174,10 @@ export function Home({ onNavigate }: HomeProps) {
       </div>
 
       {/* 주말 추천 */}
-      <div className="pl-4 mb-10">
+      <div className="pl-4 mb-10 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
         <div className="flex justify-between items-end pr-4 mb-4">
-          <h3 className="text-lg font-bold text-gray-800">이번 주말, 여기 어때요?</h3>
-          <span className="text-gray-500 text-xs flex items-center cursor-pointer" onClick={() => onNavigate('list')}>
+          <h3 className="text-lg font-bold text-gray-800 leading-snug">이번 주말, 여기 어때요?</h3>
+          <span className="text-gray-500 text-xs flex items-center cursor-pointer transition-spring hover:text-gray-800" onClick={() => onNavigate('list')}>
             더보기 <ChevronRight size={12} />
           </span>
         </div>
@@ -221,7 +221,7 @@ export function Home({ onNavigate }: HomeProps) {
                     <span className="text-[8px] font-normal text-gray-400">[AI]</span>
                   </span>
                 ) : (
-                  <span className="text-gray-400 text-[10px]">🐾</span>
+                  <PawPrint size={10} className="text-gray-300" />
                 )}
               </div>
             </div>
@@ -235,30 +235,34 @@ export function Home({ onNavigate }: HomeProps) {
       {/* 카테고리별 베스트 랭킹 */}
       <CategoryBestRanking places={places} onNavigate={onNavigate} />
 
-      {/* 프로모션 배너 */}
-      <div className="px-4 grid grid-cols-2 gap-2.5">
+      {/* 프로모션 배너 — Double-Bezel */}
+      <div className="px-4 grid grid-cols-2 gap-2.5 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        {/* 첫 리뷰 이벤트 */}
         <div
-          className="bg-primary/10 rounded-2xl p-3.5 flex flex-col items-start cursor-pointer hover:bg-primary/20 transition-colors active:scale-[0.98]"
+          className="p-1 bg-primary/5 rounded-[1.6rem] ring-1 ring-primary/10 cursor-pointer active:scale-[0.97] transition-spring"
           onClick={() => handleBannerClick('lounge')}
         >
-          <div className="w-full flex justify-end mb-2">
-            <Gift size={28} className="text-primary" />
+          <div className="bg-primary/10 hover:bg-primary/15 transition-spring rounded-[1.25rem] p-3.5 flex flex-col items-start h-full">
+            <div className="w-full flex justify-end mb-2">
+              <Gift size={28} className="text-primary" />
+            </div>
+            <h6 className="font-bold text-primary text-xs mb-1 leading-snug">첫 리뷰 이벤트</h6>
+            <p className="m-0 text-[12px] text-gray-500 leading-snug">산책 인증샷 올리면 간식 쿠폰 100% 증정!</p>
           </div>
-          <h6 className="font-bold text-primary text-xs mb-1">첫 리뷰 이벤트</h6>
-          <p className="m-0 text-[12px] text-gray-500 leading-snug">산책 인증샷 올리면 간식 쿠폰 100% 증정!</p>
         </div>
-
 
         {/* 방문인증센터 배너 */}
         <div
-          className="bg-brand-point/10 rounded-2xl p-3.5 flex flex-col items-start cursor-pointer hover:bg-brand-point/20 transition-colors active:scale-[0.98]"
+          className="p-1 bg-brand-point/5 rounded-[1.6rem] ring-1 ring-brand-point/10 cursor-pointer active:scale-[0.97] transition-spring"
           onClick={() => handleBannerClick('visit-checkin')}
         >
-          <div className="w-full flex justify-end mb-2">
-            <Camera size={28} className="text-brand-point" />
+          <div className="bg-brand-point/10 hover:bg-brand-point/15 transition-spring rounded-[1.25rem] p-3.5 flex flex-col items-start h-full">
+            <div className="w-full flex justify-end mb-2">
+              <Camera size={28} className="text-brand-point" />
+            </div>
+            <h6 className="font-bold text-brand-point text-xs mb-1 leading-snug">방문인증센터</h6>
+            <p className="m-0 text-[12px] text-gray-500 leading-snug flex items-center gap-1">방문 인증하고 포인트 받자! <Gift size={12} className="text-brand-point" /></p>
           </div>
-          <h6 className="font-bold text-brand-point text-xs mb-1">방문인증센터</h6>
-          <p className="m-0 text-[12px] text-gray-500 leading-snug">방문 인증하고 포인트 받자! 🎁</p>
         </div>
       </div>
 
@@ -325,10 +329,10 @@ export function Home({ onNavigate }: HomeProps) {
 function CategoryItem({ icon: Icon, label, onClick, className }: { icon: any, label: string, onClick: () => void, className?: string }) {
   return (
     <div className={`flex flex-col items-center gap-2 group cursor-pointer flex-shrink-0 min-w-[70px] ${className || ''}`} onClick={onClick}>
-      <div className="w-14 h-14 bg-primary/10 text-primary rounded-[28px] flex items-center justify-center transition-all duration-200 group-hover:scale-105 group-active:scale-95">
+      <div className="w-14 h-14 bg-primary/10 text-primary rounded-[28px] flex items-center justify-center transition-spring group-hover:scale-[1.08] group-hover:bg-primary/20 group-active:scale-[0.92]">
         <Icon size={28} strokeWidth={1.5} />
       </div>
-      <span className="text-[11px] font-medium text-gray-500">{label}</span>
+      <span className="text-[11px] font-medium text-gray-500 transition-spring group-hover:text-gray-800 leading-snug">{label}</span>
     </div>
   );
 }

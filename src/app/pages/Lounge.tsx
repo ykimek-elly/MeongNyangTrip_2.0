@@ -29,6 +29,15 @@ interface LoungeProps {
 
 // Mock Data for Walk Talk
 // 실시간 산책 톡 목업 데이터
+const TALK_COLORS = [
+  'bg-orange-50 border-orange-100',
+  'bg-blue-50 border-blue-100',
+  'bg-green-50 border-green-100',
+  'bg-purple-50 border-purple-100',
+  'bg-amber-50 border-amber-100',
+  'bg-teal-50 border-teal-100',
+];
+
 const WALK_TALKS = [
   {
     id: 1,
@@ -37,7 +46,6 @@ const WALK_TALKS = [
       "지금 올림픽공원 북2문 쪽 강아지 친구들 많아요! 놀러오세요~ 🐕",
     time: "10분 전",
     location: "올림픽공원",
-    color: "bg-orange-50 border-orange-100",
   },
   {
     id: 2,
@@ -45,7 +53,6 @@ const WALK_TALKS = [
     content: "한강 잠원지구 주차장 만차입니다 ㅠㅠ 참고하세요!",
     time: "25분 전",
     location: "잠원한강공원",
-    color: "bg-red-50 border-red-100",
   },
   {
     id: 3,
@@ -53,8 +60,7 @@ const WALK_TALKS = [
     content:
       "비 그쳐서 산책 나왔는데 땅이 좀 질척거리네요. 발 닦일 준비 필수!",
     time: "40분 전",
-    location: "여의��공원",
-    color: "bg-blue-50 border-blue-100",
+    location: "여의도공원",
   },
   {
     id: 4,
@@ -63,7 +69,6 @@ const WALK_TALKS = [
       "반려동물 놀이터 소형견 구역 지금 한가해요~ 소심한 친구들 오기 딱좋음",
     time: "1시간 전",
     location: "보라매공원",
-    color: "bg-green-50 border-green-100",
   },
 ];
 
@@ -545,15 +550,15 @@ function FeedView({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-4">
                 <button
-                  className="hover:scale-110 active:scale-95 transition-transform"
+                  className="hover:scale-[1.15] active:scale-90 transition-spring"
                   onClick={() => toggleLike(post.id)}
                 >
                   <Heart
                     size={24}
                     className={
                       post.isLiked
-                        ? "fill-primary text-primary transition-colors"
-                        : "text-gray-800 hover:text-primary transition-colors"
+                        ? "fill-primary text-primary"
+                        : "text-gray-800 hover:text-primary transition-spring"
                     }
                   />
                 </button>
@@ -779,8 +784,8 @@ function WalkTalkView({ talks }: { talks: typeof WALK_TALKS }) {
     >
       <div className="bg-primary/10 p-4 rounded-2xl flex items-center justify-between mb-4">
         <div>
-          <h4 className="font-bold text-primary text-sm">
-            실시간 산책 톡 💬
+          <h4 className="font-bold text-primary text-sm flex items-center gap-1.5">
+            <MessageCircle size={14} /> 실시간 산책 톡
           </h4>
           <p className="text-xs text-gray-500">
             지금 우리 동네 산책 상황을 공유해요!
@@ -791,10 +796,11 @@ function WalkTalkView({ talks }: { talks: typeof WALK_TALKS }) {
         <Clock size={32} className="text-primary/50" />
       </div>
 
-      {talks.map((talk) => (
+      {talks.map((talk, idx) => (
         <div
           key={talk.id}
-          className={`p-4 rounded-2xl border ${talk.color} relative`}
+          className={`p-4 rounded-2xl border ${TALK_COLORS[idx % TALK_COLORS.length]} relative animate-fade-in-up`}
+          style={{ animationDelay: `${idx * 0.07}s` }}
         >
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2">

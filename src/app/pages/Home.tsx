@@ -73,7 +73,7 @@ export function Home({ onNavigate }: HomeProps) {
             <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'PLACE' })}>
               <img
                 src={mainBanner1}
-                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="block w-full h-full object-cover transition-spring group-hover:scale-105"
                 alt="멍냥플레이스"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end px-7 pt-7 pb-12">
@@ -91,7 +91,7 @@ export function Home({ onNavigate }: HomeProps) {
             <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'STAY' })}>
               <img
                 src={mainBanner2}
-                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="block w-full h-full object-cover transition-spring group-hover:scale-105"
                 alt="멍냥스테이"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end px-7 pt-7 pb-12">
@@ -109,7 +109,7 @@ export function Home({ onNavigate }: HomeProps) {
             <div className="relative h-[280px] w-full outline-none group cursor-pointer" onClick={() => onNavigate('list', { category: 'DINING' })}>
               <img
                 src={mainBanner3}
-                className="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="block w-full h-full object-cover transition-spring group-hover:scale-105"
                 alt="멍냥다이닝"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end px-7 pt-7 pb-12">
@@ -129,12 +129,12 @@ export function Home({ onNavigate }: HomeProps) {
         <div className="bg-white rounded-[2rem] px-[24px] py-[20px]">
 
           <div className="flex gap-2 h-[3.25rem]">
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl px-3 flex items-center gap-2 flex-1 min-w-0">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl px-3 flex items-center gap-2 flex-1 min-w-0 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(227,99,148,0.1)] transition-spring">
               <Search className="text-gray-400 shrink-0" size={18} />
               <input
                 type="text"
                 placeholder="지역 검색 (서울·경기)"
-                className="bg-transparent w-full outline-none text-gray-800 placeholder:text-gray-400 font-medium text-sm"
+                className="bg-transparent w-full outline-none text-gray-800 placeholder:text-gray-400 font-medium text-sm focus:placeholder:text-gray-300"
                 value={searchRegion}
                 onChange={(e) => setSearchRegion(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -145,7 +145,7 @@ export function Home({ onNavigate }: HomeProps) {
               onChange={(date) => setSearchDate(date)}
             />
             <button
-              className="bg-primary text-white rounded-2xl aspect-square h-full flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0"
+              className="bg-primary text-white rounded-2xl aspect-square h-full flex items-center justify-center shadow-md hover:scale-[1.05] active:scale-[0.95] transition-spring shrink-0"
               onClick={handleSearch}
             >
               <Search size={20} strokeWidth={2.5} />
@@ -193,13 +193,13 @@ export function Home({ onNavigate }: HomeProps) {
           arrows={false}
           variableWidth={true}
           swipeToSlide={true}
-          cssEase="ease-in-out"
+          cssEase="cubic-bezier(0.16, 1, 0.3, 1)"
           className="[&_.slick-track]:flex [&_.slick-track]:gap-4 [&_.slick-slide]:!w-auto [&_.slick-slide>div]:h-full"
         >
           {places.slice(0, 8).map((place, idx) => (
             <div
               key={place.id}
-              className="!w-[160px] pr-4 cursor-pointer active:scale-95 transition-transform"
+              className="!w-[160px] pr-4 cursor-pointer hover:scale-[1.02] active:scale-[0.97] transition-spring"
               onClick={() => onNavigate('detail', { id: place.id })}
             >
               <div className="relative mb-2">
@@ -304,7 +304,7 @@ export function Home({ onNavigate }: HomeProps) {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowSignupPrompt(false)}
-                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-sm hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-sm hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98] transition-spring"
                 >
                   닫기
                 </button>
@@ -313,7 +313,7 @@ export function Home({ onNavigate }: HomeProps) {
                     setShowSignupPrompt(false);
                     onNavigate('signup');
                   }}
-                  className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 active:scale-95 transition-all"
+                  className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-spring"
                 >
                   회원가입하기
                 </button>

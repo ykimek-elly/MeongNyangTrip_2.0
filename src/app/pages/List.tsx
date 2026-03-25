@@ -189,7 +189,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
           <div className="relative">
             <button
               onClick={() => setShowSortMenu(prev => !prev)}
-              className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900"
+              className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900 hover:scale-[1.03] active:scale-[0.97] transition-spring"
             >
               {SORT_LABELS[sortKey]} <ChevronDown size={13} />
             </button>
@@ -199,7 +199,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
                   <button
                     key={key}
                     onClick={() => handleSortChange(key)}
-                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 ${sortKey === key ? 'text-primary' : 'text-gray-700'}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 transition-spring ${sortKey === key ? 'text-primary' : 'text-gray-700'}`}
                   >
                     {SORT_LABELS[key]}
                   </button>

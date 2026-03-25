@@ -1,0 +1,44 @@
+# 환경변수 및 민감정보
+.env
+.env.*
+*.env
+
+# 빌드 산출물
+build/
+.gradle/
+out/
+dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로그
+*.log
+logs/
+
+# 테스트
+src/test/
+
+# Git
+.git/
+.github/
+
+# 문서
+docs/
+guidelines/
+exports/
+*.md
+ATTRIBUTIONS.md
+
+# 노드모듈 (프론트 빌드 시 Docker 내에서 설치)
+node_modules/
+
+# 백엔드 Gradle wrapper 캐시
+backend/.gradle/
+backend/build/

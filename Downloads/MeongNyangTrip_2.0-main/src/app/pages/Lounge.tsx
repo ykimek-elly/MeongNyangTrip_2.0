@@ -10,7 +10,6 @@ import {
   Camera,
   X,
   Clock,
-  Users,
   Pencil,
   Trash2,
   Search,
@@ -19,7 +18,6 @@ import {
 import { useFeedStore, type FeedPost } from "../store/useFeedStore";
 import { useAppStore } from "../store/useAppStore";
 import { ShareSheet } from "../components/ShareSheet";
-
 
 interface LoungeProps {
   onNavigate: (page: string, params?: any) => void;
@@ -461,9 +459,7 @@ function WriteModal({
                   className="w-full h-full object-cover"
                 />
                 {selectedImg === i && (
-                  <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-                    <Heart size={16} className="text-primary fill-primary" />
-                  </div>
+                  <div className="absolute inset-0 bg-primary/10 flex items-center justify-center"></div>
                 )}
               </div>
             ))}
@@ -552,7 +548,8 @@ function WriteModal({
                                 className="w-full h-full object-cover"
                                 // 만약 URL은 있는데 서버에서 이미지를 못 찾을 경우(404)를 대비
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  (e.target as HTMLImageElement).style.display =
+                                    "none";
                                 }}
                               />
                             ) : (
@@ -621,10 +618,15 @@ function FeedView({
   posts: FeedPost[];
   onNavigate: (page: string, params?: any) => void;
 }) {
+  // 이미 선언되어 있는 스토어 도구들을 그대로 사용
   const { toggleLike, addComment, deletePost, editPost } = useFeedStore();
+
+  // 선언 유지
   const places = useAppStore((s) => s.places);
   const [commentingPostId, setCommentingPostId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
+  const [editValue, setEditValue] = useState("");
+
   const [sharePostData, setSharePostData] = useState<{
     id: number;
     img: string;
@@ -638,10 +640,49 @@ function FeedView({
 
   const handleAddComment = (postId: number) => {
     if (!commentText.trim()) return;
+
     addComment(postId, "나", commentText.trim());
     setCommentText("");
     setCommentingPostId(null);
   };
+
+  // 1. 댓글 삭제 로직 (기존 menuOpenPostId 사용)
+  const onDeleteComment = (postId: number, commentId: number) => {
+    if (confirm("정말 삭제하시겠습니까?")) {
+      const targetPost = posts.find((p) => p.id === postId);
+      if (targetPost) {
+        const newCommentList = targetPost.commentList.filter(
+          (c) => c.id !== commentId,
+        );
+
+        // 인자 3개 전달 (ID, 데이터, 빈 객체)
+        editPost(postId, {
+          commentList: newCommentList,
+          comments: Math.max(0, targetPost.comments - 1),
+        } as any);
+      }
+    }
+    setMenuOpenPostId(null); // 기존 선언된 이름으로 변경
+  };
+
+  // 댓글 수정
+  const onUpdateComment = (postId: number, commentId: number) => {
+  const targetPost = posts.find((p) => p.id === postId);
+  if (targetPost) {
+    // 1. 기존 댓글 리스트에서 해당 ID만 수정된 내용으로 교체
+    const newCommentList = targetPost.commentList.map((c) =>
+      c.id === commentId ? { ...c, content: editValue } : c
+    );
+
+    // 2. 스토어의 editPost를 호출하여 상태 반영
+    editPost(postId, {
+      commentList: newCommentList,
+    } as any);
+  }
+  // 3. 수정 모드 종료 및 입력값 초기화
+  setEditingPost(null);
+  setEditValue("");
+};
 
   const feedContent = (
     <motion.div
@@ -819,11 +860,96 @@ function FeedView({
                 >
                   {/* 최근 댓글 표시 */}
                   {post.commentList.slice(-3).map((c) => (
-                    <div key={c.id} className="text-sm mb-1">
-                      <span className="font-bold mr-1">{c.user}</span>
-                      <span className="text-gray-700">{c.content}</span>
+                    <div
+                      key={c.id}
+                      className="flex items-start justify-between mb-1 relative text-sm min-h-[24px]"
+                    >
+                      {/* [왼쪽] 이름 + 내용 */}
+                      <div className="flex-1 pr-2">
+                        <span className="font-bold mr-1">{c.user}</span>
+
+                        {editingPost?.id === c.id ? (
+                          <div className="inline-flex items-center gap-2">
+                            <input
+                              className="border-b border-primary outline-none bg-transparent py-0 h-auto text-sm"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              autoFocus
+                              onKeyDown={(e) =>
+                                e.key === "Enter" &&
+                                onUpdateComment(post.id, c.id)
+                              }
+                            />
+                            <button
+                              onClick={() => onUpdateComment(post.id, c.id)}
+                              className="text-[10px] text-primary font-bold"
+                            >
+                              저장
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingPost(null);
+                                setEditValue("");
+                              }}
+                              className="text-[10px] text-gray-400"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-gray-700">{c.content}</span>
+                        )}
+                      </div>
+
+                      {/* [오른쪽] 수정/삭제 메뉴 버튼 (항상 노출) */}
+                      {c.user === "나" && editingPost?.id !== c.id && (
+                        <div className="relative flex-shrink-0">
+                          <button
+                            onClick={() =>
+                              setMenuOpenPostId(
+                                menuOpenPostId === c.id ? null : c.id,
+                              )
+                            }
+                            className="p-1 text-gray-300 hover:text-gray-600 transition-colors"
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
+
+                          {menuOpenPostId === c.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setMenuOpenPostId(null)}
+                              />
+                              <div className="absolute right-0 top-6 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                                <button
+                                  className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                                  onClick={() => {
+                                    setEditingPost({
+                                      id: c.id,
+                                      content: c.content,
+                                    });
+                                    setEditValue(c.content);
+                                    setMenuOpenPostId(null);
+                                  }}
+                                >
+                                  <Pencil size={10} /> 수정
+                                </button>
+                                <button
+                                  className="w-full px-3 py-2 text-[11px] text-left hover:bg-red-50 text-red-500 flex items-center gap-2"
+                                  onClick={() => onDeleteComment(post.id, c.id)}
+                                >
+                                  <Trash2 size={10} /> 삭제
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
+
+                  {/* 댓글 입력창 */}
                   <div className="flex items-center gap-2 mt-2 border-t border-gray-100 pt-2">
                     <input
                       type="text"

@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.service;
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.recommendation.dto.ScoredPlace;
 import com.team.meongnyang.recommendation.log.service.AiLogService;
+import com.team.meongnyang.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -83,6 +85,33 @@ class PlaceScoringServiceTest {
                 .orElseThrow();
 
         assertThat(penalizedPlace.getPenaltyScore()).isEqualTo(12.5);
+    }
+
+    @Test
+    @DisplayName("사용자 좌표가 있으면 기본 점수 계산 경로도 사용자 위경도를 사용한다")
+    void scorePlaces_usesUserCoordinates() {
+        User user = User.builder()
+                .userId(1L)
+                .email("user@example.com")
+                .password("encoded-password")
+                .nickname("tester")
+                .latitude(37.5665)
+                .longitude(126.9780)
+                .build();
+
+        Place place = fixturePlace(1L, "Alpha Cafe");
+
+        when(distanceCalculator.calculateDistanceKm(37.5665, 126.9780, 37.27, 127.01)).thenReturn(5.0);
+
+        List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
+                List.of(place),
+                user,
+                null,
+                null
+        );
+
+        assertThat(rankedPlaces).hasSize(1);
+        verify(distanceCalculator).calculateDistanceKm(37.5665, 126.9780, 37.27, 127.01);
     }
 
     private Place fixturePlace(Long id, String title) {

@@ -38,6 +38,9 @@ public class NotificationService {
                     payload.getTemplateParameter(),
                     payload.getButtons() != null && !payload.getButtons().isEmpty());
 
+            log.info("[카카오 알림톡] contentPreview={}",
+                    payload.getContent() == null ? null : payload.getContent().replace("\r", "\\r").replace("\n", "\\n"));
+
             NotificationResponse response = ncloudClient.send(request);
 
             log.info("[카카오 알림톡] 발송 결과 success={}, requestId={}, statusCode={}",

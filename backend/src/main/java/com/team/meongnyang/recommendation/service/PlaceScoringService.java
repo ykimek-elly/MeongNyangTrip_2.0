@@ -35,9 +35,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PlaceScoringService {
 
-    private static final double DEFAULT_USER_LAT = 37.27;
-    private static final double DEFAULT_USER_LNG = 127.01;
-
     /**
      * 장소 점수 계산에 사용되는 상수들
      * - 펫 : 50.0
@@ -70,7 +67,15 @@ public class PlaceScoringService {
      * @return 총점 내림차순으로 정렬된 장소 점수 목록
      */
     public List<ScoredPlace> scorePlaces(List<Place> candidates, User user, Pet pet, WeatherContext weather) {
-        return scorePlaces(candidates, user, pet, weather, DEFAULT_USER_LAT, DEFAULT_USER_LNG, Map.of());
+        return scorePlaces(
+                candidates,
+                user,
+                pet,
+                weather,
+                requireUserLatitude(user),
+                requireUserLongitude(user),
+                Map.of()
+        );
     }
 
     /**
@@ -917,6 +922,20 @@ public class PlaceScoringService {
     private boolean hasKeyword(String text, String keyword) {
         String normalizedKeyword = RecommendationTextUtils.normalizeTrimLower(keyword);
         return !normalizedKeyword.isBlank() && text.contains(normalizedKeyword);
+    }
+
+    private double requireUserLatitude(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("user must not be null");
+        }
+        return user.getLatitude();
+    }
+
+    private double requireUserLongitude(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("user must not be null");
+        }
+        return user.getLongitude();
     }
 
     /**

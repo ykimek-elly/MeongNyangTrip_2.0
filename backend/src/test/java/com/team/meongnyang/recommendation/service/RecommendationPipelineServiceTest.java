@@ -42,6 +42,8 @@ class RecommendationPipelineServiceTest {
     private static final String EMAIL = "user@example.com";
     private static final String PROMPT = "recommendation prompt";
     private static final String CACHE_KEY = "gemini:test:key";
+    private static final double USER_LAT = 37.5665;
+    private static final double USER_LNG = 126.9780;
     private static final String GEMINI_RESPONSE = """
             - [추천설명]
             알파 카페는 반려동물과 함께 머무르기 편안한 장소입니다.
@@ -102,11 +104,11 @@ class RecommendationPipelineServiceTest {
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
+        when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
         when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
+        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(candidates);
         when(aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01, Map.of())).thenReturn(rankedPlaces);
+        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of())).thenReturn(rankedPlaces);
         when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
         when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
         when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
@@ -141,11 +143,11 @@ class RecommendationPipelineServiceTest {
 
         inOrder.verify(recommendationUserReader).getCurrentUserByEmail(EMAIL);
         inOrder.verify(recommendationPetReader).getPrimaryPet(user);
-        inOrder.verify(weatherGridConverter).convertToGrid(37.27, 127.01);
+        inOrder.verify(weatherGridConverter).convertToGrid(USER_LAT, USER_LNG);
         inOrder.verify(weatherService).getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy());
-        inOrder.verify(candidatePlaceService).getInitialCandidates(user, pet, weatherContext, 37.27, 127.01);
+        inOrder.verify(candidatePlaceService).getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG);
         inOrder.verify(aiLogservice).getRecentRecommendedPlacePenalties(user.getUserId());
-        inOrder.verify(placeScoringService).scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01, Map.of());
+        inOrder.verify(placeScoringService).scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of());
         inOrder.verify(recommendationEvidenceContextService).buildContext(user, pet, weatherContext, rankedPlaces);
         inOrder.verify(recommendationPromptService).buildRecommendationPrompt(evidenceContext);
         inOrder.verify(geminiCacheService).generateKey(PROMPT);
@@ -181,11 +183,11 @@ class RecommendationPipelineServiceTest {
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
+        when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
         when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
+        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(candidates);
         when(aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01, Map.of())).thenReturn(rankedPlaces);
+        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of())).thenReturn(rankedPlaces);
         when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
         when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
         when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
@@ -225,9 +227,9 @@ class RecommendationPipelineServiceTest {
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
+        when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
         when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(List.of());
+        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(List.of());
 
         RecommendationNotificationResult result = recommendationPipelineService.recommendForCurrentUser(EMAIL);
 
@@ -256,11 +258,11 @@ class RecommendationPipelineServiceTest {
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
-        when(weatherGridConverter.convertToGrid(37.27, 127.01)).thenReturn(gridPoint);
+        when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
         when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
-        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, 37.27, 127.01)).thenReturn(candidates);
+        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(candidates);
         when(aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, 37.27, 127.01, Map.of())).thenReturn(rankedPlaces);
+        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of())).thenReturn(rankedPlaces);
         when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
         when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
         when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
@@ -277,6 +279,8 @@ class RecommendationPipelineServiceTest {
                 .email(EMAIL)
                 .password("encoded-password")
                 .nickname("tester")
+                .latitude(USER_LAT)
+                .longitude(USER_LNG)
                 .build();
     }
 

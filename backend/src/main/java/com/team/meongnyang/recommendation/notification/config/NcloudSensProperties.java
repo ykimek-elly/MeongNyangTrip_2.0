@@ -33,6 +33,7 @@ public class NcloudSensProperties {
 
     private String detailLinkPrefix;
 
+
     private Template template = new Template();
     private Delivery delivery = new Delivery();
 
@@ -113,19 +114,13 @@ public class NcloudSensProperties {
             return resolveDefaultTemplateCode();
         }
 
-        String resolvedCode = switch (weatherType) {
+        return switch (weatherType) {
             case SUNNY -> template.getSunny();
             case RAIN -> template.getRain();
             case CLOUDY -> template.getCloudy();
             case HOT -> template.getHot();
             case COLD -> template.getCold();
         };
-
-        if (resolvedCode == null || resolvedCode.isBlank()) {
-            return resolveDefaultTemplateCode();
-        }
-
-        return resolvedCode;
     }
 
     public String resolveTemplateCode(String weatherType) {

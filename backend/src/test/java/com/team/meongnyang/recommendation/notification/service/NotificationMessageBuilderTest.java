@@ -12,11 +12,12 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class NotificationMessageBuilderTest {
 
     @Test
-    @DisplayName("날씨별 템플릿 코드와 승인 템플릿 최종 본문을 함께 생성한다")
+    @DisplayName("날씨별 template code와 승인 템플릿 본문을 함께 생성한다")
     void buildRequest() {
         NcloudSensProperties properties = createProperties();
         NotificationMessageBuilder builder = new NotificationMessageBuilder(
@@ -59,7 +60,7 @@ class NotificationMessageBuilderTest {
     }
 
     @Test
-    @DisplayName("comment 줄바꿈은 공백으로 치환하고 비 템플릿 본문을 생성한다")
+    @DisplayName("comment 줄바꿈은 공백으로 치환하고 장마 템플릿 본문을 생성한다")
     void buildRequestWithRainTemplateAndNormalizedComment() {
         NcloudSensProperties properties = createProperties();
         NotificationMessageBuilder builder = new NotificationMessageBuilder(
@@ -95,6 +96,28 @@ class NotificationMessageBuilderTest {
                 ※ 본 알림은 고객님이 신청한 날씨 기반 반려동물 케어 알림으로,
                 등록하신 반려동물 정보 및 날씨 조건에 따라 반복 발송될 수 있습니다.
                 """.trim());
+    }
+
+    @Test
+    @DisplayName("날씨별 template code가 없으면 다른 날씨 코드로 보내지 않고 예외를 발생시킨다")
+    void buildRequestFailsFastWhenWeatherTemplateCodeMissing() {
+        NcloudSensProperties properties = createProperties();
+        properties.getTemplate().setSunny(null);
+
+        NotificationMessageBuilder builder = new NotificationMessageBuilder(
+                new KakaoTemplateManager(properties),
+                properties
+        );
+
+        assertThatThrownBy(() -> builder.buildRequest(
+                createUser("010-1234-5678"),
+                createPet("초코"),
+                createPlace(100L, "수원 산책길"),
+                "산책하기 좋은 코스예요.",
+                "SUNNY"
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("weatherType=SUNNY");
     }
 
     private NcloudSensProperties createProperties() {

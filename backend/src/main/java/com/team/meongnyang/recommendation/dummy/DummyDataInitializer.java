@@ -81,6 +81,8 @@ public class DummyDataInitializer implements CommandLineRunner {
                     .notificationEnabled(true)
                     .role(User.Role.USER)
                     .status(User.Status.ACTIVE)
+                    .latitude(37.27)
+                    .longitude(127.0)
                     .build()
     );
   }

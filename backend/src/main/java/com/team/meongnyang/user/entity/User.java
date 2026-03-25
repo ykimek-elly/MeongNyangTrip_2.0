@@ -74,6 +74,10 @@ public class User extends BaseEntity {
     /** 마지막 알림 발송 시각 */
     @Column
     private LocalDateTime lastNotificationSentAt;
+    @Column
+    private double latitude;
+    @Column
+    private double longitude;
 
     public void markNotificationSent() {
         this.lastNotificationSentAt = LocalDateTime.now();

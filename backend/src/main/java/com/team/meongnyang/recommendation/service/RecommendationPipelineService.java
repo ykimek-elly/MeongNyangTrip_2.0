@@ -45,9 +45,6 @@ public class RecommendationPipelineService {
   private final WeatherGridConverter weatherGridConverter;
   private final AiLogService aiLogservice;
 
-  private static final double SUWON_LAT = 37.27;
-  private static final double SUWON_LNG = 127.01;
-
   /**
    * 수동 진입시
    * @param email
@@ -58,8 +55,6 @@ public class RecommendationPipelineService {
 
     User user = recommendationUserReader.getCurrentUserByEmail(email);
     log.info("[추천 파이프라인] 사용자 조회 결과 email={}, userId={}, nickname={}", email, user.getUserId(), user.getNickname());
-    log.info("[추천 파이프라인] 사용자 위경도 lat={}, lng={}", SUWON_LAT, SUWON_LNG);
-
     Pet pet = recommendationPetReader.getPrimaryPet(user);
     log.info("[추천 파이프라인] 대표 반려견 조회 결과 petId={}, name={}, preferredPlace={}", pet.getPetId(), pet.getPetName(), pet.getPreferredPlace());
 
@@ -80,12 +75,13 @@ public class RecommendationPipelineService {
    * 배치 실행 시에는 batchExecutionId를 함께 전달해서 사용자 단위 추적을 강화한다.
    */
   public RecommendationNotificationResult recommendForNotification(User user, Pet pet, String batchExecutionId) {
+
     try (RecommendationBatchTraceContext.TraceScope ignored =
                  RecommendationBatchTraceContext.open(batchExecutionId, user.getUserId(), pet.getPetId())) {
     log.info("[추천 파이프라인-알림] 시작 userId={}, petId={}", user.getUserId(), pet.getPetId());
 
-    double latitude = SUWON_LAT;
-    double longitude = SUWON_LNG;
+    double latitude = user.getLatitude();
+    double longitude = user.getLongitude();
     log.info("[추천 파이프라인-알림] 사용자 위경도 lat={}, lng={}", latitude, longitude);
 
     WeatherGridPoint gridPoint = weatherGridConverter.convertToGrid(latitude, longitude);

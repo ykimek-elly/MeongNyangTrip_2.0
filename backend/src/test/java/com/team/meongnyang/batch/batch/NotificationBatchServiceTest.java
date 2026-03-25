@@ -75,11 +75,12 @@ class NotificationBatchServiceTest {
                 .statusName("success")
                 .build();
 
-        when(userRepository.findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE))
+        when(userRepository.findAllByNotificationEnabledTrueAndStatusAndRole(User.Status.ACTIVE, User.Role.USER))
                 .thenReturn(List.of(user));
-        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatus(
+        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatusAndUserRole(
                 List.of(user.getUserId()),
-                User.Status.ACTIVE
+                User.Status.ACTIVE,
+                User.Role.USER
         ))
                 .thenReturn(List.of(pet));
         when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString()))
@@ -127,11 +128,12 @@ class NotificationBatchServiceTest {
                 .cacheHit(false)
                 .build();
 
-        when(userRepository.findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE))
+        when(userRepository.findAllByNotificationEnabledTrueAndStatusAndRole(User.Status.ACTIVE, User.Role.USER))
                 .thenReturn(List.of(user));
-        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatus(
+        when(petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatusAndUserRole(
                 List.of(user.getUserId()),
-                User.Status.ACTIVE
+                User.Status.ACTIVE,
+                User.Role.USER
         ))
                 .thenReturn(List.of(pet));
         when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString()))
@@ -152,6 +154,7 @@ class NotificationBatchServiceTest {
                 .nickname("batch-user")
                 .phoneNumber("01012345678")
                 .notificationEnabled(true)
+                .role(User.Role.USER)
                 .status(User.Status.ACTIVE)
                 .build();
     }

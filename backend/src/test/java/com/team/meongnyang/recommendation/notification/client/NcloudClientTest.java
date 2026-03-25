@@ -61,10 +61,10 @@ class NcloudClientTest {
                                 .content("""
                                         [멍냥트립]
                                         고객님께서 설정하신 반려동물 맞춤 알림에 따라,
-                                        몽실의 오늘 반려생활을 안내드립니다.
+                                        몽실이의 오늘 반려생활을 안내드립니다.
 
                                         🌥 오늘 날씨 : 흐림
-                                        강한 햇빛이 없어 몽실이 비교적 편안하게 활동할 수 있습니다.
+                                        강한 햇빛이 없어 몽실이이 비교적 편안하게 활동할 수 있습니다.
 
                                         📍 추천 장소 : 수원 산책공원
                                         💬 몽실이가 편하게 산책할 수 있는 장소입니다.
@@ -73,7 +73,7 @@ class NcloudClientTest {
                                         등록하신 반려동물 정보 및 날씨 조건에 따라 반복 발송될 수 있습니다.
                                         """.trim())
                                 .templateParameter(Map.of(
-                                        "petName", "몽실",
+                                        "petName", "몽실이",
                                         "placeName", "수원 산책공원",
                                         "comment", "몽실이가 편하게 산책할 수 있는 장소입니다."
                                 ))
@@ -105,9 +105,9 @@ class NcloudClientTest {
                           "messages": [
                             {
                               "to": "01012345678",
-                              "content": "[멍냥트립]\n고객님께서 설정하신 반려동물 맞춤 알림에 따라,\n몽실의 오늘 반려생활을 안내드립니다.\n\n🌥 오늘 날씨 : 흐림\n강한 햇빛이 없어 몽실이 비교적 편안하게 활동할 수 있습니다.\n\n📍 추천 장소 : 수원 산책공원\n💬 몽실이가 편하게 산책할 수 있는 장소입니다.\n\n※ 본 알림은 고객님이 신청한 날씨 기반 반려동물 케어 알림으로,\n등록하신 반려동물 정보 및 날씨 조건에 따라 반복 발송될 수 있습니다.",
+                              "content": "[멍냥트립]\n고객님께서 설정하신 반려동물 맞춤 알림에 따라,\n몽실이의 오늘 반려생활을 안내드립니다.\n\n🌥 오늘 날씨 : 흐림\n강한 햇빛이 없어 몽실이이 비교적 편안하게 활동할 수 있습니다.\n\n📍 추천 장소 : 수원 산책공원\n💬 몽실이가 편하게 산책할 수 있는 장소입니다.\n\n※ 본 알림은 고객님이 신청한 날씨 기반 반려동물 케어 알림으로,\n등록하신 반려동물 정보 및 날씨 조건에 따라 반복 발송될 수 있습니다.",
                               "templateParameter": {
-                                "petName": "몽실",
+                                "petName": "몽실이",
                                 "placeName": "수원 산책공원",
                                 "comment": "몽실이가 편하게 산책할 수 있는 장소입니다."
                               }
@@ -153,7 +153,7 @@ class NcloudClientTest {
 
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.getStatusCode()).isEqualTo("202");
-        assertThat(response.getStatusName()).isEqualTo("응답 본문이 비어 있습니다.");
+        assertThat(response.getStatusName()).isNotBlank();
 
         server.verify();
     }

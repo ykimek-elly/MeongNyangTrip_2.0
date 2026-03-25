@@ -31,5 +31,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /**
      *  NotificationEnalbed 가 true이면서 Status 에 맞는 사용자 목록을 조회한다.
      */
-    List<User> findAllByNotificationEnabledTrueAndStatus(User.Status status);
+    List<User> findAllByNotificationEnabledTrueAndStatusAndRole(User.Status status, User.Role role);
 }

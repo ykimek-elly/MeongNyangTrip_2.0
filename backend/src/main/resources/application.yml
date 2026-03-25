@@ -156,9 +156,14 @@ ncloud:
     delivery:
       poll-delays-ms: ${NCLOUD_SENS_DELIVERY_POLL_DELAYS_MS:1000,3000,5000}
     template:
-      sunny: ${NCLOUD_SENS_TEMPLATE_CODE_SUNNY:${NCLOUD_SENS_TEMPLATE_CODE_GOOD:}}
-      cloudy: ${NCLOUD_SENS_TEMPLATE_CODE_CLOUDY:${NCLOUD_SENS_TEMPLATE_CODE_GOOD:}}
+      sunny: ${NCLOUD_SENS_TEMPLATE_CODE_SUNNY:}
+      cloudy: ${NCLOUD_SENS_TEMPLATE_CODE_CLOUDY:}
       cold: ${NCLOUD_SENS_TEMPLATE_CODE_COLD}
       hot: ${NCLOUD_SENS_TEMPLATE_CODE_HOT}
       rain: ${NCLOUD_SENS_TEMPLATE_CODE_RAIN}
       default-code: ${NCLOUD_SENS_TEMPLATE_CODE_DEFAULT:${NCLOUD_SENS_TEMPLATE_CODE:}}
+
+# 회원가입 완료 사용자 JSON 저장 경로 (AI 서비스 데이터 수집용)
+app:
+  signup:
+    export-path: ${SIGNUP_EXPORT_PATH:exports/registered_users.json}

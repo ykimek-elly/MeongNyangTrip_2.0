@@ -127,7 +127,10 @@ public class NotificationBatchService {
    * 알림 수신이 활성화된 사용자 목록을 조회한다.
    */
   public List<User> getNotificationTargets() {
-    return userRepository.findAllByNotificationEnabledTrueAndStatus(User.Status.ACTIVE);
+    return userRepository.findAllByNotificationEnabledTrueAndStatusAndRole(
+            User.Status.ACTIVE,
+            User.Role.USER
+    );
   }
 
   /**
@@ -144,7 +147,7 @@ public class NotificationBatchService {
             .map(User::getUserId)
             .collect(Collectors.toList());
 
-    return petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatus(userIds, User.Status.ACTIVE).stream()
+    return petRepository.findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatusAndUserRole(userIds, User.Status.ACTIVE, User.Role.USER).stream()
             .collect(Collectors.toMap(
                     pet -> pet.getUser().getUserId(),
                     pet -> pet,

@@ -23,6 +23,7 @@ public enum KakaoWeatherTemplateType {
             default -> SUNNY;
         };
     }
+
     public static final String SUNNY_TEMPLATE = """
             [멍냥트립]
             고객님께서 설정하신 반려동물 맞춤 알림에 따라,

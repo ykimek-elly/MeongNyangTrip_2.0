@@ -19,7 +19,7 @@ export const authApi = {
 
   /** POST /api/auth/signup → 회원가입 + JWT 토큰 발급 */
   signup: async (email: string, password: string, nickname: string, phone: string): Promise<AuthResponseDto> => {
-    const { data } = await api.post<AuthResponseDto>(`${AUTH_BASE}/signup`, { email, password, nickname, phone });
+    const { data } = await api.post<AuthResponseDto>(`${AUTH_BASE}/signup`, { email, password, nickname, phoneNumber: phone });
     return data;
   },
 

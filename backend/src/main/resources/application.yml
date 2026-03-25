@@ -110,3 +110,8 @@ jwt:
 # 소셜 로그인 성공 후 FE 리다이렉트 URL
 oauth2:
   redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth2/callback}
+
+# 회원가입 완료 사용자 JSON 저장 경로 (AI 서비스 데이터 수집용)
+app:
+  signup:
+    export-path: ${SIGNUP_EXPORT_PATH:exports/registered_users.json}

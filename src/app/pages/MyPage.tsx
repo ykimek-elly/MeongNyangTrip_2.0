@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, PawPrint, Pencil, Plus, Star, Smile, Meh, Frown } from 'lucide-react';
+import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, PawPrint, Pencil, Plus, Star, Smile, Meh, Frown, Dog, Cat } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useFeedStore } from '../store/useFeedStore';
 import { useDMStore } from '../store/useDMStore';
@@ -8,6 +8,7 @@ import { PlaceImage } from '../components/PlaceImage';
 import type { PetInfo } from '../store/useAppStore';
 import { AnimatePresence } from 'motion/react';
 import { motion } from 'motion/react';
+import { checkInApi } from '../api/checkInApi';
 
 interface MyPageProps {
   onNavigate: (page: string, params?: any) => void;
@@ -22,7 +23,13 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
   const [deleteTargetIndex, setDeleteTargetIndex] = React.useState<number | null>(null);
   const [petMood, setPetMood] = React.useState<'good' | 'normal' | 'bad' | null>(null);
+const [totalVisits, setTotalVisits] = React.useState(0);
 
+React.useEffect(() => {
+  checkInApi.getMyStats()
+    .then(stats => setTotalVisits(stats.totalVisits))
+    .catch(() => setTotalVisits(0));
+}, []);
   React.useEffect(() => { if (places.length === 0) fetchPlaces(); }, []);
   const wishItems = places.filter(p => wishlist.includes(p.id));
 
@@ -72,12 +79,13 @@ export function MyPage({ onNavigate }: MyPageProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
       className="bg-gray-50"
     >
       {/* Profile Header */}
-      <div className="bg-white p-6 pb-8 rounded-b-[40px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] mb-6">
+      <div className="bg-white p-6 pb-8 rounded-b-[40px] shadow-[0_4px_24px_rgba(227,99,148,0.08)] mb-6">
 
         {/* 반려동물 섹션 헤더 */}
         <div className="flex items-center justify-between mb-4 mt-4">
@@ -92,7 +100,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
           </div>
           <button
             onClick={openAdd}
-            className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-full shadow-md active:scale-95 transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-full shadow-md active:scale-[0.97] transition-spring"
           >
             <Plus size={12} /> 추가
           </button>
@@ -117,7 +125,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`relative flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-colors ${
+                className={`relative flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-spring ${
                   pet.isRepresentative
                     ? 'border-primary bg-primary/5'
                     : 'border-gray-100 bg-white'
@@ -134,7 +142,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shrink-0 ${
                   pet.isRepresentative ? 'bg-primary/15' : 'bg-gray-100'
                 }`}>
-                  {pet.type === '강아지' ? '🐶' : '🐱'}
+                  {pet.type === '강아지' ? <Dog size={18} className="text-primary" /> : <Cat size={18} className="text-primary" />}
                 </div>
 
                 {/* 정보 */}
@@ -166,7 +174,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   {!pet.isRepresentative && (
                     <button
                       onClick={() => setRepresentativePet(index)}
-                      className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 hover:bg-primary/10 hover:text-primary px-2 py-1 rounded-lg transition-colors"
+                      className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 hover:bg-primary/10 hover:text-primary px-2 py-1 rounded-lg transition-spring"
                     >
                       <Star size={10} /> 대표설정
                     </button>
@@ -174,13 +182,13 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   <div className="flex gap-1">
                     <button
                       onClick={() => openEdit(index)}
-                      className="p-2 text-gray-400 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-spring"
                     >
                       <Pencil size={13} />
                     </button>
                     <button
                       onClick={() => confirmDelete(index)}
-                      className="p-2 text-gray-400 hover:text-destructive bg-gray-50 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-destructive bg-gray-50 hover:bg-red-50 rounded-lg transition-spring"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -198,13 +206,17 @@ export function MyPage({ onNavigate }: MyPageProps) {
 
 
         <div className="grid grid-cols-2 gap-3 mt-6">
-          <div className="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
-            <span className="text-gray-500 text-xs font-medium block mb-1">나의 찜</span>
-            <h5 className="font-bold text-primary text-xl">{wishlist.length}</h5>
+          <div className="p-0.5 bg-primary/5 rounded-[1.3rem] ring-1 ring-primary/10">
+            <div className="bg-white p-4 rounded-[1.1rem] text-center">
+              <span className="text-gray-500 text-xs font-medium block mb-1 leading-snug">나의 찜</span>
+              <h5 className="font-bold text-primary text-xl">{wishlist.length}</h5>
+            </div>
           </div>
-          <div className="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
-            <span className="text-gray-500 text-xs font-medium block mb-1">다녀온 곳</span>
-            <h5 className="font-bold text-gray-900 text-xl">0</h5>
+          <div className="p-0.5 bg-gray-50 rounded-[1.3rem] ring-1 ring-gray-100">
+            <div className="bg-white p-4 rounded-[1.1rem] text-center">
+              <span className="text-gray-500 text-xs font-medium block mb-1 leading-snug">다녀온 곳</span>
+              <h5 className="font-bold text-gray-900 text-xl">{totalVisits}</h5>
+            </div>
           </div>
         </div>
       </div>
@@ -226,7 +238,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
             <div className="flex gap-1.5">
               <button
                 onClick={() => setPetMood('good')}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-spring active:scale-[0.97] ${
                   petMood === 'good' ? 'bg-green-500 text-white' : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
@@ -235,7 +247,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
               </button>
               <button
                 onClick={() => setPetMood('normal')}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-spring active:scale-[0.97] ${
                   petMood === 'normal' ? 'bg-amber-400 text-white' : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
@@ -244,7 +256,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
               </button>
               <button
                 onClick={() => setPetMood('bad')}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-spring active:scale-[0.97] ${
                   petMood === 'bad' ? 'bg-red-400 text-white' : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
@@ -255,7 +267,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
           </div>
           <button
             onClick={() => onNavigate('visit-checkin')}
-            className="flex-1 flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm active:scale-[0.98] transition-all"
+            className="flex-1 flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm active:scale-[0.97] transition-spring"
           >
             <span className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
               <Award className="text-primary" size={24} />
@@ -271,7 +283,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
           /* 관리자 전용: 관리자 센터 바로가기 */
           <button
             onClick={() => onNavigate('admin')}
-            className="w-full flex items-center justify-between p-4 bg-gray-900 rounded-3xl shadow-sm active:scale-[0.98] transition-all"
+            className="w-full flex items-center justify-between p-4 bg-gray-900 rounded-3xl shadow-sm active:scale-[0.97] transition-spring"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center">
@@ -298,7 +310,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
                   key={i}
                   onClick={s.page ? () => onNavigate(s.page!) : undefined}
                   className={`bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100 relative ${
-                    s.page ? 'cursor-pointer active:scale-95 transition-transform hover:bg-gray-100' : ''
+                    s.page ? 'cursor-pointer active:scale-[0.97] transition-spring hover:bg-gray-100' : ''
                   }`}
                 >
                   <div className={`w-7 h-7 rounded-full ${s.color} flex items-center justify-center mx-auto mb-1.5 relative`}>
@@ -331,15 +343,20 @@ export function MyPage({ onNavigate }: MyPageProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {wishItems.map(p => (
+            {wishItems.map((p, idx) => (
               <div
                 key={p.id}
-                className="bg-white p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
+                className="p-1 bg-white rounded-[1.6rem] ring-1 ring-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)] active:scale-[0.97] transition-spring cursor-pointer animate-fade-in-up"
+                style={{ animationDelay: `${idx * 0.06}s` }}
                 onClick={() => onNavigate('detail', { id: p.id })}
               >
-                <PlaceImage imageUrl={p.imageUrl} category={p.category} className="w-full aspect-square rounded-2xl mb-2 object-cover" />
-                <h6 className="font-bold text-gray-900 text-sm truncate px-1">{p.title}</h6>
-                <span className="text-gray-400 text-[10px] px-1">{p.address}</span>
+                <div className="bg-gray-50 rounded-[1.25rem] p-1.5">
+                  <PlaceImage imageUrl={p.imageUrl} category={p.category} className="w-full aspect-square rounded-xl mb-0 object-cover" />
+                </div>
+                <div className="px-2 py-2">
+                  <h6 className="font-bold text-gray-900 text-sm truncate leading-snug">{p.title}</h6>
+                  <span className="text-gray-400 text-[10px]">{p.address}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -369,7 +386,7 @@ export function MyPage({ onNavigate }: MyPageProps) {
               <div key={route.id} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative">
                 <button
                   onClick={() => removeSavedRoute(route.id)}
-                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 transition-colors bg-gray-50 rounded-full"
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 transition-spring bg-gray-50 rounded-full"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -447,13 +464,13 @@ export function MyPage({ onNavigate }: MyPageProps) {
               <div className="flex gap-2">
                 <button
                   onClick={() => setDeleteTargetIndex(null)}
-                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-sm hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-sm hover:bg-gray-200 transition-spring"
                 >
                   취소
                 </button>
                 <button
                   onClick={executeDelete}
-                  className="flex-1 py-3 rounded-xl bg-destructive text-white font-bold text-sm hover:bg-destructive/90 active:scale-95 transition-all"
+                  className="flex-1 py-3 rounded-xl bg-destructive text-white font-bold text-sm hover:bg-destructive/90 active:scale-[0.97] transition-spring"
                 >
                   삭제
                 </button>

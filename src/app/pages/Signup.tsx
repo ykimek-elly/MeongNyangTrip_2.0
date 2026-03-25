@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authApi } from '../api/authApi';
-import { ArrowLeft, Mail, Eye, EyeOff, Leaf } from 'lucide-react';
+import { ArrowLeft, Mail, Eye, EyeOff, Leaf, Phone } from 'lucide-react';
 
 interface SignupProps {
   onNavigate: (page: string) => void;
@@ -13,13 +13,21 @@ export function Signup({ onNavigate }: SignupProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
+  const [phone, setPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
-
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const isValid = email.trim() && password.length >= 6 && nickname.trim() && agreeTerms;
+  const formatPhone = (v: string) => {
+    const digits = v.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  };
+
+  const phoneDigits = phone.replace(/\D/g, '');
+  const isValid = email.trim() && password.length >= 6 && nickname.trim() && phoneDigits.length >= 10 && agreeTerms;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +35,7 @@ export function Signup({ onNavigate }: SignupProps) {
     setError('');
     setIsLoading(true);
     try {
-      const res = await authApi.signup(email, password, nickname);
+      const res = await authApi.signup(email, password, nickname, phoneDigits);
       localStorage.setItem('accessToken', res.token);
       login(res.nickname, res.email, res.userId, res.profileImage);
       onNavigate('onboarding');
@@ -40,6 +48,7 @@ export function Signup({ onNavigate }: SignupProps) {
   };
 
   const handleSocialLogin = (provider: string) => {
+    sessionStorage.setItem('pending_phone', phoneDigits);
     const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '');
     window.location.href = `${apiHost}/oauth2/authorization/${provider}`;
   };
@@ -51,7 +60,6 @@ export function Signup({ onNavigate }: SignupProps) {
         <button onClick={() => onNavigate('login')} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full">
           <ArrowLeft size={24} />
         </button>
-        <div className="flex-1" />
       </header>
 
       <main className="flex-1 px-6 py-4 pb-24">
@@ -73,6 +81,7 @@ export function Signup({ onNavigate }: SignupProps) {
 
           {/* 소셜 로그인 */}
           <div className="space-y-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">소셜 계정으로 가입</p>
             <button
               onClick={() => handleSocialLogin('google')}
               className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 rounded-2xl bg-white hover:bg-gray-50 active:scale-[0.98] transition-all"
@@ -95,13 +104,12 @@ export function Signup({ onNavigate }: SignupProps) {
               </svg>
               <span className="font-bold text-sm text-gray-900">카카오로 계속하기</span>
             </button>
-          </div>
 
-          {/* 구분선 */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400">또는 이메일로 가입</span>
-            <div className="flex-1 h-px bg-gray-200" />
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400">또는 이메일로 가입</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
           </div>
 
           {/* 이메일 가입 폼 */}
@@ -115,6 +123,7 @@ export function Signup({ onNavigate }: SignupProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="example@email.com"
+                  autoComplete="email"
                   className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
                 />
               </div>
@@ -128,6 +137,7 @@ export function Signup({ onNavigate }: SignupProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="6자리 이상 입력해주세요"
+                  autoComplete="new-password"
                   className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm pr-12"
                 />
                 <button
@@ -155,6 +165,20 @@ export function Signup({ onNavigate }: SignupProps) {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">휴대폰 번호</label>
+              <div className="relative">
+                <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  placeholder="010-0000-0000"
+                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
+                />
+              </div>
+            </div>
+
             {/* 약관 동의 */}
             <label className="flex items-start gap-3 cursor-pointer mt-2 p-3 bg-gray-50 rounded-2xl">
               <input
@@ -170,11 +194,10 @@ export function Signup({ onNavigate }: SignupProps) {
 
             {error && <p className="text-red-500 text-sm px-1">{error}</p>}
 
-            {/* 가입 버튼 */}
             <button
               type="submit"
               disabled={!isValid || isLoading}
-              className={`w-full py-4 rounded-2xl font-bold shadow-lg transition-all active:scale-[0.98] mt-2 ${
+              className={`w-full py-4 rounded-2xl font-bold shadow-md transition-spring active:scale-[0.98] hover:scale-[1.02] mt-2 ${
                 isValid && !isLoading
                   ? 'bg-primary text-white hover:bg-primary/90'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'

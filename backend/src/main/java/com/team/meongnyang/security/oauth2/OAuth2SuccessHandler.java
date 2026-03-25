@@ -26,7 +26,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private final JwtUtil jwtUtil;
 
-    @Value("${oauth2.redirect-uri:http://localhost:5173/oauth2/callback}")
+@Value("${oauth2.redirect-uri:https://meongnyangtrip.duckdns.org/oauth2/callback}")
     private String redirectUri;
 
     @Override

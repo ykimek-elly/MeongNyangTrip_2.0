@@ -157,53 +157,56 @@ export function Login({ onNavigate }: LoginProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
       className="min-h-screen bg-white flex flex-col px-6"
     >
       <header className="pt-4 pb-2 -mx-0">
-        <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full">
+        <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-spring">
           <ArrowLeft size={24} />
         </button>
       </header>
 
       <div className="flex-1 flex flex-col justify-center">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6">
+        <div className="text-center mb-10 animate-fade-in-up">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 transition-spring hover:scale-105">
             <Leaf size={40} className="text-primary" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">멍냥트립</h2>
-          <p className="text-gray-500">반려동물과 함께하는 자연 여행</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 leading-snug">멍냥트립</h2>
+          <p className="text-gray-500 leading-snug">반려동물과 함께하는 자연 여행</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto space-y-3">
+        <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto space-y-3 animate-fade-in-up" style={{ animationDelay: '0.08s' }}>
           <input
             type="email"
             placeholder="이메일"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-4 bg-white border border-gray-200 rounded-2xl shadow-sm outline-none focus:border-primary transition-colors"
+            autoComplete="email"
+            className="w-full p-4 bg-white border border-gray-200 rounded-2xl shadow-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(227,99,148,0.1)] transition-spring"
           />
           <input
             type="password"
             placeholder="비밀번호"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-4 bg-white border border-gray-200 rounded-2xl shadow-sm outline-none focus:border-primary transition-colors mb-4"
+            autoComplete="current-password"
+            className="w-full p-4 bg-white border border-gray-200 rounded-2xl shadow-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(227,99,148,0.1)] transition-spring mb-4"
           />
           {error && <p className="text-red-500 text-sm px-1">{error}</p>}
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all mt-4 disabled:opacity-60"
+            className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-md hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-spring mt-4 disabled:opacity-60 disabled:hover:scale-100"
           >
             {isLoading ? '로그인 중...' : '로그인'}
           </button>
         </form>
 
         {/* 소셜 로그인 */}
-        <div className="w-full max-w-sm mx-auto mt-6 space-y-2.5">
+        <div className="w-full max-w-sm mx-auto mt-6 space-y-2.5 animate-fade-in-up" style={{ animationDelay: '0.16s' }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="flex-1 h-px bg-gray-100" />
             <span className="text-[11px] text-gray-400">또는 소셜 로그인</span>
@@ -211,7 +214,7 @@ export function Login({ onNavigate }: LoginProps) {
           </div>
           <button
             onClick={() => handleSocialLogin('google')}
-            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-2xl bg-white hover:bg-gray-50 active:scale-[0.98] transition-all"
+            className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-2xl bg-white hover:bg-gray-50 hover:scale-[1.02] active:scale-[0.98] transition-spring"
           >
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
@@ -223,7 +226,7 @@ export function Login({ onNavigate }: LoginProps) {
           </button>
           <button
             onClick={() => handleSocialLogin('kakao')}
-            className="w-full flex items-center justify-center gap-3 py-3 border border-yellow-300 rounded-2xl bg-[#FEE500] hover:bg-[#FDD800] active:scale-[0.98] transition-all"
+            className="w-full flex items-center justify-center gap-3 py-3 border border-yellow-300 rounded-2xl bg-[#FEE500] hover:bg-[#FDD800] hover:scale-[1.02] active:scale-[0.98] transition-spring"
           >
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#3C1E1E" d="M24 4C12.95 4 4 11.16 4 20c0 5.6 3.6 10.5 9.09 13.37l-2.32 8.55c-.2.75.64 1.35 1.3.92L20.55 37c1.12.15 2.27.24 3.45.24 11.05 0 20-7.16 20-16S35.05 4 24 4z" />
@@ -233,11 +236,11 @@ export function Login({ onNavigate }: LoginProps) {
         </div>
 
         <div className="mt-6 text-center flex justify-center text-sm text-gray-500 space-x-4">
-          <span onClick={() => onNavigate('find-id')} className="cursor-pointer hover:text-gray-800">아이디 찾기</span>
+          <span onClick={() => onNavigate('find-id')} className="cursor-pointer hover:text-gray-800 transition-spring">아이디 찾기</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => onNavigate('find-password')} className="cursor-pointer hover:text-gray-800">비밀번호 찾기</span>
+          <span onClick={() => onNavigate('find-password')} className="cursor-pointer hover:text-gray-800 transition-spring">비밀번호 찾기</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => onNavigate('signup')} className="cursor-pointer hover:text-gray-800">회원가입</span>
+          <span onClick={() => onNavigate('signup')} className="cursor-pointer hover:text-gray-800 transition-spring">회원가입</span>
         </div>
 
       </div>{/* flex-1 end */}

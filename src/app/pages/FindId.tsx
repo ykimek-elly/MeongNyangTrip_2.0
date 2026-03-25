@@ -31,14 +31,15 @@ export function FindId({ onNavigate }: FindIdProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
       className="min-h-screen bg-white flex flex-col"
     >
       <header className="px-5 py-4 flex items-center bg-white border-b border-gray-100 sticky top-0 z-10">
-        <button 
-          onClick={() => onNavigate('login')} 
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full"
+        <button
+          onClick={() => onNavigate('login')}
+          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-spring hover:scale-[1.1] active:scale-[0.9]"
           aria-label="로그인 화면으로 이동"
         >
           <ArrowLeft size={24} />
@@ -48,9 +49,10 @@ export function FindId({ onNavigate }: FindIdProps) {
 
       <main className="flex-1 p-6">
         {!result ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 320, delay: 0.1 }}
           >
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">가입 시 등록한<br/>정보를 입력해주세요.</h2>
@@ -66,7 +68,7 @@ export function FindId({ onNavigate }: FindIdProps) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="이름 입력"
-                    className="w-full pl-12 p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors"
+                    className="w-full pl-12 p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary focus:shadow-[0_0_0_3px_rgba(227,99,148,0.1)] outline-none transition-spring"
                   />
                 </div>
               </div>
@@ -80,7 +82,7 @@ export function FindId({ onNavigate }: FindIdProps) {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="010-0000-0000"
-                    className="w-full pl-12 p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors"
+                    className="w-full pl-12 p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary focus:shadow-[0_0_0_3px_rgba(227,99,148,0.1)] outline-none transition-spring"
                   />
                 </div>
               </div>
@@ -91,9 +93,9 @@ export function FindId({ onNavigate }: FindIdProps) {
               <button
                 type="submit"
                 disabled={!name || !phone || isLoading}
-                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-md transition-all mt-8 ${
+                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-md transition-spring mt-8 ${
                   name && phone && !isLoading
-                    ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]'
+                    ? 'bg-primary text-white hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.97]'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
@@ -102,9 +104,10 @@ export function FindId({ onNavigate }: FindIdProps) {
             </form>
           </motion.div>
         ) : (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             className="text-center pt-10"
           >
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -117,15 +120,15 @@ export function FindId({ onNavigate }: FindIdProps) {
             </p>
             
             <div className="space-y-3">
-              <button 
+              <button
                 onClick={() => onNavigate('login')}
-                className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:bg-primary/90 transition-all"
+                className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:bg-primary/90 transition-spring hover:scale-[1.02] active:scale-[0.97]"
               >
                 로그인하러 가기
               </button>
-              <button 
+              <button
                 onClick={() => onNavigate('find-password')}
-                className="w-full py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition-all"
+                className="w-full py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition-spring hover:scale-[1.02] active:scale-[0.97]"
               >
                 비밀번호 찾기
               </button>

@@ -134,6 +134,28 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ── Supanova 스프링 트랜지션 표준 ── */
+@layer utilities {
+  .transition-spring {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(1.1rem); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0);      filter: blur(0);   }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -143,6 +165,18 @@
     @apply bg-background text-foreground;
     font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
+
+  /* ── 한국어 word-break: keep-all 전역 적용 (Supanova 한국어 타이포 표준) ── */
+  p, h1, h2, h3, h4, h5, h6, li, span, label, td, th, button, a {
+    word-break: keep-all;
+  }
+
+  /* ── 스크롤바 전역 숨김 ── */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar { display: none; }
 
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).

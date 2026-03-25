@@ -8,6 +8,7 @@ on:
       - 'src/**'
       - 'Dockerfile.frontend'
       - 'nginx.conf'
+      - 'public/**'
   workflow_dispatch:
 
 jobs:
@@ -69,7 +70,7 @@ jobs:
               "echo === 컨테이너 교체 (다운타임 최소화) ===",
               "docker stop meongnyang-app || true",
               "docker rm meongnyang-app || true",
-              "docker run -d --name meongnyang-app -p 8080:8080 --link meongnyang-redis:redis -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=redis -e REDIS_PORT=6379 -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }} -e KAKAO_OAUTH_CLIENT_ID=${{ secrets.KAKAO_OAUTH_CLIENT_ID }} -e KAKAO_OAUTH_CLIENT_SECRET=${{ secrets.KAKAO_OAUTH_CLIENT_SECRET }} -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} -e GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} -e GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }} -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} -e GEMINI_API_KEY_2=${{ secrets.GEMINI_API_KEY_2 }} -e NAVER_LOCAL_CLIENT_ID=${{ secrets.NAVER_LOCAL_CLIENT_ID }} -e NAVER_LOCAL_CLIENT_SECRET=${{ secrets.NAVER_LOCAL_CLIENT_SECRET }} -e OAUTH2_REDIRECT_URI=https://meongnyangtrip.duckdns.org/oauth2/callback -e SPRING_PROFILES_ACTIVE=prod --restart=always meongnyang-backend",
+              "docker run -d --name meongnyang-app -p 8080:8080 --link meongnyang-redis:redis -e DB_HOST=meongnyang-db.cf0sk2wkktpg.ap-northeast-2.rds.amazonaws.com -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e REDIS_HOST=redis -e REDIS_PORT=6379 -e PET_TOUR_SERVICE_KEY=${{ secrets.PET_TOUR_SERVICE_KEY }} -e KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }} -e KAKAO_OAUTH_CLIENT_ID=${{ secrets.KAKAO_OAUTH_CLIENT_ID }} -e KAKAO_OAUTH_CLIENT_SECRET=${{ secrets.KAKAO_OAUTH_CLIENT_SECRET }} -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} -e GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} -e GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }} -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} -e GEMINI_API_KEY_2=${{ secrets.GEMINI_API_KEY_2 }} -e NAVER_LOCAL_CLIENT_ID=${{ secrets.NAVER_LOCAL_CLIENT_ID }} -e NAVER_LOCAL_CLIENT_SECRET=${{ secrets.NAVER_LOCAL_CLIENT_SECRET }} -e MAIL_USERNAME=${{ secrets.MAIL_USERNAME }} -e MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }} -e OAUTH2_REDIRECT_URI=https://meongnyangtrip.duckdns.org/oauth2/callback -e SPRING_PROFILES_ACTIVE=prod --restart=always meongnyang-backend",
               "echo 백엔드 기동 대기 중...",
               "sleep 20",
 
@@ -78,6 +79,10 @@ jobs:
               "docker run -d --name meongnyang-frontend -p 80:80 -p 443:443 -v /etc/letsencrypt:/etc/letsencrypt:ro --link meongnyang-app:app --restart=always meongnyang-frontend",
 
               "echo === 최종 상태 ===",
-              "docker ps"
+              "docker ps",
+              "echo === 오래된 이미지 정리 ===",
+              "docker image prune -af --filter until=24h || true",
+              "docker builder prune -af || true",
+              "echo 정리 완료"
             ]' \
             --region ap-northeast-2

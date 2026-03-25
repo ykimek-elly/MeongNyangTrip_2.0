@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Star, MapPin, Search, LayoutGrid, List as ListIcon, ArrowLeft, ChevronDown } from 'lucide-react';
+import { Star, MapPin, Search, LayoutGrid, List as ListIcon, ArrowLeft, ChevronDown, PawPrint, Mountain, House, UtensilsCrossed } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { motion } from 'motion/react';
 import { PlaceImage } from '../components/PlaceImage';
@@ -140,6 +140,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
       className="flex-1 flex flex-col bg-white min-h-0"
     >
       {/* 검색 헤더 */}
@@ -147,13 +148,13 @@ export function List({ onNavigate, initialParams }: ListProps) {
         <div className="flex items-center gap-2 px-4 py-2">
           <button
             onClick={() => onNavigate('home')}
-            className="p-1.5 -ml-1 text-gray-700 hover:bg-gray-100 rounded-full shrink-0"
+            className="p-1.5 -ml-1 text-gray-700 hover:bg-gray-100 rounded-full shrink-0 transition-spring hover:scale-[1.1] active:scale-[0.9]"
             aria-label="뒤로가기"
           >
             <ArrowLeft size={20} />
           </button>
           <div className="flex gap-2 flex-1 h-10">
-            <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 flex items-center gap-2 flex-1 min-w-0">
+            <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 flex items-center gap-2 flex-1 min-w-0 transition-spring focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(227,99,148,0.1)]">
               <Search size={14} className="text-gray-400 shrink-0" />
               <input
                 type="text"
@@ -167,7 +168,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
             <DatePickerPopup value={searchDate} onChange={setSearchDate} />
             <button
               onClick={handleSearch}
-              className="bg-primary text-white rounded-xl w-10 h-10 flex items-center justify-center active:scale-95 transition-all shrink-0"
+              className="bg-primary text-white rounded-xl w-10 h-10 flex items-center justify-center hover:scale-[1.05] active:scale-[0.95] transition-spring shrink-0"
               aria-label="검색"
             >
               <Search size={16} strokeWidth={2.5} />
@@ -178,9 +179,9 @@ export function List({ onNavigate, initialParams }: ListProps) {
         {/* 1행: 필터 탭 */}
         <div className="grid grid-cols-4 gap-2 px-4 pb-2">
           <FilterButton label="전체" active={activeFilter === 'all'} onClick={() => handleFilterClick('all')} />
-          <FilterButton label="🏞️ 멍냥플레이스" active={activeFilter === 'PLACE'} onClick={() => handleFilterClick('PLACE')} />
-          <FilterButton label="🏡 멍냥스테이" active={activeFilter === 'STAY'} onClick={() => handleFilterClick('STAY')} />
-          <FilterButton label="🍽️ 멍냥다이닝" active={activeFilter === 'DINING'} onClick={() => handleFilterClick('DINING')} />
+          <FilterButton label="멍냥플레이스" icon={Mountain} active={activeFilter === 'PLACE'} onClick={() => handleFilterClick('PLACE')} />
+          <FilterButton label="멍냥스테이" icon={House} active={activeFilter === 'STAY'} onClick={() => handleFilterClick('STAY')} />
+          <FilterButton label="멍냥다이닝" icon={UtensilsCrossed} active={activeFilter === 'DINING'} onClick={() => handleFilterClick('DINING')} />
         </div>
 
         {/* 2행: 정렬 + 카운트 + 뷰토글 */}
@@ -188,7 +189,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
           <div className="relative">
             <button
               onClick={() => setShowSortMenu(prev => !prev)}
-              className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900"
+              className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900 hover:scale-[1.03] active:scale-[0.97] transition-spring"
             >
               {SORT_LABELS[sortKey]} <ChevronDown size={13} />
             </button>
@@ -198,7 +199,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
                   <button
                     key={key}
                     onClick={() => handleSortChange(key)}
-                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 ${sortKey === key ? 'text-primary' : 'text-gray-700'}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 transition-spring ${sortKey === key ? 'text-primary' : 'text-gray-700'}`}
                   >
                     {SORT_LABELS[key]}
                   </button>
@@ -211,7 +212,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
           </span>
           <button
             onClick={toggleView}
-            className="p-1.5 text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-spring hover:scale-[1.1] active:scale-[0.9]"
             aria-label={viewMode === 'list' ? "그리드 뷰로 전환" : "리스트 뷰로 전환"}
           >
             {viewMode === 'list' ? <LayoutGrid size={18} /> : <ListIcon size={18} />}
@@ -223,82 +224,91 @@ export function List({ onNavigate, initialParams }: ListProps) {
       <div ref={listContainerRef} className="flex-1 overflow-y-auto pb-24 min-h-0">
       <div className={viewMode === 'list' ? "px-4 py-4 space-y-3" : "px-4 py-4 grid grid-cols-2 gap-3"}>
         {filteredPlaces.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-400 opacity-75">
-            <Search size={48} className="mb-4 text-gray-300" />
-            <p>조건에 맞는 장소가 없어요.</p>
+          <div className="col-span-full flex flex-col items-center justify-center py-20 animate-fade-in-up">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Search size={28} className="text-primary/50" />
+            </div>
+            <p className="text-sm font-bold text-gray-500 mb-1">조건에 맞는 장소가 없어요</p>
+            <p className="text-xs text-gray-400">다른 검색어나 카테고리를 시도해보세요</p>
           </div>
         ) : (
-          filteredPlaces.slice(0, displayCount).map(place => (
+          filteredPlaces.slice(0, displayCount).map((place, idx) => (
             viewMode === 'list' ? (
-              // 리스트 뷰 아이템
+              // 리스트 뷰 — Double-Bezel 카드
               <div
                 key={place.id}
-                className="flex items-center bg-white border border-gray-100 p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer"
+                className={`p-1 bg-primary/5 rounded-[1.6rem] ring-1 ring-primary/10 transition-spring active:scale-[0.97] cursor-pointer ${idx < 8 ? 'animate-fade-in-up' : ''}`}
+                style={idx < 8 ? { animationDelay: `${idx * 0.05}s` } : undefined}
                 onClick={() => onNavigate('detail', { id: place.id })}
               >
-                <PlaceImage
-                  imageUrl={place.imageUrl}
-                  category={place.category}
-                  className="w-[90px] h-[90px] rounded-2xl object-cover flex-shrink-0"
-                />
-                <div className="ml-4 flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <h6 className="font-bold text-gray-900 mb-1 truncate">{place.title}</h6>
-                    {place.reviewCount > 0 ? (
-                      <span className="flex items-center text-brand-point text-xs font-bold gap-0.5 shrink-0">
-                        <Star size={12} className="fill-brand-point" /> {place.rating.toFixed(1)}
-                      </span>
-                    ) : place.aiRating ? (
-                      <span className="flex items-center text-gray-900 text-xs font-bold gap-0.5 shrink-0">
-                        <Star size={12} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
-                        <span className="text-[9px] font-normal text-gray-400">[AI]</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-[10px] shrink-0">🐾</span>
-                    )}
+                <div className="bg-white rounded-[1.25rem] p-2.5 flex items-center">
+                  <PlaceImage
+                    imageUrl={place.imageUrl}
+                    category={place.category}
+                    className="w-[90px] h-[90px] rounded-2xl object-cover flex-shrink-0"
+                  />
+                  <div className="ml-4 flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <h6 className="font-bold text-gray-900 mb-1 truncate">{place.title}</h6>
+                      {place.reviewCount > 0 ? (
+                        <span className="flex items-center text-brand-point text-xs font-bold gap-0.5 shrink-0">
+                          <Star size={12} className="fill-brand-point" /> {place.rating.toFixed(1)}
+                        </span>
+                      ) : place.aiRating ? (
+                        <span className="flex items-center text-gray-900 text-xs font-bold gap-0.5 shrink-0">
+                          <Star size={12} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
+                          <span className="text-[9px] font-normal text-gray-400">[AI]</span>
+                        </span>
+                      ) : (
+                        <PawPrint size={10} className="text-gray-300 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                      <MapPin size={10} /> {place.address}
+                    </p>
+                    <span className="inline-block bg-primary/10 text-primary border border-primary/30 text-[10px] font-medium px-2 py-0.5 rounded-full">
+                      {place.category.toUpperCase()}
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                    <MapPin size={10} /> {place.address}
-                  </p>
-                  <span className="inline-block bg-primary/10 text-primary border border-primary/30 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                    {place.category.toUpperCase()}
-                  </span>
                 </div>
               </div>
             ) : (
-              // 그리드 뷰 아이템
+              // 그리드 뷰 — Double-Bezel 카드
               <div
                 key={place.id}
+                className={`aspect-square p-1 bg-primary/5 rounded-[1.6rem] ring-1 ring-primary/10 transition-spring active:scale-[0.97] cursor-pointer ${idx < 8 ? 'animate-fade-in-up' : ''}`}
+                style={idx < 8 ? { animationDelay: `${idx * 0.05}s` } : undefined}
                 onClick={() => onNavigate('detail', { id: place.id })}
-                className="aspect-square bg-white border border-gray-100 p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer flex flex-col overflow-hidden"
               >
-                <PlaceImage
-                  imageUrl={place.imageUrl}
-                  category={place.category}
-                  className="w-full flex-1 min-h-0 rounded-2xl object-cover mb-2"
-                />
-                <div className="px-1 shrink-0">
-                  <div className="flex justify-between items-center mb-0.5">
-                    <h6 className="font-bold text-gray-900 text-sm truncate flex-1 pr-1">{place.title}</h6>
-                    {place.reviewCount > 0 ? (
-                      <span className="flex items-center text-brand-point text-[10px] font-bold gap-0.5 flex-shrink-0">
-                        <Star size={10} className="fill-brand-point" /> {place.rating.toFixed(1)}
-                      </span>
-                    ) : place.aiRating ? (
-                      <span className="flex items-center text-gray-900 text-[10px] font-bold gap-0.5 flex-shrink-0">
-                        <Star size={10} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
-                        <span className="text-[8px] font-normal text-gray-400">[AI]</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-[10px] flex-shrink-0">🐾</span>
-                    )}
+                <div className="bg-white rounded-[1.25rem] p-2 flex flex-col h-full overflow-hidden">
+                  <PlaceImage
+                    imageUrl={place.imageUrl}
+                    category={place.category}
+                    className="w-full flex-1 min-h-0 rounded-xl object-cover mb-2"
+                  />
+                  <div className="px-1 shrink-0">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <h6 className="font-bold text-gray-900 text-sm truncate flex-1 pr-1">{place.title}</h6>
+                      {place.reviewCount > 0 ? (
+                        <span className="flex items-center text-brand-point text-[10px] font-bold gap-0.5 flex-shrink-0">
+                          <Star size={10} className="fill-brand-point" /> {place.rating.toFixed(1)}
+                        </span>
+                      ) : place.aiRating ? (
+                        <span className="flex items-center text-gray-900 text-[10px] font-bold gap-0.5 flex-shrink-0">
+                          <Star size={10} className="fill-[#008BFF] text-[#008BFF]" /> {place.aiRating.toFixed(1)}
+                          <span className="text-[8px] font-normal text-gray-400">[AI]</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-[10px] flex-shrink-0">🐾</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mb-1.5 flex items-center gap-1 truncate">
+                      <MapPin size={10} className="flex-shrink-0" /> {place.address}
+                    </p>
+                    <span className="inline-block bg-primary/10 text-primary border border-primary/30 text-[10px] font-medium px-2 py-0.5 rounded-full">
+                      {place.category.toUpperCase()}
+                    </span>
                   </div>
-                  <p className="text-[10px] text-gray-500 mb-1.5 flex items-center gap-1 truncate">
-                    <MapPin size={10} className="flex-shrink-0" /> {place.address}
-                  </p>
-                  <span className="inline-block bg-primary/10 text-primary border border-primary/30 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                    {place.category.toUpperCase()}
-                  </span>
                 </div>
               </div>
             )
@@ -317,16 +327,17 @@ export function List({ onNavigate, initialParams }: ListProps) {
 }
 
 
-function FilterButton({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) {
+function FilterButton({ label, icon: Icon, active, onClick }: { label: string, icon?: React.ElementType, active: boolean, onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-center px-1 py-1.5 rounded-full text-[10px] font-medium transition-colors ${
-        active 
-          ? 'bg-primary text-white shadow-md shadow-primary/20' 
+      className={`w-full flex items-center justify-center gap-1 px-1 py-1.5 rounded-full text-[10px] font-medium transition-spring hover:scale-[1.04] active:scale-[0.95] ${
+        active
+          ? 'bg-primary text-white shadow-md shadow-primary/20'
           : 'bg-gray-100 text-gray-500 border border-transparent hover:bg-gray-200'
       }`}
     >
+      {Icon && <Icon size={10} />}
       {label}
     </button>
   );

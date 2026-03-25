@@ -33,8 +33,8 @@ export function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
       ].map((item) => (
         <div
           key={item.id}
-          className={`flex flex-col items-center justify-center cursor-pointer transition-colors duration-300 flex-1 ${
-            activeTab === item.id ? 'text-primary font-bold' : 'text-[#b0bec5]'
+          className={`flex flex-col items-center justify-center cursor-pointer transition-spring hover:scale-[1.12] active:scale-[0.92] flex-1 ${
+            activeTab === item.id ? 'text-primary font-bold' : 'text-muted-foreground'
           }`}
           onClick={() => onNavigate(item.id)}
           role="button"

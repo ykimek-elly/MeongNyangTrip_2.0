@@ -56,7 +56,7 @@ function createNavigateHandler(navigate: ReturnType<typeof useNavigate>, isLogge
       case 'mypage':
       case 'wish':
         if (!isLoggedIn) {
-          alert("로그인이 필요합니다. (테스트: 아무 아이디나 입력)");
+          alert("로그인이 필요합니다.");
           navigate('/login');
         } else {
           navigate('/mypage');

@@ -27,6 +27,8 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: email, profile
+            redirect-uri: "https://meongnyangtrip.duckdns.org/login/oauth2/code/{registrationId}"
+
           kakao:
             client-id: ${KAKAO_OAUTH_CLIENT_ID}
             client-secret: ${KAKAO_OAUTH_CLIENT_SECRET}
@@ -44,6 +46,7 @@ spring:
 server:
   forward-headers-strategy: framework
   port: 8080
+  use-forward-headers: true
 
 pet-tour:
   service-key: ${PET_TOUR_SERVICE_KEY}

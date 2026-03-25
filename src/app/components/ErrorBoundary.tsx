@@ -36,14 +36,14 @@ export function RouteErrorFallback() {
         <div className="flex gap-3">
           <button
             onClick={() => window.location.reload()}
-            className="flex items-center gap-2 bg-gray-100 text-gray-600 px-5 py-3 rounded-2xl font-bold text-sm hover:bg-gray-200 active:scale-95 transition-all"
+            className="flex items-center gap-2 bg-gray-100 text-gray-600 px-5 py-3 rounded-2xl font-bold text-sm hover:bg-gray-200 active:scale-[0.97] transition-spring"
           >
             <RotateCcw size={16} />
             새로고침
           </button>
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-md hover:bg-primary/90 active:scale-95 transition-all"
+            className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-md hover:bg-primary/90 active:scale-[0.97] transition-spring"
           >
             <Home size={16} />
             홈으로
@@ -119,14 +119,14 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
             <div className="flex gap-3">
               <button
                 onClick={() => window.location.reload()}
-                className="flex items-center gap-2 bg-gray-100 text-gray-600 px-5 py-3 rounded-2xl font-bold text-sm hover:bg-gray-200 active:scale-95 transition-all"
+                className="flex items-center gap-2 bg-gray-100 text-gray-600 px-5 py-3 rounded-2xl font-bold text-sm hover:bg-gray-200 active:scale-[0.97] transition-spring"
               >
                 <RotateCcw size={16} />
                 새로고침
               </button>
               <button
                 onClick={this.handleReset}
-                className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-md hover:bg-primary/90 active:scale-95 transition-all"
+                className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-md hover:bg-primary/90 active:scale-[0.97] transition-spring"
               >
                 <Home size={16} />
                 홈으로

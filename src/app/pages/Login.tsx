@@ -248,13 +248,13 @@ export function Login({ onNavigate }: LoginProps) {
       {/* Footer */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center justify-center text-[11px] text-gray-500">
         <div className="flex items-center gap-2 mb-2">
-          <span onClick={() => onNavigate('team')} className="cursor-pointer font-semibold hover:text-gray-800 transition-colors">개발팀 소개</span>
+          <span onClick={() => onNavigate('team')} className="cursor-pointer font-semibold hover:text-gray-800 transition-spring">개발팀 소개</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => setActiveModal('terms')} className="cursor-pointer hover:text-gray-800 transition-colors">이용약관</span>
+          <span onClick={() => setActiveModal('terms')} className="cursor-pointer hover:text-gray-800 transition-spring">이용약관</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => setActiveModal('privacy')} className="cursor-pointer font-semibold text-gray-700 hover:text-gray-900 transition-colors">개인정보처리방침</span>
+          <span onClick={() => setActiveModal('privacy')} className="cursor-pointer font-semibold text-gray-700 hover:text-gray-900 transition-spring">개인정보처리방침</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => setActiveModal('support')} className="cursor-pointer hover:text-gray-800 transition-colors">고객센터</span>
+          <span onClick={() => setActiveModal('support')} className="cursor-pointer hover:text-gray-800 transition-spring">고객센터</span>
         </div>
         <div className="text-gray-400 text-[12px] text-center">
           <p className="mt-0.5">Copyright © {new Date().getFullYear()} Team 멍냥트립. All rights reserved.</p>

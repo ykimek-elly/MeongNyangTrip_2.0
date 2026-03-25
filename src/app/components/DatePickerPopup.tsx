@@ -161,7 +161,7 @@ export function DatePickerPopup({ value, onChange }: DatePickerPopupProps) {
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <button
-              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition-spring"
               onClick={(e) => { e.stopPropagation(); prevMonth(); }}
             >
               <ChevronLeft size={16} className="text-gray-500" />
@@ -170,7 +170,7 @@ export function DatePickerPopup({ value, onChange }: DatePickerPopupProps) {
               {year}년 {MONTHS[month]}
             </span>
             <button
-              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition-spring"
               onClick={(e) => { e.stopPropagation(); nextMonth(); }}
             >
               <ChevronRight size={16} className="text-gray-500" />
@@ -192,7 +192,7 @@ export function DatePickerPopup({ value, onChange }: DatePickerPopupProps) {
               <div key={i} className="flex items-center justify-center">
                 {day ? (
                   <button
-                    className={`w-8 h-8 rounded-full text-xs font-medium transition-all
+                    className={`w-8 h-8 rounded-full text-xs font-medium transition-spring
                       ${isSelected(day)
                         ? 'bg-primary text-white font-bold'
                         : isToday(day)

@@ -84,7 +84,7 @@ export function Signup({ onNavigate }: SignupProps) {
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">소셜 계정으로 가입</p>
             <button
               onClick={() => handleSocialLogin('google')}
-              className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 rounded-2xl bg-white hover:bg-gray-50 active:scale-[0.98] transition-all"
+              className="w-full flex items-center justify-center gap-3 py-3.5 border border-gray-200 rounded-2xl bg-white hover:bg-gray-50 active:scale-[0.97] transition-spring"
             >
               <svg width="20" height="20" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -97,7 +97,7 @@ export function Signup({ onNavigate }: SignupProps) {
 
             <button
               onClick={() => handleSocialLogin('kakao')}
-              className="w-full flex items-center justify-center gap-3 py-3.5 border border-yellow-300 rounded-2xl bg-[#FEE500] hover:bg-[#FDD800] active:scale-[0.98] transition-all"
+              className="w-full flex items-center justify-center gap-3 py-3.5 border border-yellow-300 rounded-2xl bg-[#FEE500] hover:bg-[#FDD800] active:scale-[0.97] transition-spring"
             >
               <svg width="20" height="20" viewBox="0 0 48 48">
                 <path fill="#3C1E1E" d="M24 4C12.95 4 4 11.16 4 20c0 5.6 3.6 10.5 9.09 13.37l-2.32 8.55c-.2.75.64 1.35 1.3.92L20.55 37c1.12.15 2.27.24 3.45.24 11.05 0 20-7.16 20-16S35.05 4 24 4z"/>
@@ -124,7 +124,7 @@ export function Signup({ onNavigate }: SignupProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="example@email.com"
                   autoComplete="email"
-                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
+                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm"
                 />
               </div>
             </div>
@@ -138,7 +138,7 @@ export function Signup({ onNavigate }: SignupProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="6자리 이상 입력해주세요"
                   autoComplete="new-password"
-                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm pr-12"
+                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm pr-12"
                 />
                 <button
                   type="button"
@@ -160,7 +160,7 @@ export function Signup({ onNavigate }: SignupProps) {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="활동할 닉네임을 입력해주세요"
-                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm"
                 maxLength={20}
               />
             </div>
@@ -174,7 +174,7 @@ export function Signup({ onNavigate }: SignupProps) {
                   value={phone}
                   onChange={(e) => setPhone(formatPhone(e.target.value))}
                   placeholder="010-0000-0000"
-                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
+                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm"
                 />
               </div>
             </div>

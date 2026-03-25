@@ -34,7 +34,7 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
         <h3 className="text-lg font-bold text-gray-800">카테고리별 베스트 👍</h3>
         <button
           onClick={() => onNavigate('list', { category: activeCategory })}
-          className="text-xs text-gray-400 flex items-center gap-1 hover:text-gray-600 transition-colors"
+          className="text-xs text-gray-400 flex items-center gap-1 hover:text-gray-600 transition-spring"
         >
           더보기 <span className="text-[10px]">›</span>
         </button>
@@ -46,7 +46,7 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-spring duration-200 ${
               activeCategory === cat.id
                 ? 'bg-primary text-white shadow-md'
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
@@ -68,7 +68,7 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: idx * 0.05 }}
                 onClick={() => onNavigate('detail', { id: place.id })}
-                className="bg-white p-3 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.03)] border border-gray-100 flex gap-4 cursor-pointer hover:border-primary/30 transition-colors"
+                className="bg-white p-3 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.03)] border border-gray-100 flex gap-4 cursor-pointer hover:border-primary/30 transition-spring"
               >
                 {/* 이미지 & 순위 */}
                 <div className="relative w-[80px] h-[80px] flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">

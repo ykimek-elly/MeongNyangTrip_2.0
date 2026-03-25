@@ -101,7 +101,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
       <header className="px-5 py-4 flex items-center bg-white sticky top-0 z-10 border-b border-gray-100">
         <button
           onClick={() => onNavigate('home')}
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-spring"
         >
           <ArrowLeft size={24} />
         </button>
@@ -132,7 +132,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
                   onChange={(e) => setNewNickname(e.target.value)}
                   placeholder="닉네임을 입력해주세요"
                   maxLength={20}
-                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm"
+                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm"
                 />
               </div>
               {newNickname.trim().length > 0 && newNickname.trim().length < 2 && (
@@ -170,7 +170,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
           <button
             onClick={handleSaveProfile}
             disabled={!profileChanged || isProfileSaving}
-            className={`w-full mt-5 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] ${
+            className={`w-full mt-5 py-3.5 rounded-2xl font-bold text-sm transition-spring active:scale-[0.98] ${
               profileChanged && !isProfileSaving
                 ? 'bg-primary text-white shadow-md hover:bg-primary/90'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -214,7 +214,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="현재 비밀번호를 입력하세요"
-                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm pr-12"
+                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm pr-12"
                 />
                 <button
                   type="button"
@@ -235,7 +235,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="6자리 이상 입력해주세요"
-                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm pr-12"
+                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm pr-12"
                 />
                 <button
                   type="button"
@@ -262,7 +262,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="비밀번호를 다시 입력해주세요"
-                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-colors text-sm pr-12"
+                  className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm pr-12"
                 />
                 <button
                   type="button"
@@ -292,7 +292,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
           <button
             onClick={handleChangePassword}
             disabled={!canChangePassword || isPasswordChanging}
-            className={`w-full mt-5 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] ${
+            className={`w-full mt-5 py-3.5 rounded-2xl font-bold text-sm transition-spring active:scale-[0.98] ${
               canChangePassword && !isPasswordChanging
                 ? 'bg-gray-900 text-white shadow-md hover:bg-gray-800'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -335,7 +335,7 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
           </p>
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full py-3 rounded-2xl border border-red-200 text-destructive text-sm font-bold hover:bg-red-50 transition-colors active:scale-[0.98]"
+            className="w-full py-3 rounded-2xl border border-red-200 text-destructive text-sm font-bold hover:bg-red-50 transition-spring active:scale-[0.98]"
           >
             회원 탈퇴
           </button>
@@ -357,14 +357,14 @@ export function EditProfile({ onNavigate }: EditProfileProps) {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-spring"
               >
                 취소
               </button>
               <button
                 onClick={handleDeleteAccount}
                 disabled={isDeleting}
-                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors disabled:opacity-60"
+                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-spring disabled:opacity-60"
               >
                 {isDeleting ? (
                   <span className="flex items-center justify-center gap-1.5">

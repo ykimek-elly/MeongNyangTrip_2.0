@@ -205,7 +205,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                     placeholder="반려동물 이름"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-primary transition-colors text-sm"
+                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-primary transition-spring text-sm"
                     maxLength={20}
                   />
                 </div>
@@ -217,7 +217,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                       <button
                         key={t.id}
                         onClick={() => { setType(t.id); setBreed(''); setCustomBreed(''); }}
-                        className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border-2 transition-all ${
+                        className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border-2 transition-spring ${
                           type === t.id
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-gray-100 text-gray-600 hover:bg-gray-50'
@@ -237,7 +237,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                       <button
                         key={b}
                         onClick={() => setBreed(b)}
-                        className={`px-3.5 py-2 rounded-full text-sm transition-all ${
+                        className={`px-3.5 py-2 rounded-full text-sm transition-spring ${
                           breed === b
                             ? 'bg-primary text-white font-bold shadow-md'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -258,7 +258,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                         value={customBreed}
                         onChange={e => setCustomBreed(e.target.value)}
                         placeholder="품종을 직접 입력해주세요"
-                        className="w-full px-4 py-3 rounded-2xl border-2 border-primary/40 bg-primary/5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-primary transition-colors"
+                        className="w-full px-4 py-3 rounded-2xl border-2 border-primary/40 bg-primary/5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-primary transition-spring"
                         autoFocus
                       />
                     </motion.div>
@@ -272,7 +272,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                       <button
                         key={g.id}
                         onClick={() => setGender(g.id)}
-                        className={`flex items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all ${
+                        className={`flex items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-spring ${
                           gender === g.id
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-gray-100 text-gray-600 hover:bg-gray-50'
@@ -288,7 +288,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                 <button
                   onClick={() => canProceed && setStep(2)}
                   disabled={!canProceed}
-                  className={`w-full py-3.5 rounded-2xl font-bold transition-all ${
+                  className={`w-full py-3.5 rounded-2xl font-bold transition-spring ${
                     canProceed
                       ? 'bg-primary text-white shadow-md active:scale-[0.98]'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -310,7 +310,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
               >
                 <button
                   onClick={() => setStep(1)}
-                  className="text-sm text-gray-500 hover:text-primary transition-colors flex items-center gap-1"
+                  className="text-sm text-gray-500 hover:text-primary transition-spring flex items-center gap-1"
                 >
                   ← 기본 정보로 돌아가기
                 </button>
@@ -322,7 +322,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                     placeholder="예: 3"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-primary transition-colors text-sm"
+                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-primary transition-spring text-sm"
                     min={0}
                     max={30}
                   />
@@ -337,7 +337,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                     placeholder="예: 5.5"
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
-                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-primary transition-colors text-sm"
+                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-primary transition-spring text-sm"
                     min={0}
                     max={100}
                     step={0.1}
@@ -351,7 +351,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                       <button
                         key={s.id}
                         onClick={() => setSize(s.id)}
-                        className={`p-3 rounded-2xl border-2 transition-all text-center ${
+                        className={`p-3 rounded-2xl border-2 transition-spring text-center ${
                           size === s.id
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-gray-100 text-gray-600 hover:bg-gray-50'
@@ -371,7 +371,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                       <button
                         key={a.id}
                         onClick={() => setActivity(a.id)}
-                        className={`p-3 rounded-2xl border-2 transition-all text-center ${
+                        className={`p-3 rounded-2xl border-2 transition-spring text-center ${
                           activity === a.id
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-gray-100 text-gray-600 hover:bg-gray-50'
@@ -388,7 +388,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                   <button
                     type="button"
                     onClick={() => setSetAsRepresentative(prev => !prev)}
-                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all ${
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-spring ${
                       setAsRepresentative ? 'border-primary bg-primary/5' : 'border-gray-100 bg-gray-50'
                     }`}
                   >
@@ -405,7 +405,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                 <button
                   onClick={() => canStep2Submit && setStep(3)}
                   disabled={!canStep2Submit}
-                  className={`w-full py-3.5 rounded-2xl font-bold transition-all ${
+                  className={`w-full py-3.5 rounded-2xl font-bold transition-spring ${
                     canStep2Submit
                       ? 'bg-primary text-white shadow-md active:scale-[0.98]'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -427,7 +427,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
               >
                 <button
                   onClick={() => setStep(2)}
-                  className="text-sm text-gray-500 hover:text-primary transition-colors flex items-center gap-1"
+                  className="text-sm text-gray-500 hover:text-primary transition-spring flex items-center gap-1"
                 >
                   ← 상세 정보로 돌아가기
                 </button>
@@ -447,7 +447,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                           <button
                             type="button"
                             onClick={() => handleSidoChange(s)}
-                            className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
+                            className={`w-full text-left px-3 py-2.5 text-sm transition-spring ${
                               sido === s
                                 ? 'bg-primary text-white font-bold'
                                 : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200'
@@ -471,7 +471,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                             <button
                               type="button"
                               onClick={() => setDistrict(prev => prev === d ? '' : d)}
-                              className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                              className={`w-full text-left px-3 py-2.5 text-sm transition-spring flex items-center justify-between ${
                                 district === d
                                   ? 'text-primary font-bold bg-primary/5'
                                   : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
@@ -504,7 +504,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                         <button
                           key={rs.value}
                           onClick={() => setActivityRadius(rs.value)}
-                          className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-all active:opacity-80 ${
+                          className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-spring active:opacity-80 ${
                             filled ? 'bg-primary' : 'bg-white'
                           } ${idx > 0 ? 'border-l-2 border-gray-100' : ''}`}
                         >
@@ -537,7 +537,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                         <button
                           key={id}
                           onClick={() => setPersonality(selected ? '' : id)}
-                          className={`flex flex-col items-center gap-2 p-3.5 rounded-2xl border-2 transition-all ${
+                          className={`flex flex-col items-center gap-2 p-3.5 rounded-2xl border-2 transition-spring ${
                             selected ? 'border-primary bg-primary/5' : 'border-gray-100 bg-white hover:bg-gray-50'
                           }`}
                         >
@@ -563,7 +563,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                         <button
                           key={id}
                           onClick={() => setAtmosphere(selected ? '' : id)}
-                          className={`w-full flex items-center p-3.5 rounded-2xl border-2 transition-all ${
+                          className={`w-full flex items-center p-3.5 rounded-2xl border-2 transition-spring ${
                             selected ? 'border-primary bg-primary/5' : 'border-gray-100 bg-white hover:bg-gray-50'
                           }`}
                         >
@@ -584,7 +584,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                 {/* ⑤ 알림 수신 */}
                 <div
                   onClick={() => setNotifyEnabled(prev => !prev)}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border-2 cursor-pointer transition-spring ${
                     notifyEnabled ? 'border-primary bg-primary/5' : 'border-gray-100 bg-gray-50'
                   }`}
                 >
@@ -599,8 +599,8 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                       <div className="text-[11px] text-gray-400">날씨·장소·이벤트 알림</div>
                     </div>
                   </div>
-                  <div className={`w-11 h-6 rounded-full transition-colors relative ${notifyEnabled ? 'bg-primary' : 'bg-gray-300'}`}>
-                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${notifyEnabled ? 'left-5' : 'left-0.5'}`} />
+                  <div className={`w-11 h-6 rounded-full transition-spring relative ${notifyEnabled ? 'bg-primary' : 'bg-gray-300'}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-spring ${notifyEnabled ? 'left-5' : 'left-0.5'}`} />
                   </div>
                 </div>
 
@@ -608,7 +608,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                 <button
                   onClick={handleSubmit}
                   disabled={!canSubmit}
-                  className={`w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
+                  className={`w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-spring ${
                     canSubmit
                       ? 'bg-primary text-white shadow-md active:scale-[0.98]'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'

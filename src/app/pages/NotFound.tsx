@@ -26,7 +26,7 @@ export function NotFound({ onNavigate }: NotFoundProps) {
 
       <button
         onClick={() => onNavigate('home')}
-        className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-md hover:bg-primary/90 active:scale-95 transition-all"
+        className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-md hover:bg-primary/90 active:scale-[0.97] transition-spring"
       >
         <Home size={18} />
         홈으로 돌아가기

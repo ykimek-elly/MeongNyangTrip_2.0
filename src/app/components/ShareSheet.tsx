@@ -168,7 +168,7 @@ export function ShareSheet({ isOpen, onClose, postId, postImage, postUser }: Sha
                     </div>
                     <button
                       onClick={() => setShowAddFriend(!showAddFriend)}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-spring ${
                         showAddFriend
                           ? 'bg-primary text-white'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -221,7 +221,7 @@ export function ShareSheet({ isOpen, onClose, postId, postImage, postUser }: Sha
                           />
                           <button
                             onClick={handleShare}
-                            className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-full hover:bg-primary/90 active:scale-95 transition-all shrink-0"
+                            className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-full hover:bg-primary/90 active:scale-[0.97] transition-spring shrink-0"
                           >
                             보내기
                           </button>
@@ -268,10 +268,10 @@ function QuickShareButton({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 min-w-[72px] py-1.5 active:scale-95 transition-transform"
+      className="flex flex-col items-center gap-1.5 min-w-[72px] py-1.5 active:scale-[0.97] transition-transform"
     >
       <div
-        className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors ${
+        className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-spring ${
           active
             ? 'border-primary bg-primary/5 text-primary'
             : 'border-gray-200 bg-white text-gray-700'
@@ -324,11 +324,11 @@ function FriendGrid({
           <button
             key={friend.id}
             onClick={() => onToggle(friend.id)}
-            className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+            className="flex flex-col items-center gap-1.5 active:scale-[0.97] transition-transform"
           >
             <div className="relative">
               <div
-                className={`w-[60px] h-[60px] rounded-full overflow-hidden border-2 transition-all ${
+                className={`w-[60px] h-[60px] rounded-full overflow-hidden border-2 transition-spring ${
                   isSelected ? 'border-primary' : 'border-transparent'
                 }`}
               >
@@ -406,7 +406,7 @@ function AddFriendPanel({
               <motion.div
                 key={friend.id}
                 layout
-                className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-spring"
               >
                 <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-100 shrink-0 relative">
                   <img
@@ -439,7 +439,7 @@ function AddFriendPanel({
                 ) : (
                   <button
                     onClick={() => handleAdd(friend)}
-                    className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90 active:scale-95 transition-all flex items-center gap-1"
+                    className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90 active:scale-[0.97] transition-spring flex items-center gap-1"
                   >
                     <CirclePlus size={14} /> 친구 추가
                   </button>

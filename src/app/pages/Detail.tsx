@@ -472,12 +472,12 @@ export function Detail({ id, onNavigate }: DetailProps) {
                         <p className="text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1"><Tag size={12} /> 장소 태그</p>
                         <div className="flex flex-wrap gap-1.5">
                           {positive.map((tag, idx) => (
-                            <span key={`pos-${idx}`} className="text-[12px] font-medium bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-full transition-spring hover:scale-105 active:scale-95 cursor-default inline-block animate-fade-in-up" style={{ animationDelay: `${idx * 0.04}s` }}>
+                            <span key={`pos-${idx}`} className="text-[12px] font-medium bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-full transition-spring hover:scale-105 active:scale-[0.97] cursor-default inline-block animate-fade-in-up" style={{ animationDelay: `${idx * 0.04}s` }}>
                               #{tag}
                             </span>
                           ))}
                           {restricted.map((tag, idx) => (
-                            <span key={`res-${idx}`} className="text-[12px] font-medium bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-1 rounded-full transition-spring hover:scale-105 active:scale-95 cursor-default inline-block">
+                            <span key={`res-${idx}`} className="text-[12px] font-medium bg-orange-50 text-orange-600 border border-orange-200 px-2.5 py-1 rounded-full transition-spring hover:scale-105 active:scale-[0.97] cursor-default inline-block">
                               #{tag}
                             </span>
                           ))}

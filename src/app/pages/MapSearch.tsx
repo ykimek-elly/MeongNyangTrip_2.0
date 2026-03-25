@@ -335,7 +335,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={() => onNavigate('home')}
-            className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-white transition-colors"
+            className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-white transition-spring"
           >
             <ArrowLeft size={20} className="text-gray-700" />
           </button>
@@ -368,7 +368,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
               )}
               <button
                 onClick={() => { setSearchQuery(searchInput); setShowSuggestions(false); }}
-                className="bg-primary text-white font-bold text-[13px] whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm active:scale-95 transition-all"
+                className="bg-primary text-white font-bold text-[13px] whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm active:scale-[0.97] transition-all"
               >
                 검색
               </button>
@@ -395,7 +395,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                           setMapLevel(3);
                         }
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-spring text-left border-b border-gray-50 last:border-0"
                     >
                       <PawPrint size={14} className="text-primary shrink-0" />
                       <div className="min-w-0">
@@ -449,7 +449,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         onClick={handleLocate}
         animate={{ rotate: spinning ? 360 : 0 }}
         transition={{ duration: 0.55, ease: "easeInOut" }}
-        className={`absolute right-4 bottom-[82px] z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-colors ${lat && lng ? 'text-primary' : 'text-gray-700'}`}
+        className={`absolute right-4 bottom-[82px] z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-[0.97] transition-spring ${lat && lng ? 'text-primary' : 'text-gray-700'}`}
       >
         <Navigation size={24} />
       </motion.button>
@@ -518,7 +518,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : selectedVet.place_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 카카오 길찾기
                 </a>
@@ -528,7 +528,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : `https://map.naver.com/v5/search/${encodeURIComponent(selectedVet.place_name + ' ' + (selectedVet.road_address_name || selectedVet.address_name))}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 네이버 길찾기
                 </a>
@@ -602,7 +602,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
 
                     <button
                       onClick={() => onNavigate('detail', { id: selectedPlace.id })} // Mock ID, usually needs real ID
-                      className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md active:scale-95 transition-transform"
+                      className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md active:scale-[0.97] transition-transform"
                     >
                       상세보기
                     </button>
@@ -618,7 +618,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : `https://map.kakao.com/link/to/${encodeURIComponent(selectedPlace.name || selectedPlace.title || '')},${selectedPlace.latitude},${selectedPlace.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 카카오 길찾기
                 </a>
@@ -628,7 +628,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : `https://map.naver.com/v5/search/${encodeURIComponent(selectedPlace.name || selectedPlace.title || '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 네이버 길찾기
                 </a>

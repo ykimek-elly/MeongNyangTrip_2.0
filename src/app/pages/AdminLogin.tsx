@@ -72,7 +72,7 @@ export function AdminLogin({ onNavigate }: AdminLoginProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@test.com"
+                placeholder="admin@meongtrip.com"
                 className="w-full pl-10 pr-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-600 outline-none focus:border-primary transition-colors"
               />
             </div>

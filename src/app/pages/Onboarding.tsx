@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, type PetInfo } from '../store/useAppStore';
-import { PawPrint, Heart, MapPin, Sparkles, Bell } from 'lucide-react';
+import { PawPrint, Heart, MapPin, Sparkles, Bell, Dog, Cat } from 'lucide-react';
 import { PetProfileForm } from '../components/PetProfileForm';
 
 interface OnboardingProps {
@@ -63,7 +63,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.2 }}
                 className="w-28 h-28 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-8"
               >
-                <span className="text-6xl">🎉</span>
+                <Sparkles size={52} className="text-primary" />
               </motion.div>
 
               <h1 className="text-2xl font-bold text-gray-900 mb-3">
@@ -99,7 +99,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
               <div className="space-y-3 mt-auto">
                 <button
                   onClick={() => setShowPetForm(true)}
-                  className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-spring flex items-center justify-center gap-2"
                 >
                   <PawPrint size={20} />
                   반려동물 등록하기
@@ -130,7 +130,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 transition={{ type: 'spring', damping: 10, stiffness: 200, delay: 0.1 }}
                 className="w-28 h-28 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
               >
-                <span className="text-6xl">🐾</span>
+                <PawPrint size={52} className="text-green-500" />
               </motion.div>
 
               <motion.div
@@ -144,7 +144,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
 
                 {pet && (
                   <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full mx-auto mb-3">
-                    <span className="text-lg">{pet.type === '강아지' ? '🐶' : '🐱'}</span>
+                    {pet.type === '강아지' ? <Dog size={18} className="text-primary" /> : <Cat size={18} className="text-primary" />}
                     <span className="text-sm font-bold text-primary">
                       {pet.name} · {pet.breed} · {pet.age}살
                     </span>
@@ -182,7 +182,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 )}
                 <button
                   onClick={() => handleComplete('home')}
-                  className={`w-full py-3.5 rounded-2xl font-bold transition-all active:scale-[0.98] ${pet ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-primary text-white shadow-lg hover:bg-primary/90'
+                  className={`w-full py-3.5 rounded-2xl font-bold transition-all active:scale-[0.98] ${pet ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-primary text-white shadow-md hover:bg-primary/90'
                     }`}
                 >
                   홈으로 가기

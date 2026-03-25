@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, PawPrint, Pencil, Plus, Star, Smile, Meh, Frown } from 'lucide-react';
+import { Leaf, Navigation, Calendar, Clock, MapPin, Trash2, Heart, Award, Shield, Image as ImageIcon, MessageCircle, Send, AlertTriangle, EyeOff, ChevronRight, PawPrint, Pencil, Plus, Star, Smile, Meh, Frown, Dog, Cat } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useFeedStore } from '../store/useFeedStore';
 import { useDMStore } from '../store/useDMStore';
@@ -79,12 +79,13 @@ React.useEffect(() => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
       className="bg-gray-50"
     >
       {/* Profile Header */}
-      <div className="bg-white p-6 pb-8 rounded-b-[40px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] mb-6">
+      <div className="bg-white p-6 pb-8 rounded-b-[40px] shadow-[0_4px_24px_rgba(227,99,148,0.08)] mb-6">
 
         {/* 반려동물 섹션 헤더 */}
         <div className="flex items-center justify-between mb-4 mt-4">
@@ -141,7 +142,7 @@ React.useEffect(() => {
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shrink-0 ${
                   pet.isRepresentative ? 'bg-primary/15' : 'bg-gray-100'
                 }`}>
-                  {pet.type === '강아지' ? '🐶' : '🐱'}
+                  {pet.type === '강아지' ? <Dog size={18} className="text-primary" /> : <Cat size={18} className="text-primary" />}
                 </div>
 
                 {/* 정보 */}
@@ -205,13 +206,17 @@ React.useEffect(() => {
 
 
         <div className="grid grid-cols-2 gap-3 mt-6">
-          <div className="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
-            <span className="text-gray-500 text-xs font-medium block mb-1">나의 찜</span>
-            <h5 className="font-bold text-primary text-xl">{wishlist.length}</h5>
+          <div className="p-0.5 bg-primary/5 rounded-[1.3rem] ring-1 ring-primary/10">
+            <div className="bg-white p-4 rounded-[1.1rem] text-center">
+              <span className="text-gray-500 text-xs font-medium block mb-1 leading-snug">나의 찜</span>
+              <h5 className="font-bold text-primary text-xl">{wishlist.length}</h5>
+            </div>
           </div>
-          <div className="bg-gray-50 p-4 rounded-2xl text-center border border-gray-100">
-            <span className="text-gray-500 text-xs font-medium block mb-1">다녀온 곳</span>
-            <h5 className="font-bold text-gray-900 text-xl">{totalVisits}</h5>
+          <div className="p-0.5 bg-gray-50 rounded-[1.3rem] ring-1 ring-gray-100">
+            <div className="bg-white p-4 rounded-[1.1rem] text-center">
+              <span className="text-gray-500 text-xs font-medium block mb-1 leading-snug">다녀온 곳</span>
+              <h5 className="font-bold text-gray-900 text-xl">{totalVisits}</h5>
+            </div>
           </div>
         </div>
       </div>
@@ -338,15 +343,20 @@ React.useEffect(() => {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {wishItems.map(p => (
+            {wishItems.map((p, idx) => (
               <div
                 key={p.id}
-                className="bg-white p-2.5 rounded-3xl shadow-sm active:scale-[0.98] transition-transform cursor-pointer border border-gray-50"
+                className="p-1 bg-white rounded-[1.6rem] ring-1 ring-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)] active:scale-[0.97] transition-spring cursor-pointer animate-fade-in-up"
+                style={{ animationDelay: `${idx * 0.06}s` }}
                 onClick={() => onNavigate('detail', { id: p.id })}
               >
-                <PlaceImage imageUrl={p.imageUrl} category={p.category} className="w-full aspect-square rounded-2xl mb-2 object-cover" />
-                <h6 className="font-bold text-gray-900 text-sm truncate px-1">{p.title}</h6>
-                <span className="text-gray-400 text-[10px] px-1">{p.address}</span>
+                <div className="bg-gray-50 rounded-[1.25rem] p-1.5">
+                  <PlaceImage imageUrl={p.imageUrl} category={p.category} className="w-full aspect-square rounded-xl mb-0 object-cover" />
+                </div>
+                <div className="px-2 py-2">
+                  <h6 className="font-bold text-gray-900 text-sm truncate leading-snug">{p.title}</h6>
+                  <span className="text-gray-400 text-[10px]">{p.address}</span>
+                </div>
               </div>
             ))}
           </div>

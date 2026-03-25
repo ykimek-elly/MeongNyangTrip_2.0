@@ -264,7 +264,7 @@ export function TeamPage({ onNavigate }: TeamPageProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + (i * 0.1) }}
-                className={`border rounded-2xl py-4 backdrop-blur-md transition-colors duration-500 ${isNightMode ? 'bg-white/[0.03] border-white/[0.05] shadow-lg' : 'bg-card border-border shadow-sm'}`}
+                className={`border rounded-2xl py-4 backdrop-blur-md transition-colors duration-500 ${isNightMode ? 'bg-white/[0.03] border-white/[0.05] shadow-md' : 'bg-card border-border shadow-sm'}`}
               >
                 <div className={`text-2xl font-black mb-1 transition-colors duration-500 ${isNightMode ? 'text-white drop-shadow-sm' : 'text-foreground'}`}>{s.value}</div>
                 <div className={`text-[9px] font-bold uppercase tracking-widest transition-colors duration-500 ${isNightMode ? 'text-indigo-300/80' : 'text-muted-foreground'}`}>{s.label}</div>

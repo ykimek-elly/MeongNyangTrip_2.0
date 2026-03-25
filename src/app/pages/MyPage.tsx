@@ -100,7 +100,7 @@ React.useEffect(() => {
           </div>
           <button
             onClick={openAdd}
-            className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-full shadow-md active:scale-95 transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-full shadow-md active:scale-[0.97] transition-spring"
           >
             <Plus size={12} /> 추가
           </button>
@@ -125,7 +125,7 @@ React.useEffect(() => {
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`relative flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-colors ${
+                className={`relative flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-spring ${
                   pet.isRepresentative
                     ? 'border-primary bg-primary/5'
                     : 'border-gray-100 bg-white'
@@ -174,7 +174,7 @@ React.useEffect(() => {
                   {!pet.isRepresentative && (
                     <button
                       onClick={() => setRepresentativePet(index)}
-                      className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 hover:bg-primary/10 hover:text-primary px-2 py-1 rounded-lg transition-colors"
+                      className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 hover:bg-primary/10 hover:text-primary px-2 py-1 rounded-lg transition-spring"
                     >
                       <Star size={10} /> 대표설정
                     </button>
@@ -182,13 +182,13 @@ React.useEffect(() => {
                   <div className="flex gap-1">
                     <button
                       onClick={() => openEdit(index)}
-                      className="p-2 text-gray-400 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-primary bg-gray-50 hover:bg-primary/5 rounded-lg transition-spring"
                     >
                       <Pencil size={13} />
                     </button>
                     <button
                       onClick={() => confirmDelete(index)}
-                      className="p-2 text-gray-400 hover:text-destructive bg-gray-50 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-destructive bg-gray-50 hover:bg-red-50 rounded-lg transition-spring"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -238,7 +238,7 @@ React.useEffect(() => {
             <div className="flex gap-1.5">
               <button
                 onClick={() => setPetMood('good')}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-spring active:scale-[0.97] ${
                   petMood === 'good' ? 'bg-green-500 text-white' : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
@@ -247,7 +247,7 @@ React.useEffect(() => {
               </button>
               <button
                 onClick={() => setPetMood('normal')}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-spring active:scale-[0.97] ${
                   petMood === 'normal' ? 'bg-amber-400 text-white' : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
@@ -256,7 +256,7 @@ React.useEffect(() => {
               </button>
               <button
                 onClick={() => setPetMood('bad')}
-                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-all active:scale-95 ${
+                className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-spring active:scale-[0.97] ${
                   petMood === 'bad' ? 'bg-red-400 text-white' : 'bg-white text-gray-500 border border-gray-100'
                 }`}
               >
@@ -267,7 +267,7 @@ React.useEffect(() => {
           </div>
           <button
             onClick={() => onNavigate('visit-checkin')}
-            className="flex-1 flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm active:scale-[0.98] transition-all"
+            className="flex-1 flex flex-col items-center justify-center gap-3 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm active:scale-[0.97] transition-spring"
           >
             <span className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
               <Award className="text-primary" size={24} />
@@ -283,7 +283,7 @@ React.useEffect(() => {
           /* 관리자 전용: 관리자 센터 바로가기 */
           <button
             onClick={() => onNavigate('admin')}
-            className="w-full flex items-center justify-between p-4 bg-gray-900 rounded-3xl shadow-sm active:scale-[0.98] transition-all"
+            className="w-full flex items-center justify-between p-4 bg-gray-900 rounded-3xl shadow-sm active:scale-[0.97] transition-spring"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center">
@@ -310,7 +310,7 @@ React.useEffect(() => {
                   key={i}
                   onClick={s.page ? () => onNavigate(s.page!) : undefined}
                   className={`bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100 relative ${
-                    s.page ? 'cursor-pointer active:scale-95 transition-transform hover:bg-gray-100' : ''
+                    s.page ? 'cursor-pointer active:scale-[0.97] transition-spring hover:bg-gray-100' : ''
                   }`}
                 >
                   <div className={`w-7 h-7 rounded-full ${s.color} flex items-center justify-center mx-auto mb-1.5 relative`}>
@@ -386,7 +386,7 @@ React.useEffect(() => {
               <div key={route.id} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 relative">
                 <button
                   onClick={() => removeSavedRoute(route.id)}
-                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 transition-colors bg-gray-50 rounded-full"
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 transition-spring bg-gray-50 rounded-full"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -464,13 +464,13 @@ React.useEffect(() => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setDeleteTargetIndex(null)}
-                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-sm hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-sm hover:bg-gray-200 transition-spring"
                 >
                   취소
                 </button>
                 <button
                   onClick={executeDelete}
-                  className="flex-1 py-3 rounded-xl bg-destructive text-white font-bold text-sm hover:bg-destructive/90 active:scale-95 transition-all"
+                  className="flex-1 py-3 rounded-xl bg-destructive text-white font-bold text-sm hover:bg-destructive/90 active:scale-[0.97] transition-spring"
                 >
                   삭제
                 </button>

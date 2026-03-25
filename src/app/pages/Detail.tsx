@@ -193,7 +193,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 </div>
                 <button
                   onClick={() => setShowAiPolicy(true)}
-                  className="flex items-center gap-1 bg-[#008BFF]/10 text-[#008BFF] text-[10px] font-bold px-2 py-0.5 rounded-full hover:bg-[#008BFF]/20 transition-colors"
+                  className="flex items-center gap-1 bg-[#008BFF]/10 text-[#008BFF] text-[10px] font-bold px-2 py-0.5 rounded-full hover:bg-[#008BFF]/20 transition-spring"
                 >
                   <span className="flex items-center justify-center w-[12px] h-[12px] bg-[#008BFF] text-white rounded-full text-[8px] font-black leading-none">i</span>
                   AI 추천
@@ -329,9 +329,9 @@ export function Detail({ id, onNavigate }: DetailProps) {
                   <span className="text-[12px] text-gray-700 leading-relaxed pt-1">{fullAddress}</span>
                 </div>
                 {place.phone && (
-                  <a href={`tel:${place.phone}`} className="flex items-center gap-3 text-[12px] text-gray-700 hover:text-primary transition-colors group">
-                    <div className="w-7 h-7 flex items-center justify-center bg-white border border-gray-200 rounded-lg shrink-0 group-hover:border-primary/30 transition-colors">
-                      <Phone size={13} className="text-gray-500 group-hover:text-primary transition-colors" />
+                  <a href={`tel:${place.phone}`} className="flex items-center gap-3 text-[12px] text-gray-700 hover:text-primary transition-spring group">
+                    <div className="w-7 h-7 flex items-center justify-center bg-white border border-gray-200 rounded-lg shrink-0 group-hover:border-primary/30 transition-spring">
+                      <Phone size={13} className="text-gray-500 group-hover:text-primary transition-spring" />
                     </div>
                     {place.phone}
                   </a>
@@ -449,7 +449,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                       {/* 산정 기준 링크 */}
                       <button
                         onClick={() => setShowAiPolicy(true)}
-                        className="w-full flex items-center justify-center gap-1 py-2.5 border-t border-gray-50 text-[11px] text-[#008BFF] font-medium hover:bg-blue-50/30 transition-colors"
+                        className="w-full flex items-center justify-center gap-1 py-2.5 border-t border-gray-50 text-[11px] text-[#008BFF] font-medium hover:bg-blue-50/30 transition-spring"
                       >
                         <Info size={11} />
                         AI 점수 산정 기준 보기
@@ -598,7 +598,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
                 placeholder="이 장소에 대한 솔직한 후기를 남겨주세요."
-                className="w-full h-[72px] bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-700 placeholder:text-gray-400 border border-gray-100 resize-none outline-none focus:border-primary/50 transition-colors"
+                className="w-full h-[72px] bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-700 placeholder:text-gray-400 border border-gray-100 resize-none outline-none focus:border-primary/50 transition-spring"
               />
               {!isLoggedIn && (
                 <p className="text-[11px] text-gray-400 text-center mt-2">로그인 후 리뷰를 작성할 수 있습니다.</p>

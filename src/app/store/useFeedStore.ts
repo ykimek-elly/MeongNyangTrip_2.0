@@ -45,7 +45,7 @@ interface FeedState {
   markDMRead: (postId: number, dmId: number) => void;
 }
 
-const API = '/api/v1/lounge';
+const API = '/lounge';
 
 export const useFeedStore = create<FeedState>((set, get) => ({
   posts: [],

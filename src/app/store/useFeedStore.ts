@@ -19,6 +19,7 @@ export interface FeedPost {
   comments: number;
   dms: number;
   placeId?: number;
+  postType: string;
   time: string;
   createdAt: string;
   isLiked: boolean;
@@ -31,11 +32,15 @@ export interface FeedPost {
 
 interface FeedState {
   posts: FeedPost[];
+  talks: FeedPost[];
   loading: boolean;
   fetchPosts: () => Promise<void>;
+  fetchTalks: () => Promise<void>;
   addPost: (post: { content: string; imageUrl: string; placeId?: number }) => Promise<void>;
+  addTalk: (content: string) => Promise<void>;
   toggleLike: (postId: number) => Promise<void>;
   addComment: (postId: number, user: string, content: string) => Promise<void>;
+  addTalkComment: (talkId: number, content: string) => Promise<void>;
   deleteComment: (postId: number, commentId: number) => Promise<void>;
   editPost: (postId: number, content: any) => Promise<void>;
   deletePost: (postId: number) => Promise<void>;
@@ -47,43 +52,45 @@ interface FeedState {
 
 const API = '/lounge';
 
+const mapPost = (p: any): FeedPost => ({
+  id: p.id,
+  user: p.user,
+  userImg: p.userImg ?? 'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=100&q=80',
+  img: p.img ?? '',
+  content: p.content,
+  likes: p.likes ?? 0,
+  comments: p.comments ?? 0,
+  dms: 0,
+  placeId: p.placeId,
+  postType: p.postType ?? 'FEED',
+  time: p.time ?? '',
+  createdAt: p.createdAt ?? '',
+  isLiked: p.isLiked ?? false,
+  likedBy: [],
+  commentList: (p.commentList ?? []).map((c: any) => ({
+    id: c.id,
+    user: c.user,
+    content: c.content,
+    time: '',
+    createdAt: c.createdAt ?? '',
+  })),
+  dmList: [],
+  isReported: false,
+  isHidden: false,
+});
+
 export const useFeedStore = create<FeedState>((set, get) => ({
   posts: [],
+  talks: [],
   loading: false,
 
-  // 피드 전체 조회
+  // 일반 피드 조회
   fetchPosts: async () => {
     set({ loading: true });
     try {
-      const res = await api.get(`${API}/posts`);
+      const res = await api.get(`${API}/posts?type=FEED`);
       const data = res.data?.data ?? [];
-      set({
-        posts: data.map((p: any) => ({
-          id: p.id,
-          user: p.user,
-          userImg: p.userImg ?? 'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=100&q=80',
-          img: p.img ?? '',
-          content: p.content,
-          likes: p.likes ?? 0,
-          comments: p.comments ?? 0,
-          dms: 0,
-          placeId: p.placeId,
-          time: p.time ?? '',
-          createdAt: p.createdAt ?? '',
-          isLiked: p.isLiked ?? false,
-          likedBy: [],
-          commentList: (p.commentList ?? []).map((c: any) => ({
-            id: c.id,
-            user: c.user,
-            content: c.content,
-            time: '',
-            createdAt: c.createdAt ?? '',
-          })),
-          dmList: [],
-          isReported: false,
-          isHidden: false,
-        })),
-      });
+      set({ posts: data.map(mapPost) });
     } catch (e) {
       console.error('피드 조회 실패', e);
     } finally {
@@ -91,13 +98,36 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
   },
 
-  // 게시글 작성
+  // 산책 톡 조회 (24시간 이내)
+  fetchTalks: async () => {
+    try {
+      const res = await api.get(`${API}/posts?type=TALK`);
+      const data = res.data?.data ?? [];
+      set({ talks: data.map(mapPost) });
+    } catch (e) {
+      console.error('산책 톡 조회 실패', e);
+    }
+  },
+
+  // 일반 게시글 작성
   addPost: async ({ content, imageUrl, placeId }) => {
     try {
-      await api.post(`${API}/posts`, { content, imageUrl, placeId });
+      await api.post(`${API}/posts`, { content, imageUrl, placeId, postType: 'FEED' });
       await get().fetchPosts();
     } catch (e) {
       console.error('게시글 작성 실패', e);
+    }
+  },
+
+  // 산책 톡 작성
+  addTalk: async (content) => {
+    try {
+      const res = await api.post(`${API}/posts`, { content, postType: 'TALK' });
+      const newTalk = mapPost(res.data?.data);
+      set((state) => ({ talks: [newTalk, ...state.talks] }));
+    } catch (e) {
+      console.error('산책 톡 작성 실패', e);
+      throw e;
     }
   },
 
@@ -118,7 +148,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
   },
 
-  // 댓글 작성
+  // 일반 피드 댓글 작성
   addComment: async (postId, _user, content) => {
     try {
       const res = await api.post(`${API}/posts/${postId}/comments`, { content });
@@ -148,6 +178,37 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
   },
 
+  // 산책 톡 댓글 작성
+  addTalkComment: async (talkId, content) => {
+    try {
+      const res = await api.post(`${API}/posts/${talkId}/comments`, { content });
+      const newComment = res.data?.data;
+      set((state) => ({
+        talks: state.talks.map((t) =>
+          t.id === talkId
+            ? {
+                ...t,
+                comments: t.comments + 1,
+                commentList: [
+                  ...t.commentList,
+                  {
+                    id: newComment?.id ?? Date.now(),
+                    user: newComment?.user ?? '나',
+                    content,
+                    time: '방금 전',
+                    createdAt: newComment?.createdAt ?? new Date().toISOString(),
+                  },
+                ],
+              }
+            : t
+        ),
+      }));
+    } catch (e) {
+      console.error('산책 톡 댓글 작성 실패', e);
+      throw e;
+    }
+  },
+
   // 댓글 삭제
   deleteComment: async (postId, commentId) => {
     try {
@@ -170,7 +231,6 @@ export const useFeedStore = create<FeedState>((set, get) => ({
 
   // 게시글 수정
   editPost: async (postId, content) => {
-    // commentList 수정 (로컬)인 경우 바로 반영
     if (typeof content === 'object' && content !== null) {
       set((state) => ({
         posts: state.posts.map((p) =>
@@ -197,13 +257,14 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       await api.delete(`${API}/posts/${postId}`);
       set((state) => ({
         posts: state.posts.filter((p) => p.id !== postId),
+        talks: state.talks.filter((t) => t.id !== postId),
       }));
     } catch (e) {
       console.error('게시글 삭제 실패', e);
     }
   },
 
-  // 아래는 로컬 전용 (어드민/DM 기능)
+  // 로컬 전용
   toggleHidePost: (postId) =>
     set((state) => ({
       posts: state.posts.map((p) =>

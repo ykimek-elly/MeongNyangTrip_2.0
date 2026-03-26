@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,10 +27,22 @@ public class LoungeService {
     private final LoungeLikeRepository likeRepository;
     private final UserRepository userRepository;
 
-    /** 전체 피드 조회 */
-    public List<LoungeDto.PostResponse> getPosts(String currentUserEmail) {
-        return postRepository.findByIsHiddenFalseOrderByPostIdDesc().stream()
-                .map(p -> LoungeDto.PostResponse.from(p, currentUserEmail != null ? currentUserEmail : ""))
+    /** 피드 조회 (type: FEED or TALK) */
+    public List<LoungeDto.PostResponse> getPosts(String currentUserEmail, String type) {
+        String email = currentUserEmail != null ? currentUserEmail : "";
+        List<LoungePost> posts;
+
+        if ("TALK".equalsIgnoreCase(type)) {
+            // 산책 톡: 24시간 이내만
+            LocalDateTime since = LocalDateTime.now().minusHours(24);
+            posts = postRepository.findByIsHiddenFalseAndPostTypeAndRegDateAfterOrderByPostIdDesc("TALK", since);
+        } else {
+            // 일반 피드
+            posts = postRepository.findByIsHiddenFalseAndPostTypeOrderByPostIdDesc("FEED");
+        }
+
+        return posts.stream()
+                .map(p -> LoungeDto.PostResponse.from(p, email))
                 .collect(Collectors.toList());
     }
 
@@ -37,11 +50,13 @@ public class LoungeService {
     @Transactional
     public LoungeDto.PostResponse createPost(String email, LoungeDto.CreateRequest req) {
         User user = getUser(email);
+        String type = req.getPostType() != null ? req.getPostType().toUpperCase() : "FEED";
         LoungePost post = LoungePost.builder()
                 .user(user)
                 .content(req.getContent())
                 .imageUrl(req.getImageUrl())
                 .placeId(req.getPlaceId())
+                .postType(type)
                 .build();
         postRepository.save(post);
         return LoungeDto.PostResponse.from(post, email);

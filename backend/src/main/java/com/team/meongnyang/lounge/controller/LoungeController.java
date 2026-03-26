@@ -18,12 +18,13 @@ public class LoungeController {
 
     private final LoungeService loungeService;
 
-    /** 피드 전체 조회 (비로그인도 가능) */
+    /** 피드/톡 조회 (비로그인도 가능) ?type=FEED or TALK */
     @GetMapping("/posts")
     public ResponseEntity<ApiResponse<List<LoungeDto.PostResponse>>> getPosts(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "FEED") String type) {
         String email = userDetails != null ? userDetails.getUsername() : null;
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", loungeService.getPosts(email)));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", loungeService.getPosts(email, type)));
     }
 
     /** 게시글 작성 */

@@ -34,6 +34,10 @@ public class LoungePost extends BaseEntity {
     @Column(name = "place_id")
     private Long placeId;
 
+    @Column(name = "post_type", nullable = false, length = 10)
+    @Builder.Default
+    private String postType = "FEED";
+
     @Column(name = "likes", nullable = false)
     @Builder.Default
     private int likes = 0;

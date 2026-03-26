@@ -15,6 +15,7 @@ public class LoungeDto {
         private String content;
         private String imageUrl;
         private Long placeId;
+        private String postType; // "FEED" or "TALK"
     }
 
     @Getter @NoArgsConstructor @AllArgsConstructor
@@ -35,6 +36,7 @@ public class LoungeDto {
         private String content;
         private String img;
         private Long placeId;
+        private String postType;
         private int likes;
         private boolean isLiked;
         private int comments;
@@ -50,12 +52,13 @@ public class LoungeDto {
                     .content(post.getContent())
                     .img(post.getImageUrl())
                     .placeId(post.getPlaceId())
+                    .postType(post.getPostType())
                     .likes(post.getLikes())
                     .isLiked(post.getLikeList().stream()
                             .anyMatch(l -> l.getUser().getEmail().equals(currentUserEmail)))
                     .comments(post.getCommentList().size())
                     .time("방금 전")
-                    .createdAt(null)
+                    .createdAt(post.getRegDate())
                     .commentList(post.getCommentList().stream()
                             .map(CommentResponse::from)
                             .collect(Collectors.toList()))
@@ -75,7 +78,7 @@ public class LoungeDto {
                     .id(comment.getCommentId())
                     .user(comment.getUser().getNickname())
                     .content(comment.getContent())
-                    .createdAt(null)
+                    .createdAt(comment.getRegDate())
                     .build();
         }
     }

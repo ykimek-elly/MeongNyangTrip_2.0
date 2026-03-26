@@ -92,7 +92,11 @@ export function Lounge({ onNavigate }: LoungeProps) {
   const [selectedTalk, setSelectedTalk] = useState<any | null>(null);
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
 
-  const { posts, addPost } = useFeedStore();
+  const { posts, addPost, fetchPosts } = useFeedStore();
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
   const places = useAppStore((s) => s.places);
 
   const handleCreatePost = (
@@ -108,12 +112,8 @@ export function Lounge({ onNavigate }: LoungeProps) {
         : imgSource; // 0빼고 전체 사용
 
     addPost({
-      user: "나",
-      userImg:
-        "https://images.unsplash.com/photo-1535930749574-1399327ce78f?w=100&q=80",
-      img: finalImg, // 👈 여기서 진짜 이미지가 결정됩니다!
       content,
-      time: "방금 전",
+      imageUrl: finalImg,
       placeId,
     });
     setIsWriteModalOpen(false);

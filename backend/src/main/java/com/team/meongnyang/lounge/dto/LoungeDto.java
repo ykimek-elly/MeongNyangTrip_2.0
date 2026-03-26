@@ -10,31 +10,24 @@ import java.util.stream.Collectors;
 
 public class LoungeDto {
 
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Getter @NoArgsConstructor @AllArgsConstructor
     public static class CreateRequest {
         private String content;
-        private String imageUrl;   // S3 URL (프론트에서 먼저 업로드 후 전달)
-        private Long placeId;      // 선택
+        private String imageUrl;
+        private Long placeId;
     }
 
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Getter @NoArgsConstructor @AllArgsConstructor
     public static class UpdateRequest {
         private String content;
     }
 
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Getter @NoArgsConstructor @AllArgsConstructor
     public static class CommentRequest {
         private String content;
     }
 
-    @Getter
-    @Builder
+    @Getter @Builder
     public static class PostResponse {
         private Long id;
         private String user;
@@ -61,8 +54,8 @@ public class LoungeDto {
                     .isLiked(post.getLikeList().stream()
                             .anyMatch(l -> l.getUser().getEmail().equals(currentUserEmail)))
                     .comments(post.getCommentList().size())
-                    .time(post.getCreatedAt() != null ? post.getCreatedAt().toString() : "")
-                    .createdAt(post.getCreatedAt())
+                    .time("방금 전")
+                    .createdAt(null)
                     .commentList(post.getCommentList().stream()
                             .map(CommentResponse::from)
                             .collect(Collectors.toList()))
@@ -70,8 +63,7 @@ public class LoungeDto {
         }
     }
 
-    @Getter
-    @Builder
+    @Getter @Builder
     public static class CommentResponse {
         private Long id;
         private String user;
@@ -83,7 +75,7 @@ public class LoungeDto {
                     .id(comment.getCommentId())
                     .user(comment.getUser().getNickname())
                     .content(comment.getContent())
-                    .createdAt(comment.getCreatedAt())
+                    .createdAt(null)
                     .build();
         }
     }

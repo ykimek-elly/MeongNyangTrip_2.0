@@ -55,7 +55,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   fetchPosts: async () => {
     set({ loading: true });
     try {
-      const res = await axios.get(`${API}/posts`);
+      const res = await api.get(`${API}/posts`);
       const data = res.data?.data ?? [];
       set({
         posts: data.map((p: any) => ({
@@ -94,7 +94,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   // 게시글 작성
   addPost: async ({ content, imageUrl, placeId }) => {
     try {
-      await axios.post(`${API}/posts`, { content, imageUrl, placeId });
+      await api.post(`${API}/posts`, { content, imageUrl, placeId });
       await get().fetchPosts();
     } catch (e) {
       console.error('게시글 작성 실패', e);
@@ -104,7 +104,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   // 좋아요 토글
   toggleLike: async (postId) => {
     try {
-      const res = await axios.post(`${API}/posts/${postId}/likes`);
+      const res = await api.post(`${API}/posts/${postId}/likes`);
       const updated = res.data?.data;
       set((state) => ({
         posts: state.posts.map((p) =>
@@ -121,7 +121,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   // 댓글 작성
   addComment: async (postId, _user, content) => {
     try {
-      const res = await axios.post(`${API}/posts/${postId}/comments`, { content });
+      const res = await api.post(`${API}/posts/${postId}/comments`, { content });
       const newComment = res.data?.data;
       set((state) => ({
         posts: state.posts.map((p) =>
@@ -151,7 +151,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   // 댓글 삭제
   deleteComment: async (postId, commentId) => {
     try {
-      await axios.delete(`${API}/posts/${postId}/comments/${commentId}`);
+      await api.delete(`${API}/posts/${postId}/comments/${commentId}`);
       set((state) => ({
         posts: state.posts.map((p) =>
           p.id === postId
@@ -180,7 +180,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       return;
     }
     try {
-      await axios.patch(`${API}/posts/${postId}`, { content });
+      await api.patch(`${API}/posts/${postId}`, { content });
       set((state) => ({
         posts: state.posts.map((p) =>
           p.id === postId ? { ...p, content } : p
@@ -194,7 +194,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   // 게시글 삭제
   deletePost: async (postId) => {
     try {
-      await axios.delete(`${API}/posts/${postId}`);
+      await api.delete(`${API}/posts/${postId}`);
       set((state) => ({
         posts: state.posts.filter((p) => p.id !== postId),
       }));

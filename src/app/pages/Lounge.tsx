@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Heart,
@@ -378,8 +378,10 @@ function WriteModal({
     try {
       const formData = new FormData();
       formData.append("file", file);
+      const token = localStorage.getItem('accessToken');  
       const res = await fetch("/api/v1/upload/image", {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
       const data = await res.json();

@@ -134,7 +134,7 @@ export function Login({ onNavigate }: LoginProps) {
   const login = useAppStore(state => state.login);
 
   const handleSocialLogin = (provider: string) => {
-    const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '');
+  const apiHost = window.location.origin;
     window.location.href = `${apiHost}/oauth2/authorization/${provider}`;
   };
 

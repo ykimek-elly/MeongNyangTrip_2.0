@@ -28,7 +28,7 @@ public class LoungeService {
 
     /** 전체 피드 조회 */
     public List<LoungeDto.PostResponse> getPosts(String currentUserEmail) {
-        return postRepository.findAllVisibleOrderByCreatedAtDesc().stream()
+        return postRepository.findByIsHiddenFalseOrderByPostIdDesc().stream()
                 .map(p -> LoungeDto.PostResponse.from(p, currentUserEmail != null ? currentUserEmail : ""))
                 .collect(Collectors.toList());
     }

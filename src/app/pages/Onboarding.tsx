@@ -38,7 +38,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
           {PHASES.map((p, idx) => (
             <div
               key={p}
-              className={`h-1.5 rounded-full flex-1 transition-all duration-500 ${idx <= PHASES.indexOf(phase) ? 'bg-primary' : 'bg-gray-200'
+              className={`h-1.5 rounded-full flex-1 transition-spring duration-500 ${idx <= PHASES.indexOf(phase) ? 'bg-primary' : 'bg-gray-200'
                 }`}
             />
           ))}
@@ -106,7 +106,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 </button>
                 <button
                   onClick={() => handleComplete('home')}
-                  className="w-full py-3 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                  className="w-full py-3 text-sm text-gray-400 hover:text-gray-600 transition-spring"
                 >
                   나중에 할게요
                 </button>
@@ -174,7 +174,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 {pet && (
                   <button
                     onClick={() => handleComplete('ai-walk-guide')}
-                    className="w-full py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-md hover:bg-amber-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-md hover:bg-amber-600 active:scale-[0.97] transition-spring flex items-center justify-center gap-2"
                   >
                     <Sparkles size={18} />
                     AI 산책 가이드 보러가기
@@ -182,7 +182,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 )}
                 <button
                   onClick={() => handleComplete('home')}
-                  className={`w-full py-3.5 rounded-2xl font-bold transition-all active:scale-[0.98] ${pet ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-primary text-white shadow-md hover:bg-primary/90'
+                  className={`w-full py-3.5 rounded-2xl font-bold transition-spring active:scale-[0.98] ${pet ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-primary text-white shadow-md hover:bg-primary/90'
                     }`}
                 >
                   홈으로 가기

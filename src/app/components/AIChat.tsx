@@ -54,7 +54,7 @@ export function AIChat() {
           <div className="absolute bottom-0 left-full pl-3">
             <button
               onClick={() => setIsOpen(true)}
-              className="w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform pointer-events-auto"
+              className="w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center hover:scale-105 active:scale-[0.97] transition-transform pointer-events-auto"
               title="AI 챗봇"
             >
               <Bot size={22} />
@@ -136,7 +136,7 @@ export function AIChat() {
                   />
                   <button
                     onClick={handleSend}
-                    className="bg-primary text-white p-2.5 rounded-full hover:bg-primary/90 transition-colors"
+                    className="bg-primary text-white p-2.5 rounded-full hover:bg-primary/90 transition-spring"
                   >
                     <Send size={16} />
                   </button>

@@ -113,7 +113,7 @@ export function Lounge({ onNavigate }: LoungeProps) {
       <div className="sticky top-0 z-40 bg-white border-b border-gray-100 flex">
         <button
           onClick={() => setActiveTab("feed")}
-          className={`flex-1 py-3 text-sm font-bold transition-colors relative ${
+          className={`flex-1 py-3 text-sm font-bold transition-spring relative ${
             activeTab === "feed"
               ? "text-gray-900"
               : "text-gray-400"
@@ -131,7 +131,7 @@ export function Lounge({ onNavigate }: LoungeProps) {
         </button>
         <button
           onClick={() => setActiveTab("talk")}
-          className={`flex-1 py-3 text-sm font-bold transition-colors relative ${
+          className={`flex-1 py-3 text-sm font-bold transition-spring relative ${
             activeTab === "talk"
               ? "text-gray-900"
               : "text-gray-400"
@@ -171,7 +171,7 @@ export function Lounge({ onNavigate }: LoungeProps) {
           <div className="absolute bottom-0 left-full flex flex-col gap-2.5 pl-3">
             <button
               onClick={() => setIsWriteModalOpen(true)}
-              className="w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform pointer-events-auto"
+              className="w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center hover:scale-105 active:scale-[0.97] transition-transform pointer-events-auto"
               title="글쓰기"
             >
               <Camera size={22} />
@@ -257,7 +257,7 @@ function WriteModal({
             {SAMPLE_IMAGES.map((img, i) => (
               <div
                 key={i}
-                className={`aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
+                className={`aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-spring ${
                   selectedImg === i
                     ? "border-primary scale-95"
                     : "border-transparent"
@@ -351,7 +351,7 @@ function WriteModal({
                       filteredPlaces.map((place) => (
                         <button
                           key={place.id}
-                          className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                          className="flex items-center gap-2 w-full p-2 rounded-lg hover:bg-gray-50 transition-spring text-left"
                           onClick={() => {
                             setSelectedPlaceId(place.id);
                             setShowPlaceSearch(false);
@@ -387,7 +387,7 @@ function WriteModal({
           </div>
 
           <button
-            className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+            className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 active:scale-[0.97] transition-spring disabled:opacity-50"
             disabled={!content.trim()}
             onClick={() =>
               onSubmit(content, selectedImg, selectedPlaceId)
@@ -494,7 +494,7 @@ function FeedView({
                       className="absolute right-3 top-12 z-20 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-[120px]"
                     >
                       <button
-                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-spring"
                         onClick={() => {
                           setEditingPost({
                             id: post.id,
@@ -511,7 +511,7 @@ function FeedView({
                       </button>
                       <div className="h-px bg-gray-100" />
                       <button
-                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-spring"
                         onClick={() => {
                           if (
                             confirm(
@@ -665,7 +665,7 @@ function FeedView({
             {/* 장소 태그 */}
             {post.placeId && (
               <div
-                className="inline-flex items-center gap-1 bg-primary/5 text-primary px-2 py-1 rounded text-xs font-bold cursor-pointer hover:bg-primary/10 transition-colors mb-2 mt-1"
+                className="inline-flex items-center gap-1 bg-primary/5 text-primary px-2 py-1 rounded text-xs font-bold cursor-pointer hover:bg-primary/10 transition-spring mb-2 mt-1"
                 onClick={() => {
                   const place = places.find(
                     (p) => p.id === post.placeId,
@@ -763,7 +763,7 @@ function EditPostModal({
         />
 
         <button
-          className="w-full mt-4 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+          className="w-full mt-4 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 active:scale-[0.97] transition-spring disabled:opacity-50"
           disabled={!text.trim()}
           onClick={() => onSave(text.trim())}
         >

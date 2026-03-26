@@ -125,7 +125,7 @@ export function Lounge({ onNavigate }: LoungeProps) {
           {activeTab === "feed" ? (
             <FeedView
               key="feed"
-              posts={posts.filter((p) => !p.isHidden)}
+              posts={posts.filter((p) => !p.isHidden && p.img)}
               onNavigate={onNavigate}
             />
           ) : (
@@ -566,15 +566,13 @@ function FeedView({
             <button
               className="text-gray-400 hover:text-gray-600 relative"
               onClick={() => {
-                if (post.user === "나") {
-                  setMenuOpenPostId(menuOpenPostId === post.id ? null : post.id);
-                }
+                setMenuOpenPostId(menuOpenPostId === post.id ? null : post.id);
               }}
             >
               <MoreHorizontal size={20} />
             </button>
             <AnimatePresence>
-              {menuOpenPostId === post.id && post.user === "나" && (
+              {menuOpenPostId === post.id && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpenPostId(null)} />
                   <motion.div
@@ -689,7 +687,7 @@ function FeedView({
                           <span className="text-gray-700">{c.content}</span>
                         )}
                       </div>
-                      {c.user === "나" && editingPost?.id !== c.id && (
+                      {editingPost?.id !== c.id && (
                         <div className="relative flex-shrink-0">
                           <button
                             onClick={() => setMenuOpenPostId(menuOpenPostId === c.id ? null : c.id)}

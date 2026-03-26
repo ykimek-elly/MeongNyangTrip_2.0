@@ -350,34 +350,53 @@ function WriteModal({
   onSubmit: (content: string, imgIndex: number, placeId?: number) => void;
 }) {
   const [content, setContent] = useState("");
-
-  const [myImages, setMyImages] = useState<string[]>([]); // 업로드된 이미지 URL 배열
-  const [selectedImg, setSelectedImg] = useState<number | null>(null); // 선택된 인덱스 (초기값 null)
+  const [myImages, setMyImages] = useState<string[]>([]); // 미리보기용 base64
+  const [s3Urls, setS3Urls] = useState<string[]>([]);     // 실제 S3 URL
+  const [selectedImg, setSelectedImg] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. 이벤트 타입 구체화
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 파일 타입 체크 (이미지만 허용)
     if (!file.type.startsWith("image/")) {
       alert("이미지 파일만 업로드 가능합니다.");
       return;
     }
 
+    // 1. 미리보기 (base64)
     const reader = new FileReader();
     reader.onloadend = () => {
-      const result = reader.result as string;
-
-      // 사진을 교체하는 방식일 때
-      setMyImages([result]);
+      setMyImages([reader.result as string]);
       setSelectedImg(0);
-
-      // 사진을 '추가'하는 방식이라면:
-      // setMyImages(prev => [...prev, result]);
     };
     reader.readAsDataURL(file);
+
+    // 2. S3 업로드
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/v1/upload/image", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data?.data?.url) {
+        setS3Urls([data.data.url]);
+      } else {
+        alert("이미지 업로드에 실패했어요. 다시 시도해주세요.");
+        setMyImages([]);
+        setSelectedImg(null);
+      }
+    } catch (err) {
+      alert("이미지 업로드 중 오류가 발생했어요.");
+      setMyImages([]);
+      setSelectedImg(null);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const [showPlaceSearch, setShowPlaceSearch] = useState(false);
@@ -581,29 +600,14 @@ function WriteModal({
           <button
             className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
             // 필수 조건: 내용이 있고 + 이미지가 선택되었을 때만 활성화
-            disabled={!content.trim() || selectedImg === null}
+            disabled={!content.trim() || selectedImg === null || uploading || s3Urls.length === 0}
             onClick={() => {
-              // 1. 선택된 이미지가 있는지 최종 확인
-              if (selectedImg !== null && myImages[selectedImg]) {
-                // 2. 부모에게 받은 onSubmit 실행
-                // content: 글 내용
-                // myImages[selectedImg]: 선택된 이미지의 base64 데이터
-                // selectedPlaceId: 선택된 장소의 ID (있을 경우만)
-                onSubmit(
-                  content,
-                  myImages[selectedImg] as any,
-                  selectedPlaceId,
-                );
-
-                console.log("게시글 전송 데이터:", {
-                  내용: content,
-                  이미지: "base64 데이터 생략",
-                  장소ID: selectedPlaceId,
-                });
+              if (selectedImg !== null && s3Urls[selectedImg]) {
+                onSubmit(content, s3Urls[selectedImg] as any, selectedPlaceId);
               }
             }}
           >
-            등록하기
+            {uploading ? "이미지 업로드 중..." : "등록하기"}
           </button>
         </div>
       </motion.div>

@@ -1,5 +1,6 @@
 package com.team.meongnyang.lounge.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.team.meongnyang.lounge.entity.LoungeComment;
 import com.team.meongnyang.lounge.entity.LoungePost;
 import lombok.*;
@@ -28,54 +29,50 @@ public class LoungeDto {
         private String content;
     }
 
- // LoungeDto.java - PostResponse 안에 isOwner 추가
-@Getter @Builder
-public static class PostResponse {
-    private Long id;
-    private String user;
-    private String userImg;
-    private String content;
-    private String img;
-    private Long placeId;
-    private String postType;
-    private int likes;
-    private boolean isLiked;
-    private boolean isOwner;   // ← 이거 추가!
-    private int comments;
-    private String time;
-    private LocalDateTime createdAt;
-    private List<CommentResponse> commentList;
+    @Getter @Builder
+    public static class PostResponse {
+        private Long id;
+        private String user;
+        private String userImg;
+        private String content;
+        private String img;
+        private Long placeId;
+        private String postType;
+        private int likes;
+        @JsonProperty("isLiked")  // ← Lombok boolean 직렬화 버그 방지
+        private boolean isLiked;
 
+        @JsonProperty("isOwner")  // ← Lombok boolean 직렬화 버그 방지
+        private boolean isOwner;
+        private int comments;
+        private String time;
+        private LocalDateTime createdAt;
+        private List<CommentResponse> commentList;
 
-     @JsonProperty("isLiked")   // ← 추가
-    private boolean isLiked;
-
-    @JsonProperty("isOwner")   // ← 추가
-    private boolean isOwner;
-
-    public static PostResponse from(LoungePost post, String currentUserEmail) {
-        String email = currentUserEmail != null ? currentUserEmail : "";
-        return PostResponse.builder()
-                .id(post.getPostId())
-                .user(post.getUser().getNickname())
-                .userImg(post.getUser().getProfileImage())
-                .content(post.getContent())
-                .img(post.getImageUrl())
-                .placeId(post.getPlaceId())
-                .postType(post.getPostType())
-                .likes(post.getLikes())
-                .isLiked(post.getLikeList().stream()
-                        .anyMatch(l -> l.getUser().getEmail().equals(email)))
-                .isOwner(post.getUser().getEmail().equals(email))  // ← 이거 추가!
-                .comments(post.getCommentList().size())
-                .time("방금 전")
-                .createdAt(post.getRegDate())
-                .commentList(post.getCommentList().stream()
-                        .map(CommentResponse::from)
-                        .collect(Collectors.toList()))
-                .build();
+        public static PostResponse from(LoungePost post, String currentUserEmail) {
+            String email = currentUserEmail != null ? currentUserEmail : "";
+            return PostResponse.builder()
+                    .id(post.getPostId())
+                    .user(post.getUser().getNickname())
+                    .userImg(post.getUser().getProfileImage())
+                    .content(post.getContent())
+                    .img(post.getImageUrl())
+                    .placeId(post.getPlaceId())
+                    .postType(post.getPostType())
+                    .likes(post.getLikes())
+                    .isLiked(post.getLikeList().stream()
+                            .anyMatch(l -> l.getUser().getEmail().equals(email)))
+                    .isOwner(post.getUser().getEmail().equals(email)) // ← 추가
+                    .comments(post.getCommentList().size())
+                    .time("방금 전")
+                    .createdAt(post.getRegDate())
+                    .commentList(post.getCommentList().stream()
+                            .map(CommentResponse::from)
+                            .collect(Collectors.toList()))
+                    .build();
+        }
     }
-}
+
     @Getter @Builder
     public static class CommentResponse {
         private Long id;

@@ -23,6 +23,7 @@ export interface FeedPost {
   time: string;
   createdAt: string;
   isLiked: boolean;
+  isOwner: boolean;   // ← 추가!
   likedBy: string[];
   commentList: CommentItem[];
   dmList: any[];
@@ -66,6 +67,7 @@ const mapPost = (p: any): FeedPost => ({
   time: p.time ?? '',
   createdAt: p.createdAt ?? '',
   isLiked: p.isLiked ?? false,
+  isOwner: p.isOwner ?? false,
   likedBy: [],
   commentList: (p.commentList ?? []).map((c: any) => ({
     id: c.id,

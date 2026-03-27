@@ -499,6 +499,7 @@ function FeedView({
 }) {
   const { toggleLike, addComment, deletePost, editPost } = useFeedStore();
   const places = useAppStore((s) => s.places);
+  const isAdmin = useAppStore((s) => s.isAdmin); // ← 추가
   const [commentingPostId, setCommentingPostId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
   const [editValue, setEditValue] = useState("");
@@ -563,16 +564,22 @@ function FeedView({
               </div>
               <span className="text-sm font-bold text-gray-800">{post.user}</span>
             </div>
-            <button
-              className="text-gray-400 hover:text-gray-600 relative"
-              onClick={() => {
-                setMenuOpenPostId(menuOpenPostId === post.id ? null : post.id);
-              }}
-            >
-              <MoreHorizontal size={20} />
-            </button>
+
+            {/* ← 수정: 본인 또는 관리자만 ··· 버튼 표시 */}
+            {(post.isOwner || isAdmin) && (
+              <button
+                className="text-gray-400 hover:text-gray-600 relative"
+                onClick={() => {
+                  setMenuOpenPostId(menuOpenPostId === post.id ? null : post.id);
+                }}
+              >
+                <MoreHorizontal size={20} />
+              </button>
+            )}
+
             <AnimatePresence>
-              {menuOpenPostId === post.id && (
+              {/* ← 수정: 본인 또는 관리자만 드롭다운 메뉴 표시 */}
+              {menuOpenPostId === post.id && (post.isOwner || isAdmin) && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpenPostId(null)} />
                   <motion.div

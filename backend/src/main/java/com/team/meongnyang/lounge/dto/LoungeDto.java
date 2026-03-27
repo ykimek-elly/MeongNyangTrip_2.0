@@ -46,6 +46,13 @@ public static class PostResponse {
     private LocalDateTime createdAt;
     private List<CommentResponse> commentList;
 
+
+     @JsonProperty("isLiked")   // ← 추가
+    private boolean isLiked;
+
+    @JsonProperty("isOwner")   // ← 추가
+    private boolean isOwner;
+
     public static PostResponse from(LoungePost post, String currentUserEmail) {
         String email = currentUserEmail != null ? currentUserEmail : "";
         return PostResponse.builder()

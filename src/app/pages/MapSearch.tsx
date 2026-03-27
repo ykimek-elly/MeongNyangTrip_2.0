@@ -132,12 +132,19 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   }, [lat, lng, activeFilter]);
 
   // 장소 데이터 조회: 위치 확보 시 근처 5km, 미확보 시 전체 목록
+  // 위치 기반 결과 없으면 전체 목록으로 폴백
   React.useEffect(() => {
     const fetchPlaces = async () => {
       try {
-        const data = lat && lng
-          ? await placeApi.getPlaces(undefined, undefined, lat, lng, 5000)
-          : await placeApi.getPlaces();
+        let data: PlaceDto[];
+        if (lat && lng) {
+          data = await placeApi.getPlaces(undefined, undefined, lat, lng, 5000);
+          if (data.length === 0) {
+            data = await placeApi.getPlaces();
+          }
+        } else {
+          data = await placeApi.getPlaces();
+        }
         setPlaces(data as SpotType[]);
       } catch (error) {
         console.error('Failed to fetch places:', error);

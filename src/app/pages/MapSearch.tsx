@@ -350,8 +350,9 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 value={searchInput}
                 onChange={(e) => { setSearchInput(e.target.value); setShowSuggestions(true); }}
                 onFocus={() => searchInput && setShowSuggestions(true)}
-                onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing) return; // 한글 입력 조합 중복 방지
+                onKeyUp={(e) => {
+                  // onKeyUp 사용: Windows Chrome에서 한글 IME 조합 완료 후 Enter 처리
+                  if (e.nativeEvent.isComposing) return;
                   if (e.key === 'Enter') {
                     setSearchQuery(searchInput);
                     e.currentTarget.blur();

@@ -419,6 +419,9 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 setActiveFilter(filter.id);
                 setSelectedPlace(null);
                 setSelectedVet(null);
+                setSearchQuery('');      // ← 추가
+                setSearchInput('');      // ← 추가
+                setShowSuggestions(false); // ← 추가
                 if (filter.id === '동물병원' && !lat) getLocation();
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id

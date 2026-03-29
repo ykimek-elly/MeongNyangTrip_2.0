@@ -2,6 +2,7 @@ package com.team.meongnyang.batch.batch;
 
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.recommendation.batch.NotificationBatchService;
+import com.team.meongnyang.recommendation.batch.NotificationPolicyService;
 import com.team.meongnyang.recommendation.cache.DailyRecommendationCacheService;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
@@ -13,8 +14,8 @@ import com.team.meongnyang.user.repository.PetRepository;
 import com.team.meongnyang.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -42,11 +43,22 @@ class NotificationBatchServiceTest {
     @Mock
     private DailyRecommendationCacheService dailyRecommendationCacheService;
 
-    @InjectMocks
     private NotificationBatchService notificationBatchService;
 
+    @BeforeEach
+    void setUp() {
+        notificationBatchService = new NotificationBatchService(
+                userRepository,
+                petRepository,
+                recommendationPipelineService,
+                notificationService,
+                dailyRecommendationCacheService,
+                new NotificationPolicyService()
+        );
+    }
+
     @Test
-    @DisplayName("알림 전송 성공 후 daily recommendation cache를 저장한다")
+    @DisplayName("알림 발송 성공 시 daily recommendation cache를 저장한다")
     void runDailyNotificationBatch_success() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
@@ -81,8 +93,8 @@ class NotificationBatchServiceTest {
                 List.of(user.getUserId()),
                 User.Status.ACTIVE,
                 User.Role.USER
-        ))
-                .thenReturn(List.of(pet));
+        )).thenReturn(List.of(pet));
+        when(dailyRecommendationCacheService.isSentToday(eq(user.getUserId()), any())).thenReturn(false);
         when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString()))
                 .thenReturn(recommendationResult);
         when(notificationService.send(
@@ -110,7 +122,7 @@ class NotificationBatchServiceTest {
     }
 
     @Test
-    @DisplayName("추천 결과가 없으면 알림 전송과 캐시 저장을 하지 않는다")
+    @DisplayName("추천 결과가 없으면 알림 발송과 캐시 저장을 하지 않는다")
     void runDailyNotificationBatch_noCandidate() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
@@ -134,8 +146,8 @@ class NotificationBatchServiceTest {
                 List.of(user.getUserId()),
                 User.Status.ACTIVE,
                 User.Role.USER
-        ))
-                .thenReturn(List.of(pet));
+        )).thenReturn(List.of(pet));
+        when(dailyRecommendationCacheService.isSentToday(eq(user.getUserId()), any())).thenReturn(false);
         when(recommendationPipelineService.recommendForNotification(eq(user), eq(pet), anyString()))
                 .thenReturn(recommendationResult);
 

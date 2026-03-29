@@ -48,7 +48,7 @@ class RecommendationQueryServiceTest {
                 .build();
 
         when(recommendationUserReader.getCurrentUserByEmail("user@example.com")).thenReturn(user);
-        when(dailyRecommendationCacheService.isSentToday(user.getLastNotificationSentAt())).thenReturn(true);
+        when(dailyRecommendationCacheService.isSentToday(user.getUserId(), user.getLastNotificationSentAt())).thenReturn(true);
         when(dailyRecommendationCacheService.getTodayResult(user.getUserId())).thenReturn(cachedResult);
 
         RecommendationNotificationResult result =
@@ -73,7 +73,7 @@ class RecommendationQueryServiceTest {
                 .build();
 
         when(recommendationUserReader.getCurrentUserByEmail("user@example.com")).thenReturn(user);
-        when(dailyRecommendationCacheService.isSentToday(null)).thenReturn(false);
+        when(dailyRecommendationCacheService.isSentToday(user.getUserId(), null)).thenReturn(false);
         when(recommendationPipelineService.recommendForCurrentUser("user@example.com")).thenReturn(pipelineResult);
 
         RecommendationNotificationResult result =

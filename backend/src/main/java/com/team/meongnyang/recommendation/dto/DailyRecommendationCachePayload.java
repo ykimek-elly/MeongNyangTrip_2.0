@@ -20,7 +20,7 @@ public class DailyRecommendationCachePayload {
   private String petName;
   private String dateKey;
   private String batchExecutionId;
-  private Place place;
+  private PlaceCachePayload place;
   private String weatherType;
   private String weatherWalkLevel;
   private String weatherSummary;
@@ -43,7 +43,7 @@ public class DailyRecommendationCachePayload {
             .petName(result.getPetName())
             .dateKey(dateKey)
             .batchExecutionId(batchExecutionId)
-            .place(result.getPlace())
+            .place(PlaceCachePayload.from(result.getPlace()))
             .weatherType(result.getWeatherType())
             .weatherWalkLevel(result.getWeatherWalkLevel())
             .weatherSummary(result.getWeatherSummary())
@@ -57,6 +57,8 @@ public class DailyRecommendationCachePayload {
   }
 
   public RecommendationNotificationResult toNotificationResult() {
+    Place restoredPlace = place == null ? null : place.toPlace();
+
     return RecommendationNotificationResult.builder()
             .userId(userId)
             .petId(petId)
@@ -64,7 +66,7 @@ public class DailyRecommendationCachePayload {
             .weatherType(weatherType)
             .weatherWalkLevel(weatherWalkLevel)
             .weatherSummary(weatherSummary)
-            .place(place)
+            .place(restoredPlace)
             .message(notificationMessage)
             .fallbackUsed(fallbackUsed)
             .cacheHit(geminiCacheHit)

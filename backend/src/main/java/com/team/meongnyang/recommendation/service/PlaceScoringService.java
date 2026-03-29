@@ -50,6 +50,11 @@ public class PlaceScoringService {
     private static final double MOBILITY_MAX = 10.0;
     private static final double BONUS_MAX = 5.0;
     private static final double TOTAL_MAX = 100.0;
+    private static final double POLICY_MAX = 30.0;
+    private static final double FACILITY_MAX = 15.0;
+    private static final double QUALITY_MAX = 20.0;
+    private static final double SENTIMENT_MAX = 15.0;
+    private static final double CONTEXT_MAX = 20.0;
 
     private final DistanceCalculator distanceCalculator;
 
@@ -111,13 +116,9 @@ public class PlaceScoringService {
         Map<Long, AiLogService.RecommendationDiversityPenalty> safeDiversityPenalties =
                 diversityPenalties == null ? Map.of() : diversityPenalties;
         List<ScoredPlace> rankedPlaces = candidates.stream()
-                .map(place -> scoreSinglePlace(
+                .filter(this::passesPlaceRuleGate)
+                .map(place -> scorePlaceEntityDriven(
                         place,
-                        user,
-                        pet,
-                        weather,
-                        userLat,
-                        userLng,
                         resolveDiversityPenalty(place, safeDiversityPenalties, candidates.size())
                 ))
                 .sorted(Comparator.comparingDouble(ScoredPlace::getTotalScore).reversed())
@@ -149,7 +150,8 @@ public class PlaceScoringService {
 
         // 후보 장소별 설명 가능한 점수를 계산한 뒤 총점 내림차순으로 정렬
         List<ScoredPlace> rankedPlaces = candidates.stream()
-                .map(place -> scoreSinglePlace(place, user, pet, weather, userLat, userLng))
+                .filter(this::passesPlaceRuleGate)
+                .map(place -> scorePlaceEntityDriven(place, 0.0))
                 .sorted(Comparator.comparingDouble(ScoredPlace::getTotalScore).reversed())
                 .toList();
         log.info("[장소 점수] 상위 점수 결과 count={}, topPlaces={}",
@@ -711,6 +713,388 @@ public class PlaceScoringService {
         score = clamp(score, 0.0, 4.0);
         details.add(detail("장소 환경 적합도", "품질 지표", score, 4.0, "평점과 리뷰 수를 보조 지표로 사용했습니다."));
         return score;
+    }
+
+    private ScoredPlace scorePlaceEntityDriven(Place place, double diversityPenalty) {
+        SectionResult policyResult = scorePolicySuitability(place);
+        SectionResult facilityResult = scorePetFacility(place);
+        SectionResult qualityResult = scorePlaceTrustQuality(place);
+        SectionResult sentimentResult = scoreBlogSignals(place);
+        SectionResult contextResult = scoreContextFit(place);
+
+        double penaltyScore = applyPlaceDataPenalty(place) + diversityPenalty;
+        double totalScore = normalizeScoreIfNeeded(
+                policyResult.score()
+                        + facilityResult.score()
+                        + qualityResult.score()
+                        + sentimentResult.score()
+                        + contextResult.score()
+                        - penaltyScore
+        );
+
+        List<ScoreBreakdown> breakdowns = List.of(
+                policyResult.toBreakdown(),
+                facilityResult.toBreakdown(),
+                qualityResult.toBreakdown(),
+                sentimentResult.toBreakdown(),
+                contextResult.toBreakdown()
+        );
+
+        return ScoredPlace.builder()
+                .place(place)
+                .totalScore(totalScore)
+                .dogFitScore(policyResult.score())
+                .weatherScore(facilityResult.score())
+                .placeEnvScore(qualityResult.score())
+                .distanceScore(sentimentResult.score())
+                .historyScore(contextResult.score())
+                .penaltyScore(penaltyScore)
+                .sectionScores(buildSectionScores(breakdowns))
+                .breakdowns(breakdowns)
+                .scoreDetails(flattenDetails(breakdowns))
+                .summary(buildSummary(place, breakdowns, penaltyScore))
+                .reason(buildReason(place, null, breakdowns, penaltyScore))
+                .build();
+    }
+
+    private boolean passesPlaceRuleGate(Place place) {
+        String combined = searchablePlaceEntityText(place);
+        if (containsAny(combined,
+                "반려동물 출입 불가", "반려동물 불가", "애견동반 불가", "동반 불가", "출입 금지", "전면 금지",
+                "폐업", "운영 종료", "휴업")) {
+            return false;
+        }
+        if ("STAY".equalsIgnoreCase(place.getCategory())) {
+            String accom = normalize(place.getAccomCountPet());
+            if (containsAny(accom, "0", "불가", "없음", "미제공")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private SectionResult scorePolicySuitability(Place place) {
+        List<ScoreDetail> details = new ArrayList<>();
+        String inside = normalize(place.getChkPetInside());
+        String policy = normalize(place.getPetPolicy());
+        String tags = normalize(place.getTags());
+        String category = normalize(place.getCategory());
+
+        double insideScore;
+        String insideReason;
+        if (isAffirmativeInside(inside) || containsAny(policy + " " + tags, "실내동반가능", "실내 가능", "동반 가능")) {
+            insideScore = 12.0;
+            insideReason = "실내 동반 가능 정보가 명시되어 있습니다.";
+        } else if (containsAny(policy + " " + tags, "실내 불가", "실내불가", "야외만 가능", "실외만 가능")) {
+            insideScore = 4.0;
+            insideReason = "실내는 제한되지만 야외 동반은 가능한 것으로 해석했습니다.";
+        } else {
+            insideScore = 6.0;
+            insideReason = "실내 동반 정보가 명확하지 않아 중립 점수를 부여했습니다.";
+        }
+        details.add(detail("펫 출입/정책 적합도", "실내 동반 가능성", insideScore, POLICY_MAX, insideReason));
+
+        double clarityScore = policy.isBlank() || isUnknown(policy) ? 2.0 : (policy.length() >= 12 ? 8.0 : 5.0);
+        details.add(detail("펫 출입/정책 적합도", "정책 명확성", clarityScore, POLICY_MAX,
+                clarityScore >= 8.0 ? "펫 정책 문구가 충분히 구체적입니다." : "정책 정보가 부족하거나 짧습니다."));
+
+        double restrictionScore = 6.0;
+        String restrictionReason = "과도한 제약이 확인되지 않았습니다.";
+        if (containsAny(policy, "대형견 불가", "중형견 불가", "소형견만", "특정 구역만", "사전 문의")) {
+            restrictionScore = 2.0;
+            restrictionReason = "크기 또는 구역 제한이 있어 제약 점수를 낮췄습니다.";
+        } else if (containsAny(policy, "목줄", "이동가방", "배변 처리", "기본 에티켓")) {
+            restrictionScore = 4.0;
+            restrictionReason = "기본적인 에티켓 규칙만 확인됩니다.";
+        }
+        details.add(detail("펫 출입/정책 적합도", "제약 수준", restrictionScore, POLICY_MAX, restrictionReason));
+
+        double categoryFitScore = 2.0;
+        if ("stay".equals(category) && !normalize(place.getAccomCountPet()).isBlank()) {
+            categoryFitScore = 4.0;
+        } else if (containsAny(policy + " " + tags, "펫프렌들리", "반려동물 동반", "애견동반")) {
+            categoryFitScore = 4.0;
+        } else if (containsAny(policy, "제한", "불가")) {
+            categoryFitScore = 0.0;
+        }
+        details.add(detail("펫 출입/정책 적합도", "카테고리 적합성", categoryFitScore, POLICY_MAX,
+                categoryFitScore >= 4.0 ? "카테고리 특성에 맞는 동반 정책이 있습니다." : "카테고리 대비 정책 신호가 약합니다."));
+
+        double score = round(clamp(insideScore + clarityScore + restrictionScore + categoryFitScore, 0.0, POLICY_MAX));
+        return new SectionResult(
+                "펫 출입/정책 적합도",
+                score,
+                POLICY_MAX,
+                buildSectionSummary("펫 출입/정책 적합도", score, POLICY_MAX,
+                        List.of("실내 가능 여부, 정책 명확성, 제약 수준을 기준으로 계산했습니다.")),
+                details
+        );
+    }
+
+    private SectionResult scorePetFacility(Place place) {
+        List<ScoreDetail> details = new ArrayList<>();
+        String facility = normalize(place.getPetFacility());
+        String positive = normalize(place.getBlogPositiveTags());
+        String tags = normalize(place.getTags());
+
+        int facilityMatches = countKeywords(facility,
+                "전용 공간", "전용공간", "배변", "물그릇", "식기", "놀이터", "운동장", "산책로", "어메니티", "전용 객실", "전용객실");
+        double baseFacility = facilityMatches >= 3 ? 9.0 : facilityMatches == 2 ? 6.0 : facilityMatches == 1 ? 3.0 : 1.0;
+        details.add(detail("펫 편의시설 적합도", "기본 시설", baseFacility, FACILITY_MAX,
+                facilityMatches > 0 ? "펫 시설 정보가 확인됩니다." : "시설 정보가 부족해 기본 점수만 반영했습니다."));
+
+        int convenienceMatches = countKeywords(tags + " " + positive,
+                "주차", "넓음", "산책로", "잔디", "전용 객실", "쾌적", "동선 편함");
+        double convenienceBonus = Math.min(4.0, convenienceMatches * 1.3);
+        details.add(detail("펫 편의시설 적합도", "이용 편의", convenienceBonus, FACILITY_MAX,
+                convenienceMatches > 0 ? "이용 편의를 뒷받침하는 태그/후기가 있습니다." : "편의 관련 신호가 약합니다."));
+
+        int safetyMatches = countKeywords(positive + " " + facility,
+                "안전", "조용", "청결", "쾌적", "관리");
+        double safetyBonus = Math.min(2.0, safetyMatches * 0.7);
+        details.add(detail("펫 편의시설 적합도", "안전/쾌적성", safetyBonus, FACILITY_MAX,
+                safetyMatches > 0 ? "안전성과 쾌적성 후기가 확인됩니다." : "안전성 관련 추가 신호가 없습니다."));
+
+        double score = round(clamp(baseFacility + convenienceBonus + safetyBonus, 0.0, FACILITY_MAX));
+        return new SectionResult(
+                "펫 편의시설 적합도",
+                score,
+                FACILITY_MAX,
+                buildSectionSummary("펫 편의시설 적합도", score, FACILITY_MAX,
+                        List.of("펫 시설, 이용 편의 태그, 청결/안전 신호를 반영했습니다.")),
+                details
+        );
+    }
+
+    private SectionResult scorePlaceTrustQuality(Place place) {
+        List<ScoreDetail> details = new ArrayList<>();
+        double rating = place.getRating() == null ? 0.0 : place.getRating();
+        int reviewCount = place.getReviewCount() == null ? 0 : place.getReviewCount();
+        double aiRating = place.getAiRating() == null ? 0.0 : place.getAiRating();
+        int blogCount = place.getBlogCount() == null ? 0 : place.getBlogCount();
+
+        double publicRatingScore = clamp((rating / 5.0) * 8.0, 0.0, 8.0);
+        double reviewReliabilityScore = reviewCount >= 300 ? 5.0
+                : reviewCount >= 100 ? 4.0
+                : reviewCount >= 30 ? 3.0
+                : reviewCount >= 10 ? 2.0
+                : reviewCount > 0 ? 1.0 : 0.0;
+        double aiAssistScore = place.getAiRating() == null ? 1.0
+                : aiRating >= 4.5 ? 3.0
+                : aiRating >= 4.0 ? 2.5
+                : aiRating >= 3.5 ? 2.0
+                : aiRating >= 3.0 ? 1.0 : 0.5;
+        double blogReliabilityScore = blogCount >= 200 ? 4.0
+                : blogCount >= 80 ? 3.0
+                : blogCount >= 20 ? 2.0
+                : blogCount >= 5 ? 1.0 : 0.0;
+
+        details.add(detail("장소 품질/신뢰도", "공개 평점", publicRatingScore, QUALITY_MAX,
+                "평점 %.1f/5.0을 8점 만점으로 환산했습니다.".formatted(rating)));
+        details.add(detail("장소 품질/신뢰도", "리뷰 표본 신뢰도", reviewReliabilityScore, QUALITY_MAX,
+                "리뷰 수 %d개를 기준으로 신뢰도를 계산했습니다.".formatted(reviewCount)));
+        details.add(detail("장소 품질/신뢰도", "AI 보조 평점", aiAssistScore, QUALITY_MAX,
+                place.getAiRating() == null ? "AI 평점 정보가 없어 중립 보정했습니다." : "AI 평점은 보조 신호로만 사용했습니다."));
+        details.add(detail("장소 품질/신뢰도", "블로그 표본 신뢰도", blogReliabilityScore, QUALITY_MAX,
+                "블로그 언급 수 %d건을 반영했습니다.".formatted(blogCount)));
+
+        double score = publicRatingScore + reviewReliabilityScore + aiAssistScore + blogReliabilityScore;
+        if (reviewCount < 10 && blogCount < 5) {
+            score *= 0.8;
+        }
+        score = round(clamp(score, 0.0, QUALITY_MAX));
+        return new SectionResult(
+                "장소 품질/신뢰도",
+                score,
+                QUALITY_MAX,
+                buildSectionSummary("장소 품질/신뢰도", score, QUALITY_MAX,
+                        List.of("평점, 리뷰 수, AI 평점, 블로그 표본 수를 결합했습니다.")),
+                details
+        );
+    }
+
+    private SectionResult scoreBlogSignals(Place place) {
+        List<ScoreDetail> details = new ArrayList<>();
+        String positive = normalize(place.getBlogPositiveTags());
+        String negative = normalize(place.getBlogNegativeTags());
+
+        double positiveScore = 0.0;
+        positiveScore += countKeywords(positive, "친절", "재방문", "펫친화") * 1.5;
+        positiveScore += countKeywords(positive, "청결", "쾌적", "조용", "넓음", "산책", "사진") * 1.2;
+        positiveScore = clamp(positiveScore, 0.0, 10.0);
+
+        double negativePenalty = 0.0;
+        negativePenalty += countKeywords(negative, "혼잡", "붐빔", "소음") * 1.5;
+        negativePenalty += countKeywords(negative, "냄새", "청결불량", "불친절") * 2.0;
+        negativePenalty += countKeywords(negative, "실내불가", "펫제한", "대기") * 1.5;
+        negativePenalty = clamp(negativePenalty, 0.0, 8.0);
+
+        details.add(detail("블로그 감성 시그널", "긍정 태그", positiveScore, SENTIMENT_MAX,
+                positive.isBlank() ? "긍정 블로그 태그가 없어 중립 처리했습니다." : "긍정 블로그 태그를 가중 합산했습니다."));
+        details.add(detail("블로그 감성 시그널", "부정 태그 감점", SENTIMENT_MAX - negativePenalty, SENTIMENT_MAX,
+                negative.isBlank() ? "부정 블로그 태그가 없습니다." : "혼잡/제약/청결 관련 부정 태그를 감점했습니다."));
+
+        double score = round(clamp(5.0 + positiveScore - negativePenalty, 0.0, SENTIMENT_MAX));
+        return new SectionResult(
+                "블로그 감성 시그널",
+                score,
+                SENTIMENT_MAX,
+                buildSectionSummary("블로그 감성 시그널", score, SENTIMENT_MAX,
+                        List.of("블로그 긍정/부정 태그로 실제 체감 품질을 반영했습니다.")),
+                details
+        );
+    }
+
+    private SectionResult scoreContextFit(Place place) {
+        List<ScoreDetail> details = new ArrayList<>();
+        String tags = normalize(place.getTags());
+        String category = normalize(place.getCategory());
+        String positive = normalize(place.getBlogPositiveTags());
+        String policy = normalize(place.getPetPolicy());
+        String facility = normalize(place.getPetFacility());
+
+        double categoryBase = "stay".equals(category) || "dining".equals(category) || "place".equals(category) ? 4.0 : 2.0;
+        int tagMatches = countKeywords(tags + " " + positive,
+                "실내동반가능", "조용", "산책로", "주차", "잔디", "펫프렌들리", "넓음", "전용객실", "애견동반");
+        double tagCoverage = tagMatches >= 3 ? 6.0 : tagMatches == 2 ? 4.0 : tagMatches == 1 ? 2.0 : 0.0;
+
+        double stayBonus = 0.0;
+        if ("stay".equals(category)) {
+            String accom = normalize(place.getAccomCountPet());
+            if (!accom.isBlank() && !isUnknown(accom)) {
+                stayBonus += 2.0;
+            }
+            if (containsAny(policy, "전용 객실", "객실 내 동반", "추가 요금", "사전 문의")) {
+                stayBonus += 2.0;
+            }
+            if (containsAny(facility, "어메니티", "배변", "식기", "쿠션", "방석")) {
+                stayBonus += 1.0;
+            }
+        }
+
+        int filledFields = countFilled(
+                place.getTags(),
+                place.getAiRating(),
+                place.getBlogCount(),
+                place.getBlogPositiveTags(),
+                place.getBlogNegativeTags(),
+                place.getPetPolicy(),
+                place.getPetFacility(),
+                place.getRating() == null && place.getReviewCount() == null ? null : "rating"
+        );
+        double completenessScore = clamp((filledFields / 8.0) * 5.0, 0.0, 5.0);
+
+        details.add(detail("태그/카테고리 적합도", "카테고리 기본점", categoryBase, CONTEXT_MAX,
+                "추천 대상 카테고리 여부를 반영했습니다."));
+        details.add(detail("태그/카테고리 적합도", "태그 적합도", tagCoverage, CONTEXT_MAX,
+                tagMatches > 0 ? "추천 설명에 활용 가능한 핵심 태그가 존재합니다." : "핵심 태그가 부족합니다."));
+        details.add(detail("태그/카테고리 적합도", "숙소 특화 보정", stayBonus, CONTEXT_MAX,
+                stayBonus > 0.0 ? "숙소형 장소의 펫 동반 운영 정보를 추가 반영했습니다." : "숙소 특화 보정은 적용되지 않았습니다."));
+        details.add(detail("태그/카테고리 적합도", "데이터 완성도", completenessScore, CONTEXT_MAX,
+                "설명 가능한 추천을 위한 핵심 필드 채움률을 반영했습니다."));
+
+        double score = round(clamp(categoryBase + tagCoverage + stayBonus + completenessScore, 0.0, CONTEXT_MAX));
+        return new SectionResult(
+                "태그/카테고리 적합도",
+                score,
+                CONTEXT_MAX,
+                buildSectionSummary("태그/카테고리 적합도", score, CONTEXT_MAX,
+                        List.of("카테고리, 핵심 태그, 숙소 운영 정보, 데이터 완성도를 반영했습니다.")),
+                details
+        );
+    }
+
+    private double applyPlaceDataPenalty(Place place) {
+        String policy = normalize(place.getPetPolicy());
+        String negative = normalize(place.getBlogNegativeTags());
+        String tags = normalize(place.getTags());
+        double penalty = 0.0;
+
+        if (containsAny(policy + " " + tags, "실내 불가", "실내불가", "야외만 가능", "실외만 가능")) {
+            penalty += 8.0;
+        }
+        if (containsAny(policy, "소형견만", "대형견 불가", "사전 문의", "추가 요금")) {
+            penalty += 4.0;
+        }
+        penalty += Math.min(8.0, countKeywords(negative, "혼잡", "붐빔", "소음", "냄새", "청결불량", "대기", "불친절") * 1.5);
+
+        return round(clamp(penalty, 0.0, 15.0));
+    }
+
+    private Map<String, Double> buildSectionScores(List<ScoreBreakdown> breakdowns) {
+        Map<String, Double> sectionScores = new LinkedHashMap<>();
+        for (ScoreBreakdown breakdown : breakdowns) {
+            sectionScores.put(breakdown.getSection(), round(breakdown.getScore()));
+        }
+        return sectionScores;
+    }
+
+    private String searchablePlaceEntityText(Place place) {
+        return List.of(
+                        normalize(place.getCategory()),
+                        normalize(place.getTitle()),
+                        normalize(place.getDescription()),
+                        normalize(place.getOverview()),
+                        normalize(place.getTags()),
+                        normalize(place.getPetPolicy()),
+                        normalize(place.getPetFacility()),
+                        normalize(place.getBlogPositiveTags()),
+                        normalize(place.getBlogNegativeTags()),
+                        normalize(place.getChkPetInside()),
+                        normalize(place.getAccomCountPet())
+                ).stream()
+                .filter(text -> !text.isBlank())
+                .collect(Collectors.joining(" "));
+    }
+
+    private String normalize(String value) {
+        return RecommendationTextUtils.normalizeTrimLower(value);
+    }
+
+    private boolean isUnknown(String value) {
+        return containsAny(normalize(value), "정보 없음", "없음", "미상", "unknown", "n/a");
+    }
+
+    private boolean isAffirmativeInside(String inside) {
+        return "y".equalsIgnoreCase(inside) || containsAny(inside, "가능", "허용", "yes");
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        String normalized = normalize(text);
+        for (String keyword : keywords) {
+            if (normalized.contains(normalize(keyword))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int countKeywords(String text, String... keywords) {
+        String normalized = normalize(text);
+        int count = 0;
+        for (String keyword : keywords) {
+            if (normalized.contains(normalize(keyword))) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int countFilled(Object... values) {
+        int count = 0;
+        for (Object value : values) {
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof String stringValue) {
+                if (!normalize(stringValue).isBlank() && !isUnknown(stringValue)) {
+                    count++;
+                }
+                continue;
+            }
+            count++;
+        }
+        return count;
     }
 
     private Map<String, Double> buildSectionScores(

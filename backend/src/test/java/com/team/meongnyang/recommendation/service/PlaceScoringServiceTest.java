@@ -15,9 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PlaceScoringServiceTest {
@@ -29,26 +26,24 @@ class PlaceScoringServiceTest {
     private PlaceScoringService placeScoringService;
 
     @Test
-    @DisplayName("최근 추천된 장소는 다양성 패널티로 순위가 뒤로 밀린다")
+    @DisplayName("최근 추천된 장소는 다양성 페널티로 순위가 내려간다")
     void scorePlaces_appliesDiversityPenalty() {
-        when(distanceCalculator.calculateDistanceKm(anyDouble(), anyDouble(), anyDouble(), anyDouble())).thenReturn(1.0);
-
-        Place penalizedPlace = fixturePlace(1L, "Alpha Cafe");
-        Place normalPlace = fixturePlace(2L, "Beta Cafe");
+        Place penalizedPlace = detailedPlace(1L, "Alpha Cafe");
+        Place normalPlace = detailedPlace(2L, "Beta Cafe");
 
         List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
                 List.of(
                         penalizedPlace,
                         normalPlace,
-                        fixturePlace(3L, "Gamma Cafe"),
-                        fixturePlace(4L, "Delta Cafe")
+                        detailedPlace(3L, "Gamma Cafe"),
+                        detailedPlace(4L, "Delta Cafe")
                 ),
                 null,
                 null,
                 null,
                 37.27,
                 127.01,
-                Map.of(1L, new AiLogService.RecommendationDiversityPenalty(25.0, "최근 1일 내 추천"))
+                Map.of(1L, new AiLogService.RecommendationDiversityPenalty(25.0, "최근 1회 추천"))
         );
 
         assertThat(rankedPlaces).hasSize(4);
@@ -61,22 +56,20 @@ class PlaceScoringServiceTest {
     }
 
     @Test
-    @DisplayName("후보가 3개 이하면 다양성 패널티를 완화한다")
+    @DisplayName("후보가 적으면 다양성 페널티를 완화한다")
     void scorePlaces_relaxesDiversityPenaltyWhenCandidatesAreFew() {
-        when(distanceCalculator.calculateDistanceKm(anyDouble(), anyDouble(), anyDouble(), anyDouble())).thenReturn(1.0);
-
         List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
                 List.of(
-                        fixturePlace(1L, "Alpha Cafe"),
-                        fixturePlace(2L, "Beta Cafe"),
-                        fixturePlace(3L, "Gamma Cafe")
+                        detailedPlace(1L, "Alpha Cafe"),
+                        detailedPlace(2L, "Beta Cafe"),
+                        detailedPlace(3L, "Gamma Cafe")
                 ),
                 null,
                 null,
                 null,
                 37.27,
                 127.01,
-                Map.of(1L, new AiLogService.RecommendationDiversityPenalty(25.0, "최근 1일 내 추천"))
+                Map.of(1L, new AiLogService.RecommendationDiversityPenalty(25.0, "최근 1회 추천"))
         );
 
         ScoredPlace penalizedPlace = rankedPlaces.stream()
@@ -88,8 +81,8 @@ class PlaceScoringServiceTest {
     }
 
     @Test
-    @DisplayName("사용자 좌표가 있으면 기본 점수 계산 경로도 사용자 위경도를 사용한다")
-    void scorePlaces_usesUserCoordinates() {
+    @DisplayName("Place 엔티티 신호가 풍부한 장소가 더 높은 점수를 받는다")
+    void scorePlaces_scoresUsingPlaceEntitySignals() {
         User user = User.builder()
                 .userId(1L)
                 .email("user@example.com")
@@ -99,30 +92,104 @@ class PlaceScoringServiceTest {
                 .longitude(126.9780)
                 .build();
 
-        Place place = fixturePlace(1L, "Alpha Cafe");
-
-        when(distanceCalculator.calculateDistanceKm(37.5665, 126.9780, 37.27, 127.01)).thenReturn(5.0);
+        Place strongPlace = detailedPlace(1L, "Alpha Cafe");
+        Place weakPlace = constrainedPlace(2L, "Beta Cafe");
 
         List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
-                List.of(place),
+                List.of(weakPlace, strongPlace),
                 user,
                 null,
                 null
         );
 
-        assertThat(rankedPlaces).hasSize(1);
-        verify(distanceCalculator).calculateDistanceKm(37.5665, 126.9780, 37.27, 127.01);
+        assertThat(rankedPlaces).hasSize(2);
+        assertThat(rankedPlaces.get(0).getPlace().getId()).isEqualTo(1L);
+        assertThat(rankedPlaces.get(0).getTotalScore()).isGreaterThan(rankedPlaces.get(1).getTotalScore());
+        assertThat(rankedPlaces.get(0).getSectionScores()).containsKeys("펫 출입/정책 적합도", "장소 품질/신뢰도");
     }
 
-    private Place fixturePlace(Long id, String title) {
+    @Test
+    @DisplayName("명시적 반려동물 불가 장소는 점수 계산 대상에서 제외한다")
+    void scorePlaces_filtersBlockedPlaces() {
+        Place blockedPlace = Place.builder()
+                .id(1L)
+                .title("Blocked Hotel")
+                .address("서울")
+                .latitude(37.27)
+                .longitude(127.01)
+                .category("STAY")
+                .description("반려동물 출입이 불가능한 숙소")
+                .petPolicy("반려동물 출입 불가")
+                .accomCountPet("0")
+                .build();
+
+        Place allowedPlace = Place.builder()
+                .id(2L)
+                .title("Allowed Hotel")
+                .address("서울")
+                .latitude(37.27)
+                .longitude(127.01)
+                .category("STAY")
+                .description("펫 동반 숙소")
+                .chkPetInside("Y")
+                .petPolicy("객실 내 동반 가능, 사전 문의")
+                .accomCountPet("2")
+                .petFacility("펫 어메니티, 식기")
+                .rating(4.5)
+                .reviewCount(35)
+                .blogCount(20)
+                .build();
+
+        List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
+                List.of(blockedPlace, allowedPlace),
+                null,
+                null,
+                null,
+                37.27,
+                127.01
+        );
+
+        assertThat(rankedPlaces).hasSize(1);
+        assertThat(rankedPlaces.get(0).getPlace().getId()).isEqualTo(2L);
+    }
+
+    private Place detailedPlace(Long id, String title) {
         return Place.builder()
                 .id(id)
                 .title(title)
-                .address("경기도 수원시")
+                .address("서울")
                 .latitude(37.27)
                 .longitude(127.01)
                 .category("PLACE")
-                .description("반려동물과 함께 방문하기 좋은 실내 카페")
+                .description("반려동물과 방문하기 좋은 실내 카페")
+                .rating(4.8)
+                .reviewCount(180)
+                .tags("실내동반가능,주차,산책로,펫프렌들리")
+                .chkPetInside("Y")
+                .aiRating(4.4)
+                .blogCount(90)
+                .blogPositiveTags("청결,쾌적,조용,친절")
+                .petPolicy("실내 동반 가능, 목줄 착용, 배변 처리")
+                .petFacility("물그릇, 펫 어메니티, 산책로")
+                .build();
+    }
+
+    private Place constrainedPlace(Long id, String title) {
+        return Place.builder()
+                .id(id)
+                .title(title)
+                .address("서울")
+                .latitude(37.27)
+                .longitude(127.01)
+                .category("PLACE")
+                .description("야외 위주 장소")
+                .rating(4.1)
+                .reviewCount(3)
+                .tags("야외")
+                .aiRating(2.8)
+                .blogCount(1)
+                .petPolicy("실내 불가, 사전 문의")
+                .blogNegativeTags("혼잡,소음")
                 .build();
     }
 }

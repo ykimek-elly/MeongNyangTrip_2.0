@@ -54,13 +54,15 @@ public class SecurityConfig {
                     "/api/v1/public-places/**",
                     "/api/v1/admin/**",
                     "/api/v1/pets/**",
+                    "/api/v1/upload/**",
                     "/oauth2/**",
                     "/login/oauth2/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
-                .requestMatchers(
+.requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
+.requestMatchers(HttpMethod.GET, "/api/v1/lounge/**").permitAll()                
+.requestMatchers(
                     "/api/v1/checkins/**",
                     "/api/v1/wishlists/**",
                     "/api/v1/reviews/**"

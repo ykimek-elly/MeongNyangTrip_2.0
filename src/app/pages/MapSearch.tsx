@@ -98,8 +98,23 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
     }
   }, [error]);
 
-  // 동물병원 검색 함수
-  const fetchVets = React.useCallback((centerLat: number, centerLng: number) => {
+  // 1. 필터 변경 감지 - 동물병원 아닐 때 클리어
+  React.useEffect(() => {
+    if (activeFilter !== '동물병원') {
+      setVetPlaces([]);
+      setSelectedVet(null);
+      vetFetchedRef.current = false;
+    }
+  }, [activeFilter]);
+
+  // 2. 위치 확보 후 동물병원 탭이면 API 호출
+  React.useEffect(() => {
+    if (activeFilter !== '동물병원') return;
+    if (!lat || !lng) return;
+    if (vetFetchedRef.current) return;
+    vetFetchedRef.current = true;
+
+
     const REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
     const level = mapRef.current?.getLevel() ?? 5;
     const radius = level > 8 ? 10000 : level > 5 ? 5000 : 3000;
@@ -116,31 +131,24 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         }
         setVetPlaces(data.documents ?? []);
       })
-      .catch(e => console.error('[동물병원] fetch 오류 (CORS?):', e))
+      .catch(e => console.error('[동물병원] 오류:', e))
       .finally(() => setVetLoading(false));
-  }, []);
-
-  // 동물병원 필터: GPS 있을 때만 fetch, 없으면 안내만
-  React.useEffect(() => {
-    if (activeFilter !== '동물병원') {
-      setVetPlaces([]);
-      setSelectedVet(null);
-      return;
-    }
-    // GPS 최우선, GPS 없을 땐 지도 이동 중심 사용
-    const centerLat = lat ?? mapCenter?.lat;
-    const centerLng = lng ?? mapCenter?.lng;
-    if (!centerLat || !centerLng) return; // GPS도 mapCenter도 없으면 안내 문구만 표시
-    fetchVets(centerLat, centerLng);
-  }, [activeFilter, mapCenter, lat, lng]);
+  }, [lat, lng, activeFilter]);
 
   // 장소 데이터 조회: 위치 확보 시 근처 5km, 미확보 시 전체 목록
+  // 위치 기반 결과 없으면 전체 목록으로 폴백
   React.useEffect(() => {
     const fetchPlaces = async () => {
       try {
-        const data = lat && lng
-          ? await placeApi.getPlaces(undefined, undefined, lat, lng, 5000)
-          : await placeApi.getPlaces();
+        let data: PlaceDto[];
+        if (lat && lng) {
+          data = await placeApi.getPlaces(undefined, undefined, lat, lng, 5000);
+          if (data.length === 0) {
+            data = await placeApi.getPlaces();
+          }
+        } else {
+          data = await placeApi.getPlaces();
+        }
         setPlaces(data as SpotType[]);
       } catch (error) {
         console.error('Failed to fetch places:', error);
@@ -222,12 +230,12 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   // 검색 시 지도 bounds 자동 조절
   React.useEffect(() => {
     if (!searchQuery.trim() || !mapRef.current) return;
-    
+
     // 유효한 한국 위경도(위도 30~43, 경도 124~132 이내)를 가진 장소만 필터링
     const matched = filterBySearch(filteredSpots, searchQuery).filter(
       p => p.latitude && p.longitude && p.latitude > 30 && p.longitude > 120
     );
-    
+
     if (matched.length === 0) return;
     if (matched.length === 1) {
       mapRef.current.setLevel(4);
@@ -359,16 +367,10 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 value={searchInput}
                 onChange={(e) => { setSearchInput(e.target.value); setShowSuggestions(true); }}
                 onFocus={() => searchInput && setShowSuggestions(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                    setSearchQuery(searchInput);
-                    e.currentTarget.blur();
-                    setShowSuggestions(false);
-                  }
-                }}
                 onKeyUp={(e) => {
-                  // Windows Chrome IME 버그 대응: keydown의 isComposing이 true로 남는 경우 keyup으로 처리
-                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  // onKeyUp 사용: Windows Chrome에서 한글 IME 조합 완료 후 Enter 처리
+                  if (e.nativeEvent.isComposing) return;
+                  if (e.key === 'Enter') {
                     setSearchQuery(searchInput);
                     e.currentTarget.blur();
                     setShowSuggestions(false);
@@ -378,8 +380,8 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 className="bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none w-full"
               />
               {searchInput && (
-                <button 
-                  onClick={() => { setSearchInput(''); setSearchQuery(''); setShowSuggestions(false); setSelectedPlace(null); }} 
+                <button
+                  onClick={() => { setSearchInput(''); setSearchQuery(''); setShowSuggestions(false); setSelectedPlace(null); }}
                   className="text-gray-400 hover:text-gray-600 mr-0.5"
                 >
                   <X size={14} />
@@ -438,8 +440,15 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 setActiveFilter(filter.id);
                 setSelectedPlace(null);
                 setSelectedVet(null);
-                if (filter.id === '동물병원' && !lat) setShowVetGuide(true);
-                if (filter.id !== '동물병원') setShowVetGuide(false);
+                setSearchQuery('');
+                setSearchInput('');
+                setShowSuggestions(false);
+                if (filter.id === '동물병원') {
+                  vetFetchedRef.current = false;
+                  if (!lat) { getLocation(); setShowVetGuide(true); }
+                } else {
+                  setShowVetGuide(false);
+                }
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id
                 ? 'bg-primary text-white'
@@ -452,7 +461,6 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         </div>
       </div>
 
-      {/* Current Location Button */}
       {/* 지도 어두운 오버레이 — 팝업 배너 활성 시 */}
       <AnimatePresence>
         {(selectedPlace || selectedVet) && (
@@ -641,7 +649,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     </div>
 
                     <button
-                      onClick={() => onNavigate('detail', { id: selectedPlace.id })} // Mock ID, usually needs real ID
+                      onClick={() => onNavigate('detail', { id: selectedPlace.id })}
                       className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md active:scale-[0.97] transition-transform"
                     >
                       상세보기

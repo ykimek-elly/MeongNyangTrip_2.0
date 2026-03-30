@@ -115,3 +115,13 @@ oauth2:
 app:
   signup:
     export-path: ${SIGNUP_EXPORT_PATH:exports/registered_users.json}
+    
+# AWS S3
+cloud:
+  aws:
+    s3:
+      bucket: meongnyangtrip-bucket
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false

@@ -5,7 +5,8 @@ import mainBanner2 from '../../assets/main_banner_1080_2.jpg';
 import mainBanner3 from '../../assets/main_banner_1080_3.jpg';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { Search, MapPin, Calendar, Layers, TreeDeciduous, PawPrint, Dog, Cat, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
+import { Search, MapPin, Calendar, Layers, TreeDeciduous, PawPrint, Dog, Cat, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, MessageCircle, BotMessageSquare, Heart, Award, Camera, X, LogIn } from 'lucide-react';
+import { MapNavOutlineIcon } from '../components/CustomIcon';
 
 import { PlaceImage } from '../components/PlaceImage';
 // 더미 데이터 제거
@@ -169,7 +170,7 @@ export function Home({ onNavigate }: HomeProps) {
         <div className="flex justify-start md:justify-center gap-4 overflow-x-auto scrollbar-hide snap-x px-[4px] pt-[0px] pb-[10px]">
           <div className="snap-start shrink-0">
             <CategoryItem
-              icon={Sparkles}
+              icon={BotMessageSquare}
               label="AI 추천산책"
               onClick={() => onNavigate('ai-walk-guide')}
               className="[&>div]:!bg-green-50 [&>div]:!text-green-500 [&>span]:!text-gray-800 [&>span]:!font-bold"
@@ -178,7 +179,7 @@ export function Home({ onNavigate }: HomeProps) {
           <div className="snap-start shrink-0"><CategoryItem icon={PawPrint} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'PLACE' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Dog} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Cat} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Map} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={MapNavOutlineIcon} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={MessageCircle} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
         </div>
       </div>

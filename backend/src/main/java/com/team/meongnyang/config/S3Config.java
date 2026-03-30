@@ -30,14 +30,10 @@ public class S3Config {
         var builder = S3Client.builder().region(Region.of(region));
 
         if ("prod".equals(activeProfile)) {
-            // EC2 운영: IAM Role 자동 사용
             builder.credentialsProvider(InstanceProfileCredentialsProvider.create());
-        } else if (!accessKey.isBlank() && !secretKey.isBlank()) {
-            // 로컬 개발: .env에 키가 있으면 사용
             builder.credentialsProvider(StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKey, secretKey)));
         } else {
-            // 로컬 개발: ~/.aws/credentials 또는 환경변수 자동 탐색
             builder.credentialsProvider(DefaultCredentialsProvider.create());
         }
 

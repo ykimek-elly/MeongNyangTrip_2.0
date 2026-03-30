@@ -9,10 +9,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-/**
- * OAuth2 인증 완료 후 SecurityContext에 저장되는 Principal.
- * User 엔티티와 OAuth2 속성을 함께 보관한다.
- */
 public class OAuth2UserPrincipal implements OAuth2User {
 
     private final User user;

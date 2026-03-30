@@ -114,7 +114,7 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
   const currentWeather = WEATHER_CONDITIONS.find(w => w.id === recommendation.weather);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-white pb-24">
+    <div className="bg-gradient-to-b from-primary/5 to-white pb-6">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 h-14 flex items-center">
         <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-800 hover:bg-gray-100 rounded-full transition-spring hover:scale-[1.1] active:scale-[0.9]">
@@ -401,7 +401,7 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
           initial={{ opacity: 0, y: 50, x: '-50%' }}
           animate={{ opacity: 1, y: 0, x: '-50%' }}
           exit={{ opacity: 0, y: 50, x: '-50%' }}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-2 whitespace-nowrap"
+          className="fixed bottom-[90px] left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-2 whitespace-nowrap"
         >
           <CheckCircle className="text-primary" size={20} />
           <span className="font-medium">마이페이지에 저장되었습니다.</span>

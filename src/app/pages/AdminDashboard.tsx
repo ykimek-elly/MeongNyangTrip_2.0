@@ -1267,7 +1267,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
       if (editPlaceForm.address.trim())  payload.address  = editPlaceForm.address.trim();
       if (editPlaceForm.phone.trim())    payload.phone    = editPlaceForm.phone.trim();
       if (editPlaceForm.homepage.trim()) payload.homepage = editPlaceForm.homepage.trim();
-      if (editPlaceForm.imageUrl.trim()) payload.imageUrl = editPlaceForm.imageUrl.trim();
+      payload.imageUrl = editPlaceForm.imageUrl.trim(); // 빈 문자열이면 이미지 삭제
       const updated = await adminApi.editPlace(id, payload);
       setAllActive(prev => prev.map(p => p.id === updated.id ? updated : p));
       setEditingPlaceId(null);

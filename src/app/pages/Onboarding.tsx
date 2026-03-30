@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, type PetInfo } from '../store/useAppStore';
-import { PawPrint, Heart, MapPin, Sparkles, Bell, Dog, Cat } from 'lucide-react';
+import { PawPrint, Heart, MapPin, Sparkles, Bell, Dog, Cat, Phone } from 'lucide-react';
+import { authApi } from '../api/authApi';
 import { PetProfileForm } from '../components/PetProfileForm';
 
 interface OnboardingProps {
@@ -18,6 +19,17 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
 
   const [phase, setPhase] = useState<Phase>('welcome');
   const [showPetForm, setShowPetForm] = useState(false);
+  const [phone, setPhone] = useState('');
+
+  const formatPhone = (v: string) => {
+    const digits = v.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  };
+
+  const phoneDigits = phone.replace(/\D/g, '');
+  const isPhoneValid = phoneDigits.length >= 10;
 
   const handlePetSubmit = (petData: PetInfo) => {
     addPet(petData);
@@ -26,6 +38,9 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
   };
 
   const handleComplete = (destination: string) => {
+    if (isPhoneValid) {
+      authApi.savePhone(phoneDigits).catch(() => {});
+    }
     completeOnboarding();
     onNavigate(destination);
   };
@@ -96,19 +111,54 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 ))}
               </div>
 
-              <div className="space-y-3 mt-auto">
+              {/* 카톡 알림 수신 번호 */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="mt-6 p-4 bg-primary/5 rounded-2xl border border-primary/20"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Bell size={16} className="text-primary" />
+                  <span className="text-sm font-bold text-gray-800">카톡 알림 수신 번호</span>
+                  <span className="text-[11px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full ml-auto">필수</span>
+                </div>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    placeholder="010-0000-0000"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(227,99,148,0.1)] transition-spring text-sm"
+                  />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2 ml-1">날씨·맞춤 장소·이벤트 알림을 받을 번호를 입력해주세요</p>
+              </motion.div>
+
+              <div className="space-y-3 mt-4">
                 <button
-                  onClick={() => setShowPetForm(true)}
-                  className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-spring flex items-center justify-center gap-2"
+                  onClick={() => isPhoneValid && setShowPetForm(true)}
+                  disabled={!isPhoneValid}
+                  className={`w-full py-4 font-bold rounded-2xl shadow-md flex items-center justify-center gap-2 transition-spring ${
+                    isPhoneValid
+                      ? 'bg-primary text-white hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98]'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                  }`}
                 >
                   <PawPrint size={20} />
                   반려동물 등록하기
                 </button>
                 <button
-                  onClick={() => handleComplete('home')}
-                  className="w-full py-3 text-sm text-gray-400 hover:text-gray-600 transition-spring"
+                  onClick={() => isPhoneValid && handleComplete('home')}
+                  disabled={!isPhoneValid}
+                  className={`w-full py-3 text-sm transition-spring ${
+                    isPhoneValid
+                      ? 'text-gray-400 hover:text-gray-600'
+                      : 'text-gray-300 cursor-not-allowed'
+                  }`}
                 >
-                  나중에 할게요
+                  번호만 등록하고 나중에 할게요
                 </button>
               </div>
             </motion.div>

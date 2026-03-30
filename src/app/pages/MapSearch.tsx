@@ -67,10 +67,12 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   const [vetPlaces, setVetPlaces] = useState<KakaoVet[]>([]);
   const [selectedVet, setSelectedVet] = useState<KakaoVet | null>(null);
   const [vetLoading, setVetLoading] = useState(false);
-  const vetFetchedRef = useRef(false); // 중복 호출 방지
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [showVetGuide, setShowVetGuide] = useState(false);
 
   const handleLocate = () => {
     setSpinning(true);
+    setShowVetGuide(false);
     locatingRef.current = true;
     getLocation();
     setTimeout(() => setSpinning(false), 600);
@@ -96,37 +98,41 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
     }
   }, [error]);
 
-  // 동물병원 필터 활성 시 카카오 로컬 API 호출
-  React.useEffect(() => {
-    if (activeFilter !== '동물병원') {
-      setVetPlaces([]);
-      setSelectedVet(null);
-      vetFetchedRef.current = false; // 필터 벗어나면 리셋
-      return;
-    }
-    if (!lat || !lng) return;
-    if (vetFetchedRef.current) return; // 이미 호출했으면 스킵
-    vetFetchedRef.current = true;
-
+  // 동물병원 검색 함수
+  const fetchVets = React.useCallback((centerLat: number, centerLng: number) => {
     const REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
+    const level = mapRef.current?.getLevel() ?? 5;
+    const radius = level > 8 ? 10000 : level > 5 ? 5000 : 3000;
     setVetLoading(true);
-
     fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?query=동물병원&x=${lng}&y=${lat}&radius=3000&sort=distance&size=15`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=동물병원&x=${centerLng}&y=${centerLat}&radius=${radius}&sort=distance&size=15`,
       { headers: { Authorization: `KakaoAK ${REST_KEY}` } }
     )
       .then(r => r.json())
       .then(data => {
-        console.log('[동물병원] Kakao API 응답:', data);
         if (data.errorType || data.code) {
-          console.error('[동물병원] API 오류:', data.message || data.msg);
+          console.error('[동물병원] API 오류:', data.errorType, data.message);
           return;
         }
         setVetPlaces(data.documents ?? []);
       })
-      .catch(e => console.error('[동물병원] 네트워크 오류 (CORS?):', e))
+      .catch(e => console.error('[동물병원] fetch 오류 (CORS?):', e))
       .finally(() => setVetLoading(false));
-  }, [activeFilter, lat, lng]);
+  }, []);
+
+  // 동물병원 필터: GPS 있을 때만 fetch, 없으면 안내만
+  React.useEffect(() => {
+    if (activeFilter !== '동물병원') {
+      setVetPlaces([]);
+      setSelectedVet(null);
+      return;
+    }
+    // GPS 최우선, GPS 없을 땐 지도 이동 중심 사용
+    const centerLat = lat ?? mapCenter?.lat;
+    const centerLng = lng ?? mapCenter?.lng;
+    if (!centerLat || !centerLng) return; // GPS도 mapCenter도 없으면 안내 문구만 표시
+    fetchVets(centerLat, centerLng);
+  }, [activeFilter, mapCenter, lat, lng]);
 
   // 장소 데이터 조회: 위치 확보 시 근처 5km, 미확보 시 전체 목록
   React.useEffect(() => {
@@ -239,10 +245,16 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
       {/* Kakao Map Area */}
       <div className="absolute inset-0 z-0">
         <Map
-          center={{ lat: lat || 37.5665, lng: lng || 126.9780 }}
+          center={{ lat: 37.5665, lng: 126.9780 }}
           style={{ width: "100%", height: "100%" }}
           level={5}
-          onZoomChanged={(map) => setMapLevel(map.getLevel())}
+          onZoomChanged={(map) => {
+            setMapLevel(map.getLevel());
+            setMapCenter({ lat: map.getCenter().getLat(), lng: map.getCenter().getLng() });
+          }}
+          onDragEnd={(map) => {
+            setMapCenter({ lat: map.getCenter().getLat(), lng: map.getCenter().getLng() });
+          }}
           onCreate={(map) => { mapRef.current = map; }}
         >
           {/* 동물병원 마커 */}
@@ -258,9 +270,9 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 className="cursor-pointer flex flex-col items-center"
                 onClick={() => { setSelectedVet(vet); setSelectedPlace(null); }}
               >
-                {mapLevel > 5 ? (
+                {mapLevel > 8 ? (
                   // 축소 시: 점
-                  <div className={`w-3 h-3 rounded-full border-2 border-white shadow-md ${selectedVet?.id === vet.id ? 'bg-blue-500 scale-125' : 'bg-blue-400'
+                  <div className={`w-4 h-4 rounded-full border-2 border-white shadow-md ${selectedVet?.id === vet.id ? 'bg-blue-500 scale-125' : 'bg-blue-400'
                     }`} />
                 ) : (
                   // 확대 시: 아이콘 + 상호명
@@ -308,7 +320,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 {(() => {
                   const cc = CATEGORY_COLOR[spot.category] ?? CATEGORY_COLOR['PLACE'];
                   const isSelected = selectedPlace?.id === spot.id;
-                  return mapLevel > 5 ? (
+                  return mapLevel > 8 ? (
                     // 축소 시: 점
                     <div className={`w-4 h-4 rounded-full border-[3px] border-white shadow-[0_0_0_1.5px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.25)] ${isSelected ? `${cc.dotSelected} scale-150` : cc.dot}`} />
                   ) : (
@@ -348,8 +360,15 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 onChange={(e) => { setSearchInput(e.target.value); setShowSuggestions(true); }}
                 onFocus={() => searchInput && setShowSuggestions(true)}
                 onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing) return; // 한글 입력 조합 중복 방지
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                    setSearchQuery(searchInput);
+                    e.currentTarget.blur();
+                    setShowSuggestions(false);
+                  }
+                }}
+                onKeyUp={(e) => {
+                  // Windows Chrome IME 버그 대응: keydown의 isComposing이 true로 남는 경우 keyup으로 처리
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                     setSearchQuery(searchInput);
                     e.currentTarget.blur();
                     setShowSuggestions(false);
@@ -419,7 +438,8 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 setActiveFilter(filter.id);
                 setSelectedPlace(null);
                 setSelectedVet(null);
-                if (filter.id === '동물병원' && !lat) getLocation();
+                if (filter.id === '동물병원' && !lat) setShowVetGuide(true);
+                if (filter.id !== '동물병원') setShowVetGuide(false);
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id
                 ? 'bg-primary text-white'
@@ -462,13 +482,33 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         </div>
       )}
 
-      {/* 동물병원 위치 요청 안내 */}
-      {activeFilter === '동물병원' && !lat && !vetLoading && (
-        <div className="absolute top-32 left-1/2 -translate-x-1/2 z-20 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-md flex items-center gap-2 text-sm font-bold text-gray-600">
-          <MapPin size={14} className="text-primary" />
-          위치 버튼을 눌러 주변 병원을 찾아보세요
-        </div>
-      )}
+      {/* GPS 없을 때 안내 — 지도 중앙 오버레이 */}
+      <AnimatePresence>
+        {showVetGuide && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 12 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 260 }}
+            className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+          >
+            <div className="bg-white rounded-3xl shadow-xl px-6 py-5 flex flex-col items-center gap-3 mx-6">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <Stethoscope size={24} className="text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-bold text-gray-900 mb-1">주변 동물병원 찾기</p>
+                <p className="text-xs text-gray-500 leading-relaxed">내 위치 버튼을 눌러<br/>가까운 동물병원을 찾아보세요</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-primary font-bold">
+                <Navigation size={13} />
+                오른쪽 아래 내 위치 버튼
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       {/* 동물병원 팝업 */}
       <AnimatePresence>

@@ -1,8 +1,47 @@
-# 멍냥트립 2.0 (MeongNyangTrip 2.0)
+# 🐾 멍냥트립 2.0 (MeongNyangTrip 2.0)
 
 > 반려동물과 함께하는 여행·산책·케어 플랫폼
 
-## 기술 스택
+## ✨ 주요 기능 (Key Features)
+
+- 🗺️ **멍냥지도**: 내 주변 반려동물 동반 장소 및 산책로 실시간 탐색
+- 🤖 **AI 산책 가이드**: 나이·날씨를 고려한 **초개인화 AI (Gemini) 산책 코멘트**
+- 🏨 **멍냥플레이스/스테이**: 검증된 반려동물 동반 가능 숙소/식당 맞춤 큐레이션
+- 💬 **멍냥라운지**: 보호자 간 리뷰, 일상, 정보 공유를 위한 소셜 커뮤니티 피드
+- 🩺 **펫 케어 시스템**: 반려동물 정보 기반 건강 대시보드 및 예방 접종 알림 서비스
+
+## 🏗️ 시스템 아키텍처 (Architecture)
+
+```mermaid
+graph TD
+    Client["📱 모바일 / 웹 클라이언트\n(React, Vite, Zustand)"]
+    API_Gateway["🌐 Nginx Web Server\n(HTTPS, Reverse Proxy)"]
+    
+    subgraph "Backend System (Spring Boot 3 + Java 21)"
+        Auth["🔒 인증/보안\n(Spring Security, JWT)"]
+        CoreAPI["⚙️ Core Business API\n(JPA/Hibernate)"]
+        AI_Module["🤖 AI 추천 모듈\n(Spring AI)"]
+        Batch["⏳ Batch Process\n(장소/추천 데이터 갱신)"]
+    end
+    
+    DB_PostGIS[("🐘 PostgreSQL\n+ PostGIS (공간 연산)")]
+    DB_Redis[("⚡ Redis 7\n(캐싱, 세션 관리)")]
+    Ext_Gemini["🧠 Google Gemini API"]
+    Ext_Kakao["🗺️ Kakao Map & Open API"]
+
+    Client <-->|REST API| API_Gateway
+    Client <-->|Map UI| Ext_Kakao
+    API_Gateway <--> Auth
+    API_Gateway <--> CoreAPI
+    Auth <--> DB_Redis
+    CoreAPI <--> DB_PostGIS
+    CoreAPI <--> DB_Redis
+    CoreAPI <--> AI_Module
+    AI_Module <--> Ext_Gemini
+    Batch --> DB_PostGIS
+```
+
+## 🛠️ 기술 스택
 
 | 영역 | 기술 |
 |------|------|
@@ -13,7 +52,7 @@
 | **Infra** | AWS (EC2, RDS, S3), Docker, GitHub Actions |
 | **Security** | Spring Security, JWT, OAuth 2.0 |
 
-## 프로젝트 구조
+## 📂 프로젝트 구조
 
 ```
 MeongNyangTrip_2.0/

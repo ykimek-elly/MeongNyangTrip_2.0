@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { createBrowserRouter, Outlet, useNavigate, useLocation, useParams, useSearchParams } from 'react-router';
 import { Home } from './pages/Home';
 import { List } from './pages/List';
@@ -24,6 +24,7 @@ import { EditProfile } from './pages/EditProfile';
 import { RouteErrorFallback } from './components/ErrorBoundary';
 import { BottomNav } from './components/BottomNav';
 import { AIChat } from './components/AIChat';
+import { ScrollButtons } from './components/ScrollButtons';
 import { useAppStore } from './store/useAppStore';
 import { Leaf, Sun } from 'lucide-react';
 
@@ -78,7 +79,7 @@ function createNavigateHandler(navigate: ReturnType<typeof useNavigate>, isLogge
 
 /** 헤더/GNB 숨김 대상 페이지 목록 */
 const HIDDEN_HEADER_PAGES = ['login', 'signup', 'detail', 'list', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'admin/login', 'onboarding', 'edit-profile', 'team', 'oauth2/callback', 'dm'];
-const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'ai-walk-guide', 'visit-checkin', 'admin', 'admin/login', 'onboarding', 'edit-profile', 'team', 'oauth2/callback', 'dm'];
+const HIDDEN_NAV_PAGES = ['login', 'signup', 'detail', 'find-id', 'find-password', 'visit-checkin', 'admin', 'admin/login', 'onboarding', 'edit-profile', 'team', 'oauth2/callback', 'dm'];
 
 /** 루트 레이아웃 — 헤더, GNB, AI챗 표시 제어 */
 function RootAdapter() {
@@ -94,6 +95,8 @@ function RootAdapter() {
   const showHeader = !HIDDEN_HEADER_PAGES.includes(currentPath) && !currentPath.startsWith('detail') && !currentPath.startsWith('dm');
   const showBottomNav = !HIDDEN_NAV_PAGES.includes(currentPath) && !currentPath.startsWith('detail') && !currentPath.startsWith('dm');
   const showAIChat = showBottomNav;
+  const contentRef = useRef<HTMLElement>(null);
+  const showScrollButtons = currentPath !== 'map' && currentPath !== 'list';
 
   return (
     <div className="bg-background h-screen flex justify-center font-sans text-foreground">
@@ -138,13 +141,15 @@ function RootAdapter() {
           </header>
         )}
 
-        <main 
+        <main
+          ref={contentRef}
           className={`flex-1 flex flex-col overflow-x-hidden relative min-h-0 ${currentPath === 'map' || currentPath === 'list' ? 'overflow-hidden pt-0' : 'overflow-y-auto pt-2.5'}`}
           style={{ paddingBottom: showBottomNav ? 'calc(80px + env(safe-area-inset-bottom, 0px))' : '0px' }}
         >
           <Outlet context={{ onNavigate: handleNavigate }} />
         </main>
 
+        {showScrollButtons && <ScrollButtons scrollRef={contentRef} withNav={showBottomNav} />}
         {showAIChat && <AIChat />}
 
         {showBottomNav && (

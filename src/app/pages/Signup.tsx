@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authApi } from '../api/authApi';
-import { ArrowLeft, Mail, Eye, EyeOff, Leaf, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, Eye, EyeOff, Leaf } from 'lucide-react';
 
 interface SignupProps {
   onNavigate: (page: string) => void;
@@ -13,21 +13,12 @@ export function Signup({ onNavigate }: SignupProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
-  const [phone, setPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const formatPhone = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-  };
-
-  const phoneDigits = phone.replace(/\D/g, '');
-  const isValid = email.trim() && password.length >= 6 && nickname.trim() && phoneDigits.length >= 10 && agreeTerms;
+  const isValid = email.trim() && password.length >= 6 && nickname.trim() && agreeTerms;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +26,7 @@ export function Signup({ onNavigate }: SignupProps) {
     setError('');
     setIsLoading(true);
     try {
-      const res = await authApi.signup(email, password, nickname, phoneDigits);
+      const res = await authApi.signup(email, password, nickname);
       localStorage.setItem('accessToken', res.token);
       login(res.nickname, res.email, res.userId, res.profileImage);
       onNavigate('onboarding');
@@ -48,7 +39,6 @@ export function Signup({ onNavigate }: SignupProps) {
   };
 
   const handleSocialLogin = (provider: string) => {
-    sessionStorage.setItem('pending_phone', phoneDigits);
     const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '');
     window.location.href = `${apiHost}/oauth2/authorization/${provider}`;
   };
@@ -163,20 +153,6 @@ export function Signup({ onNavigate }: SignupProps) {
                 className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm"
                 maxLength={20}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">휴대폰 번호</label>
-              <div className="relative">
-                <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  placeholder="010-0000-0000"
-                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-primary outline-none transition-spring text-sm"
-                />
-              </div>
             </div>
 
             {/* 약관 동의 */}

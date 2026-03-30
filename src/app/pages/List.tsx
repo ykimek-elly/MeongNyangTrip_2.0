@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { PlaceImage } from '../components/PlaceImage';
 
 import { DatePickerPopup } from '../components/DatePickerPopup';
+import { ScrollButtons } from '../components/ScrollButtons';
 
 interface ListProps {
   onNavigate: (page: string, params?: any) => void;
@@ -106,16 +107,19 @@ export function List({ onNavigate, initialParams }: ListProps) {
     });
     setFilteredPlaces(applySortAndFilter(filtered, sortKey));
     setSearchMsg(`검색 결과: ${filtered.length}건${searchDate ? ` • ${searchDate} 예약가능` : ''}`);
+    listContainerRef.current?.scrollTo({ top: 0 });
   };
 
   const handleSortChange = (key: SortKey) => {
     setSortKey(key);
     setShowSortMenu(false);
     setFilteredPlaces(prev => applySortAndFilter(prev, key));
+    listContainerRef.current?.scrollTo({ top: 0 });
   };
 
   const handleFilterClick = (cat: string) => {
     setActiveFilter(cat);
+    listContainerRef.current?.scrollTo({ top: 0 });
     // URL 파라미터 동기화 — 뒤로가기 시 카테고리 선택 복원용
     const url = new URL(window.location.href);
     if (cat === 'all') url.searchParams.delete('category');
@@ -141,7 +145,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-      className="flex-1 flex flex-col bg-white min-h-0"
+      className="flex-1 flex flex-col bg-white min-h-0 relative"
     >
       {/* 검색 헤더 */}
       <div className="flex-shrink-0 z-10 bg-white border-b border-gray-100">
@@ -221,7 +225,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
       </div>
 
       {/* 목록 컨테이너 */}
-      <div ref={listContainerRef} className="flex-1 overflow-y-auto pb-24 min-h-0">
+      <div ref={listContainerRef} className="flex-1 overflow-y-auto pb-24 min-h-0 relative">
       <div className={viewMode === 'list' ? "px-4 py-4 space-y-3" : "px-4 py-4 grid grid-cols-2 gap-3"}>
         {filteredPlaces.length === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center py-20 animate-fade-in-up">
@@ -322,6 +326,7 @@ export function List({ onNavigate, initialParams }: ListProps) {
         )}
       </div>
       </div>
+      <ScrollButtons scrollRef={listContainerRef} />
     </motion.div>
   );
 }

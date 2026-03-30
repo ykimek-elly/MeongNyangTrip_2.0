@@ -6,7 +6,7 @@ import mainBanner3 from '../../assets/main_banner_1080_3.jpg';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Search, MapPin, Calendar, Layers, TreeDeciduous, PawPrint, Dog, Cat, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, MessageCircle, BotMessageSquare, Heart, Award, Camera, X, LogIn } from 'lucide-react';
-import { MapNavOutlineIcon } from '../components/CustomIcon';
+import { MapNavOutlineIcon, ChatBubbleOutlineIcon } from '../components/CustomIcon';
 
 import { PlaceImage } from '../components/PlaceImage';
 // 더미 데이터 제거
@@ -180,7 +180,7 @@ export function Home({ onNavigate }: HomeProps) {
           <div className="snap-start shrink-0"><CategoryItem icon={Dog} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Cat} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={MapNavOutlineIcon} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={MessageCircle} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={ChatBubbleOutlineIcon} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
         </div>
       </div>
 

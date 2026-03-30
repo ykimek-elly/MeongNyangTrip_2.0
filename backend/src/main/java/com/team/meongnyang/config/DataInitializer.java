@@ -22,7 +22,6 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         createAdminIfNotExists("admin@test.com", "password1234", "관리자");
-        createAdminIfNotExists("admin@meongtrip.com", "Meong1234!", "관리자2");
         warmUpPlacesCache();
     }
 

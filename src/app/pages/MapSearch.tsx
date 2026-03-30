@@ -62,15 +62,21 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const locatingRef = useRef(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const vetFetchedRef = useRef(false);
 
   // 동물병원 전용 상태
   const [vetPlaces, setVetPlaces] = useState<KakaoVet[]>([]);
   const [selectedVet, setSelectedVet] = useState<KakaoVet | null>(null);
   const [vetLoading, setVetLoading] = useState(false);
-  const vetFetchedRef = useRef(false); // 중복 호출 방지
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [showVetGuide, setShowVetGuide] = useState(false);
+
+  const centerLat = mapCenter?.lat ?? lat ?? 37.5665;
+  const centerLng = mapCenter?.lng ?? lng ?? 126.9780;
 
   const handleLocate = () => {
     setSpinning(true);
+    setShowVetGuide(false);
     locatingRef.current = true;
     getLocation();
     setTimeout(() => setSpinning(false), 600);
@@ -112,17 +118,19 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
     if (vetFetchedRef.current) return;
     vetFetchedRef.current = true;
 
+
     const REST_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
+    const level = mapRef.current?.getLevel() ?? 5;
+    const radius = level > 8 ? 10000 : level > 5 ? 5000 : 3000;
     setVetLoading(true);
     fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?query=동물병원&x=${lng}&y=${lat}&radius=3000&sort=distance&size=15`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=동물병원&x=${centerLng}&y=${centerLat}&radius=${radius}&sort=distance&size=15`,
       { headers: { Authorization: `KakaoAK ${REST_KEY}` } }
     )
       .then(r => r.json())
       .then(data => {
-        console.log('[동물병원] Kakao API 응답:', data);
         if (data.errorType || data.code) {
-          console.error('[동물병원] API 오류:', data.message || data.msg);
+          console.error('[동물병원] API 오류:', data.errorType, data.message);
           return;
         }
         setVetPlaces(data.documents ?? []);
@@ -249,10 +257,16 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
       {/* Kakao Map Area */}
       <div className="absolute inset-0 z-0">
         <Map
-          center={{ lat: lat || 37.5665, lng: lng || 126.9780 }}
+          center={{ lat: 37.5665, lng: 126.9780 }}
           style={{ width: "100%", height: "100%" }}
           level={5}
-          onZoomChanged={(map) => setMapLevel(map.getLevel())}
+          onZoomChanged={(map) => {
+            setMapLevel(map.getLevel());
+            setMapCenter({ lat: map.getCenter().getLat(), lng: map.getCenter().getLng() });
+          }}
+          onDragEnd={(map) => {
+            setMapCenter({ lat: map.getCenter().getLat(), lng: map.getCenter().getLng() });
+          }}
           onCreate={(map) => { mapRef.current = map; }}
         >
           {/* 동물병원 마커 */}
@@ -268,9 +282,9 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 className="cursor-pointer flex flex-col items-center"
                 onClick={() => { setSelectedVet(vet); setSelectedPlace(null); }}
               >
-                {mapLevel > 5 ? (
+                {mapLevel > 8 ? (
                   // 축소 시: 점
-                  <div className={`w-3 h-3 rounded-full border-2 border-white shadow-md ${selectedVet?.id === vet.id ? 'bg-blue-500 scale-125' : 'bg-blue-400'
+                  <div className={`w-4 h-4 rounded-full border-2 border-white shadow-md ${selectedVet?.id === vet.id ? 'bg-blue-500 scale-125' : 'bg-blue-400'
                     }`} />
                 ) : (
                   // 확대 시: 아이콘 + 상호명
@@ -318,7 +332,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 {(() => {
                   const cc = CATEGORY_COLOR[spot.category] ?? CATEGORY_COLOR['PLACE'];
                   const isSelected = selectedPlace?.id === spot.id;
-                  return mapLevel > 5 ? (
+                  return mapLevel > 8 ? (
                     // 축소 시: 점
                     <div className={`w-4 h-4 rounded-full border-[3px] border-white shadow-[0_0_0_1.5px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.25)] ${isSelected ? `${cc.dotSelected} scale-150` : cc.dot}`} />
                   ) : (
@@ -345,7 +359,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={() => onNavigate('home')}
-            className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-white transition-colors"
+            className="p-2 bg-white/90 backdrop-blur rounded-full shadow-sm hover:bg-white transition-spring"
           >
             <ArrowLeft size={20} className="text-gray-700" />
           </button>
@@ -379,7 +393,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
               )}
               <button
                 onClick={() => { setSearchQuery(searchInput); setShowSuggestions(false); }}
-                className="bg-primary text-white font-bold text-[13px] whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm active:scale-95 transition-all"
+                className="bg-primary text-white font-bold text-[13px] whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm active:scale-[0.97] transition-all"
               >
                 검색
               </button>
@@ -406,7 +420,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                           setMapLevel(3);
                         }
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-spring text-left border-b border-gray-50 last:border-0"
                     >
                       <PawPrint size={14} className="text-primary shrink-0" />
                       <div className="min-w-0">
@@ -434,8 +448,10 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                 setSearchInput('');
                 setShowSuggestions(false);
                 if (filter.id === '동물병원') {
-                  vetFetchedRef.current = false; // 탭 클릭 시 강제 리셋
-                  if (!lat) getLocation();
+                  vetFetchedRef.current = false;
+                  if (!lat) { getLocation(); setShowVetGuide(true); }
+                } else {
+                  setShowVetGuide(false);
                 }
               }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition-all ${activeFilter === filter.id
@@ -465,7 +481,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         onClick={handleLocate}
         animate={{ rotate: spinning ? 360 : 0 }}
         transition={{ duration: 0.55, ease: "easeInOut" }}
-        className={`absolute right-4 bottom-[82px] z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-95 transition-colors ${lat && lng ? 'text-primary' : 'text-gray-700'}`}
+        className={`absolute right-4 bottom-[82px] z-10 bg-white p-3 rounded-full shadow-lg hover:text-primary active:scale-[0.97] transition-spring ${lat && lng ? 'text-primary' : 'text-gray-700'}`}
       >
         <Navigation size={24} />
       </motion.button>
@@ -478,13 +494,33 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
         </div>
       )}
 
-      {/* 동물병원 위치 요청 안내 */}
-      {activeFilter === '동물병원' && !lat && !vetLoading && (
-        <div className="absolute top-32 left-1/2 -translate-x-1/2 z-20 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-md flex items-center gap-2 text-sm font-bold text-gray-600">
-          <MapPin size={14} className="text-primary" />
-          위치 버튼을 눌러 주변 병원을 찾아보세요
-        </div>
-      )}
+      {/* GPS 없을 때 안내 — 지도 중앙 오버레이 */}
+      <AnimatePresence>
+        {showVetGuide && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 12 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 260 }}
+            className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+          >
+            <div className="bg-white rounded-3xl shadow-xl px-6 py-5 flex flex-col items-center gap-3 mx-6">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <Stethoscope size={24} className="text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-bold text-gray-900 mb-1">주변 동물병원 찾기</p>
+                <p className="text-xs text-gray-500 leading-relaxed">내 위치 버튼을 눌러<br/>가까운 동물병원을 찾아보세요</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-primary font-bold">
+                <Navigation size={13} />
+                오른쪽 아래 내 위치 버튼
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       {/* 동물병원 팝업 */}
       <AnimatePresence>
@@ -534,7 +570,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : selectedVet.place_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 카카오 길찾기
                 </a>
@@ -544,7 +580,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : `https://map.naver.com/v5/search/${encodeURIComponent(selectedVet.place_name + ' ' + (selectedVet.road_address_name || selectedVet.address_name))}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 네이버 길찾기
                 </a>
@@ -618,7 +654,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
 
                     <button
                       onClick={() => onNavigate('detail', { id: selectedPlace.id })}
-                      className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md active:scale-95 transition-transform"
+                      className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md active:scale-[0.97] transition-transform"
                     >
                       상세보기
                     </button>
@@ -634,7 +670,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : `https://map.kakao.com/link/to/${encodeURIComponent(selectedPlace.name || selectedPlace.title || '')},${selectedPlace.latitude},${selectedPlace.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-yellow-400 text-gray-900 text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 카카오 길찾기
                 </a>
@@ -644,7 +680,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
                     : `https://map.naver.com/v5/search/${encodeURIComponent(selectedPlace.name || selectedPlace.title || '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-500 text-white text-xs font-bold rounded-xl active:scale-[0.97] transition-all"
                 >
                   <ExternalLink size={13} /> 네이버 길찾기
                 </a>

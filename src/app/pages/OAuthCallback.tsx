@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useAppStore } from '../store/useAppStore';
-import { authApi } from '../api/authApi';
 import { Leaf } from 'lucide-react';
 
 /**
@@ -23,16 +22,19 @@ export function OAuthCallback() {
 
     if (token) {
       localStorage.setItem('accessToken', token);
+
+      // 백엔드가 신규 유저 여부를 전달 — 기존 유저면 무조건 홈으로
+      const isNewUser = searchParams.get('isNewUser') === 'true';
+
       login(nickname || '사용자', email || '', userId ? Number(userId) : undefined, profileImage || '');
 
-      // 가입 시 인증된 휴대폰 번호 저장
-      const pendingPhone = sessionStorage.getItem('pending_phone');
-      if (pendingPhone) {
-        sessionStorage.removeItem('pending_phone');
-        authApi.savePhone(pendingPhone).catch(() => {/* 실패 무시 — 마이페이지에서 재등록 가능 */});
+      if (isNewUser) {
+        useAppStore.getState().completeOnboarding(); // 온보딩 완료 후 다시 안 뜨도록
+        navigate('/onboarding', { replace: true });
+      } else {
+        useAppStore.getState().completeOnboarding(); // 기존 유저 — 온보딩 스킵 처리
+        navigate('/', { replace: true });
       }
-
-      navigate('/', { replace: true });
     } else {
       // 토큰 없음 = 인증 실패 → 로그인 페이지로
       navigate('/login', { replace: true });

@@ -31,7 +31,6 @@ public class S3Config {
 
         if ("prod".equals(activeProfile)) {
             builder.credentialsProvider(InstanceProfileCredentialsProvider.create());
-        } else if (!accessKey.isBlank() && !secretKey.isBlank()) {
             builder.credentialsProvider(StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKey, secretKey)));
         } else {

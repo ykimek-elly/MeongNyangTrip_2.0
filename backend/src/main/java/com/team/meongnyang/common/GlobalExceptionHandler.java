@@ -73,6 +73,6 @@ public class GlobalExceptionHandler {
         // TEMP DEBUG
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.error(500, e.getClass().getSimpleName() + ": " + e.getMessage()));
+            .body(ApiResponse.error(500, "서버 오류가 발생했습니다."));
     }
 }

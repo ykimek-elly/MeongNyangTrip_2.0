@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot } from 'lucide-react';
+import { X, Send, BotMessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function AIChat() {
@@ -57,7 +57,7 @@ export function AIChat() {
               className="w-14 h-14 bg-primary text-white rounded-full shadow-[0_4px_20px_rgba(227,99,148,0.4)] flex items-center justify-center hover:scale-105 active:scale-[0.97] transition-transform pointer-events-auto"
               title="AI 챗봇"
             >
-              <Bot size={22} />
+              <BotMessageSquare size={22} />
             </button>
           </div>
         </div>
@@ -83,7 +83,7 @@ export function AIChat() {
               <div className="p-4 bg-white border-b border-gray-100 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
-                    <Bot size={18} />
+                    <BotMessageSquare size={18} />
                   </div>
                   <h5 className="m-0 font-bold text-lg">AI 멍냥 플래너 ✨</h5>
                 </div>

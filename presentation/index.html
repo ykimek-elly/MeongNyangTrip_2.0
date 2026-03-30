@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>멍냥트립 2.0 — 발표</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --primary: #E36394;
+  --primary-glow: rgba(227,99,148,0.3);
+  --dark:  #0d0d1a;
+  --dark2: #13132a;
+  --dark3: #1a1a3e;
+  --text:  #e8e8f0;
+  --dim:   #7070a0;
+  --card:  rgba(255,255,255,0.05);
+  --border:rgba(255,255,255,0.08);
+}
+
+body {
+  font-family: 'Apple SD Gothic Neo', 'Pretendard', -apple-system, sans-serif;
+  background: var(--dark);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 진행바 ── */
+#progressBar { height: 4px; background: var(--border); flex-shrink: 0; }
+#progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #ff8fab);
+  transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+
+#app { flex:1; position:relative; overflow:hidden; }
+
+/* ══════════════════════════════════════
+   FULL SCREEN 슬라이드
+══════════════════════════════════════ */
+.full-slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 48px 60px 68px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.55s cubic-bezier(0.16,1,0.3,1),
+              transform 0.55s cubic-bezier(0.16,1,0.3,1);
+  transform: translateY(28px);
+}
+.full-slide.active  { opacity:1; pointer-events:auto; transform:translateY(0); }
+.full-slide.exit-up { opacity:0; transform:translateY(-28px); }
+
+/* ══════════════════════════════════════
+   SPLIT 슬라이드
+══════════════════════════════════════ */
+.split-slide {
+  position: absolute; inset: 0;
+  display: flex;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.55s cubic-bezier(0.16,1,0.3,1),
+              transform 0.55s cubic-bezier(0.16,1,0.3,1);
+  transform: translateX(28px);
+}
+.split-slide.active    { opacity:1; pointer-events:auto; transform:translateX(0); }
+.split-slide.exit-left { opacity:0; transform:translateX(-28px); }
+
+.split-left {
+  width: 520px; flex-shrink:0;
+  background: var(--dark2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.split-left-header {
+  padding: 20px 28px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+}
+.logo-dot { width:10px;height:10px;border-radius:50%;background:var(--primary);box-shadow:0 0 10px var(--primary); }
+.split-left-header .logo   { font-size:16px;font-weight:700;color:white; }
+.split-left-header .counter{ margin-left:auto;font-size:13px;color:var(--dim); }
+.split-left-body { flex:1; padding:28px; overflow-y:auto; }
+.split-right { flex:1; display:flex; flex-direction:column; background:#0a0a12; }
+.browser-bar {
+  padding:10px 16px; background:var(--dark3);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+}
+.b-dots { display:flex;gap:5px; }
+.b-dot  { width:10px;height:10px;border-radius:50%; }
+.b-dot.r{background:#ff5f57;} .b-dot.y{background:#ffbd2e;} .b-dot.g{background:#28c840;}
+.b-url {
+  flex:1; background:rgba(255,255,255,0.06);
+  border:1px solid var(--border); border-radius:6px;
+  padding:6px 14px; font-size:12px; color:var(--dim);
+}
+.b-url .lock { color:#34d399; margin-right:6px; }
+.site-iframe { flex:1; border:none; width:100%; }
+
+/* ══════════════════════════════════════
+   스텝 애니메이션
+══════════════════════════════════════ */
+.step-item {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s cubic-bezier(0.16,1,0.3,1),
+              transform 0.5s cubic-bezier(0.16,1,0.3,1);
+}
+.step-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── 스텝 인디케이터 ── */
+.step-indicator {
+  position: absolute; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 6px; align-items: center;
+}
+.sdot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--border);
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.sdot.done { background: rgba(227,99,148,0.4); }
+.sdot.cur  {
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
+  width: 20px; border-radius: 3px;
+}
+
+/* ── 자동재생 펄스 ── */
+@keyframes pulse-ring {
+  0%   { transform:scale(1);   opacity:.7; }
+  100% { transform:scale(1.8); opacity:0;  }
+}
+.play-pulse {
+  position: absolute; bottom: 22px; right: 32px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--dim);
+}
+.pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--primary); position: relative;
+}
+.pulse-dot::after {
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background: var(--primary);
+  animation: pulse-ring 1.4s cubic-bezier(0.16,1,0.3,1) infinite;
+}
+.play-pulse.stopped .pulse-dot        { background: var(--dim); }
+.play-pulse.stopped .pulse-dot::after { display:none; }
+
+/* ══════════════════════════════════════
+   공통 타이포그래피
+══════════════════════════════════════ */
+.tag {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; font-weight:700; color:var(--primary);
+  background:rgba(227,99,148,0.12);
+  padding:6px 16px; border-radius:20px;
+  letter-spacing:.08em; text-transform:uppercase;
+  margin-bottom:14px;
+}
+.full-title {
+  font-size:52px; font-weight:900; color:white;
+  line-height:1.15; text-align:center; margin-bottom:14px;
+}
+.full-title .grad {
+  background:linear-gradient(135deg,#fff 0%,var(--primary) 60%);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.full-sub { font-size:18px; color:var(--dim); text-align:center; margin-bottom:36px; line-height:1.6; }
+.split-h2 { font-size:22px; font-weight:800; color:white; margin-bottom:6px; }
+.split-sub{ font-size:14px; color:var(--dim); margin-bottom:20px; line-height:1.6; }
+
+/* ══════════════════════════════════════
+   다이어그램
+══════════════════════════════════════ */
+.diagram { width:100%; max-width:900px; }
+
+.stat-row { display:flex; gap:16px; margin-bottom:28px; }
+.stat-box {
+  flex:1; background:var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:24px 16px; text-align:center;
+}
+.stat-num  { font-size:40px; font-weight:900; color:var(--primary); display:block; }
+.stat-label{ font-size:13px; color:var(--dim); margin-top:4px; }
+
+.flow {
+  display:flex; align-items:center; justify-content:center;
+  flex-wrap:wrap; gap:8px;
+}
+.flow-node {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:14px; padding:18px 24px; text-align:center; min-width:130px;
+}
+.flow-node.accent { border-color:rgba(227,99,148,0.4); background:rgba(227,99,148,0.1); }
+.flow-node .fn-icon  { font-size:28px; display:block; margin-bottom:8px; }
+.flow-node .fn-title { font-size:15px; font-weight:700; color:white; }
+.flow-node .fn-sub   { font-size:12px; color:var(--dim); margin-top:2px; }
+.flow-arrow { font-size:24px; color:var(--primary); flex-shrink:0; }
+
+.arch { display:flex; flex-direction:column; gap:10px; width:100%; max-width:820px; }
+.arch-row-d { display:flex; align-items:center; gap:10px; }
+.arch-box-d {
+  flex:1; background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:14px 18px; text-align:center;
+}
+.arch-box-d.hl { border-color:rgba(227,99,148,0.4); background:rgba(227,99,148,0.1); }
+.arch-box-d.bl { border-color:rgba(96,165,250,0.3);  background:rgba(96,165,250,0.08); }
+.arch-box-d.gr { border-color:rgba(52,211,153,0.3);  background:rgba(52,211,153,0.08); }
+.arch-box-d .ab-title { font-size:15px; font-weight:700; color:white; }
+.arch-box-d .ab-sub   { font-size:12px; color:var(--dim); margin-top:2px; }
+.arch-arrow-d { font-size:20px; color:var(--dim); flex-shrink:0; }
+.arch-conn    { text-align:center; font-size:20px; color:var(--dim); }
+.arch-conn.pk { font-size:13px; font-weight:700; color:var(--primary); }
+
+.tech-row { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:24px; }
+.ttag { font-size:14px; font-weight:600; padding:8px 18px; border-radius:8px; border:1px solid; }
+.ttag.b{color:#60a5fa;border-color:rgba(96,165,250,0.3); background:rgba(96,165,250,0.1);}
+.ttag.g{color:#34d399;border-color:rgba(52,211,153,0.3); background:rgba(52,211,153,0.1);}
+.ttag.p{color:#a78bfa;border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.1);}
+.ttag.o{color:#fb923c;border-color:rgba(251,146,60,0.3); background:rgba(251,146,60,0.1);}
+.ttag.pk{color:#f472b6;border-color:rgba(244,114,182,0.3);background:rgba(244,114,182,0.1);}
+.ttag.c{color:#22d3ee;border-color:rgba(34,211,238,0.3); background:rgba(34,211,238,0.1);}
+
+.stags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+.stag  { font-size:12px; font-weight:600; padding:4px 12px; border-radius:6px; border:1px solid; }
+.stag.b{color:#60a5fa;border-color:rgba(96,165,250,0.3); background:rgba(96,165,250,0.1);}
+.stag.g{color:#34d399;border-color:rgba(52,211,153,0.3); background:rgba(52,211,153,0.1);}
+.stag.p{color:#a78bfa;border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.1);}
+.stag.o{color:#fb923c;border-color:rgba(251,146,60,0.3); background:rgba(251,146,60,0.1);}
+.stag.pk{color:#f472b6;border-color:rgba(244,114,182,0.3);background:rgba(244,114,182,0.1);}
+.stag.c{color:#22d3ee;border-color:rgba(34,211,238,0.3); background:rgba(34,211,238,0.1);}
+
+.flist { display:flex; flex-direction:column; gap:10px; }
+.fitem {
+  display:flex; align-items:flex-start; gap:12px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:14px;
+}
+.fitem .fi{ font-size:22px; flex-shrink:0; }
+.fitem h4 { font-size:15px; font-weight:700; color:white; margin-bottom:3px; }
+.fitem p  { font-size:13px; color:var(--dim); line-height:1.5; }
+
+.member-card {
+  background:linear-gradient(135deg,rgba(227,99,148,0.12),rgba(255,143,171,0.04));
+  border:1px solid rgba(227,99,148,0.25);
+  border-radius:16px; padding:18px; margin-bottom:18px;
+}
+.member-card .mn { font-size:20px; font-weight:800; color:white; margin-bottom:4px; }
+.member-card .mr { font-size:13px; color:var(--primary); font-weight:600; }
+
+.intro-emoji {
+  font-size:72px; display:block; margin-bottom:16px;
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+
+/* ══════════════════════════════════════
+   하단 네비
+══════════════════════════════════════ */
+#nav {
+  flex-shrink:0; padding:12px 32px;
+  background:var(--dark2); border-top:1px solid var(--border);
+  display:flex; align-items:center; gap:14px;
+}
+.nav-btn {
+  width:40px; height:40px; border-radius:50%;
+  border:1px solid var(--border); background:var(--card);
+  color:var(--text); font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.2s; flex-shrink:0;
+}
+.nav-btn:hover    { background:rgba(255,255,255,0.1); border-color:var(--primary); color:var(--primary); }
+.nav-btn:disabled { opacity:.25; cursor:default; }
+.dots { display:flex; gap:5px; flex:1; justify-content:center; flex-wrap:wrap; }
+.dot  { width:7px; height:7px; border-radius:50%; background:var(--border); cursor:pointer; transition:all 0.3s; }
+.dot.split-dot { background:rgba(227,99,148,0.3); border-radius:2px; width:14px; }
+.dot.active    { background:var(--primary); box-shadow:0 0 8px var(--primary); }
+.dot.active.split-dot { width:20px; }
+.slide-type-badge {
+  font-size:12px; color:var(--dim);
+  background:var(--card); border:1px solid var(--border);
+  padding:5px 14px; border-radius:20px;
+  white-space:nowrap; min-width:120px; text-align:center;
+  transition: color 0.3s;
+}
+.slide-type-badge.playing { color: var(--primary); border-color: rgba(227,99,148,0.3); }
+</style>
+</head>
+<body>
+
+<div id="progressBar"><div id="progressFill"></div></div>
+<div id="app"></div>
+<div id="nav">
+  <button class="nav-btn" id="prevBtn" onclick="navBack()">‹</button>
+  <div class="dots" id="dots"></div>
+  <span class="slide-type-badge" id="typeBadge"></span>
+  <button class="nav-btn" id="nextBtn" onclick="navNext()">›</button>
+</div>
+
+<script>
+/* ════════════════════════════════════
+   슬라이드 데이터
+════════════════════════════════════ */
+const SLIDES = [
+
+  /* ── 0: 인트로 FULL (3 steps) ── */
+  { type:'full', steps:3, html:`
+    <span class="intro-emoji step-item" data-step="1">🐾</span>
+    <div class="full-title step-item" data-step="1"><span class="grad">멍냥트립 2.0</span></div>
+    <div class="full-sub step-item" data-step="1">반려동물과 함께하는 스마트 여행 플랫폼<br>공공 API × AI × 소셜 커뮤니티의 통합</div>
+    <div class="stat-row diagram step-item" data-step="2">
+      <div class="stat-box"><span class="stat-num">1,200+</span><span class="stat-label">반려동물 동반 장소</span></div>
+      <div class="stat-box"><span class="stat-num">21</span><span class="stat-label">전체 페이지</span></div>
+      <div class="stat-box"><span class="stat-num">4</span><span class="stat-label">팀원</span></div>
+      <div class="stat-box"><span class="stat-num">AWS</span><span class="stat-label">EC2 운영 배포</span></div>
+    </div>
+    <div class="tech-row step-item" data-step="3">
+      <span class="ttag b">React 18</span><span class="ttag g">Spring Boot 3</span>
+      <span class="ttag p">PostgreSQL + PostGIS</span><span class="ttag o">AWS EC2 / S3</span>
+      <span class="ttag pk">Google Gemini AI</span><span class="ttag c">Redis 캐싱</span>
+    </div>
+    <div class="step-indicator"></div>
+    <div class="play-pulse"><div class="pulse-dot"></div><span>자동재생</span></div>
+  `},
+
+  /* ── 1: 인트로 SPLIT ── */
+  { type:'split', label:'서비스 소개', iframe:'https://meongnyangtrip.duckdns.org', navPage:'home',
+    actions:[
+      { delay:1200, scroll:320 },   // 카테고리 + 랭킹 카드 노출
+      { delay:3800, scroll:0   },   // 상단으로 복귀
+    ], html:`
+    <div class="split-h2">멍냥트립 2.0</div>
+    <div class="split-sub">반려동물 동반 여행의 모든 것을 한 곳에서</div>
+    <div class="flist">
+      <div class="fitem"><span class="fi">🗺️</span><div><h4>장소 탐색</h4><p>1,200건 반려동물 동반 장소 — 카카오 지도 + PostGIS 반경 검색</p></div></div>
+      <div class="fitem"><span class="fi">🤖</span><div><h4>AI 산책 가이드</h4><p>날씨·펫 정보 기반 Gemini AI 맞춤 코멘트</p></div></div>
+      <div class="fitem"><span class="fi">📸</span><div><h4>라운지 커뮤니티</h4><p>S3 이미지 업로드 · 좋아요 · 댓글 · 산책톡</p></div></div>
+      <div class="fitem"><span class="fi">🔐</span><div><h4>소셜 로그인</h4><p>Google / Kakao OAuth2 + JWT 인증</p></div></div>
+    </div>
+  `},
+
+  /* ── 2: 사용자 경험 FULL (6 steps) ── */
+  { type:'full', steps:6, html:`
+    <div class="tag step-item" data-step="1">👤 User Experience</div>
+    <div class="full-title step-item" data-step="1" style="font-size:42px">사용자 여정 플로우</div>
+    <div class="full-sub step-item" data-step="1">로그인부터 AI 추천까지 — 끊김 없는 반려동물 여행 경험</div>
+    <div class="flow diagram">
+      <div class="flow-node accent step-item" data-step="2">
+        <span class="fn-icon">🔐</span><span class="fn-title">소셜 로그인</span><span class="fn-sub">Google / Kakao</span>
+      </div>
+      <span class="flow-arrow step-item" data-step="3">→</span>
+      <div class="flow-node step-item" data-step="3">
+        <span class="fn-icon">🐶</span><span class="fn-title">펫 등록</span><span class="fn-sub">종·나이·활동량</span>
+      </div>
+      <span class="flow-arrow step-item" data-step="4">→</span>
+      <div class="flow-node step-item" data-step="4">
+        <span class="fn-icon">🔍</span><span class="fn-title">장소 탐색</span><span class="fn-sub">위치·카테고리 필터</span>
+      </div>
+      <span class="flow-arrow step-item" data-step="5">→</span>
+      <div class="flow-node accent step-item" data-step="5">
+        <span class="fn-icon">❤️</span><span class="fn-title">찜 & 리뷰</span><span class="fn-sub">낙관적 업데이트</span>
+      </div>
+      <span class="flow-arrow step-item" data-step="6">→</span>
+      <div class="flow-node step-item" data-step="6">
+        <span class="fn-icon">🤖</span><span class="fn-title">AI 추천</span><span class="fn-sub">맞춤 산책 가이드</span>
+      </div>
+    </div>
+    <div class="step-indicator"></div>
+    <div class="play-pulse"><div class="pulse-dot"></div><span>자동재생</span></div>
+  `},
+
+  /* ── 3: 사용자 경험 SPLIT ── */
+  { type:'split', label:'사용자 경험', iframe:'https://meongnyangtrip.duckdns.org', navPage:'list',
+    actions:[
+      { delay:1200, scroll:400 },   // 장소 카드 목록 노출
+      { delay:3500, scroll:800 },   // 더 아래로 (더 많은 장소)
+      { delay:5500, scroll:0   },   // 상단 복귀
+    ], html:`
+    <div class="split-h2">핵심 UX 기능</div>
+    <div class="split-sub">모바일 퍼스트 설계 — 직관적인 반려동물 여행 플로우</div>
+    <div class="flist">
+      <div class="fitem"><span class="fi">🗺️</span><div><h4>카카오 지도 통합</h4><p>마커 클러스터링 · 동물병원 반경 탐색 · 길찾기</p></div></div>
+      <div class="fitem"><span class="fi">🔍</span><div><h4>PostGIS 위치 기반 검색</h4><p>ST_DWithin 반경 검색 + Redis 1시간 캐싱</p></div></div>
+      <div class="fitem"><span class="fi">❤️</span><div><h4>찜 목록 낙관적 업데이트</h4><p>즉각 UI 반영 후 API 동기화 · 실패 시 자동 롤백</p></div></div>
+      <div class="fitem"><span class="fi">✅</span><div><h4>방문 인증 체크인</h4><p>카카오 로컬 API 교차 검증 · 방문 이력 누적</p></div></div>
+    </div>
+  `},
+
+  /* ── 4: 팀원D FE FULL (5 steps) ── */
+  { type:'full', steps:5, html:`
+    <div class="tag step-item" data-step="1">🎨 Frontend & Data Pipeline</div>
+    <div class="full-title step-item" data-step="1" style="font-size:40px">FE 아키텍처 & 배치 파이프라인</div>
+    <div class="full-sub step-item" data-step="1">팀원D — React 18 · TypeScript · Zustand · Tailwind CSS v4</div>
+    <div class="arch diagram">
+      <div class="arch-row-d step-item" data-step="2">
+        <div class="arch-box-d hl">
+          <div class="ab-title">🖥️ React 18 + TypeScript</div>
+          <div class="ab-sub">21개 페이지 · 모바일 퍼스트 · 컴포넌트 분리</div>
+        </div>
+      </div>
+      <div class="arch-conn step-item" data-step="3">↕</div>
+      <div class="arch-row-d step-item" data-step="3" style="gap:12px">
+        <div class="arch-box-d bl"><div class="ab-title">🔄 Zustand</div><div class="ab-sub">전역 상태 · persist · 낙관적 업데이트</div></div>
+        <div class="arch-box-d bl"><div class="ab-title">🗺️ Kakao Maps SDK</div><div class="ab-sub">마커 · 클러스터 · 오버레이</div></div>
+        <div class="arch-box-d bl"><div class="ab-title">🎭 Framer Motion</div><div class="ab-sub">Spring 애니메이션 · 트랜지션</div></div>
+      </div>
+      <div class="arch-conn step-item" data-step="4">↕</div>
+      <div class="arch-row-d step-item" data-step="4">
+        <div class="arch-box-d gr">
+          <div class="ab-title">🎨 Tailwind CSS v4 + CSS 변수 디자인 시스템</div>
+          <div class="ab-sub">--primary · --brand-point · Spring 트랜지션 · 커스텀 아이콘 팩토리</div>
+        </div>
+      </div>
+      <div class="arch-conn pk step-item" data-step="5">+ 별도 파이프라인 구축 (팀원D)</div>
+      <div class="arch-row-d step-item" data-step="5">
+        <div class="arch-box-d hl">
+          <div class="ab-title">⚙️ 배치 파이프라인 교차배치 구축</div>
+          <div class="ab-sub">공공 API 수집 → Naver LCS 교차검증 → Gemini Vision 검증 → DB 적재 → 관리자 검토큐</div>
+        </div>
+      </div>
+    </div>
+    <div class="step-indicator"></div>
+    <div class="play-pulse"><div class="pulse-dot"></div><span>자동재생</span></div>
+  `},
+
+  /* ── 5: 팀원D FE SPLIT ── */
+  { type:'split', label:'FE 핵심 기술', iframe:'https://meongnyangtrip.duckdns.org', navPage:'home',
+    actions:[
+      { delay:1200, scroll:280 },   // 카테고리 탭 + 디자인 시스템 노출
+      { delay:3200, scroll:560 },   // 랭킹 카드 섹션 노출
+      { delay:5000, scroll:0   },   // 상단 복귀
+    ], html:`
+    <div class="member-card">
+      <div class="mn">팀원D — FE & UI/UX & 배치 파이프라인</div>
+      <div class="mr">React · TypeScript · Tailwind CSS · Zustand · 데이터 파이프라인</div>
+    </div>
+    <div class="stags">
+      <span class="stag b">React 18</span><span class="stag b">TypeScript</span>
+      <span class="stag c">Vite</span><span class="stag g">Tailwind v4</span>
+      <span class="stag p">Zustand</span><span class="stag o">Router v7</span>
+      <span class="stag pk">Framer Motion</span><span class="stag c">Kakao Maps</span>
+    </div>
+    <div class="flist">
+      <div class="fitem"><span class="fi">📱</span><div><h4>모바일 퍼스트 디자인 시스템</h4><p>CSS 변수 기반 컬러 · max-width 600px · Spring 물리 애니메이션</p></div></div>
+      <div class="fitem"><span class="fi">🔄</span><div><h4>Zustand Persist 전역 상태</h4><p>찜·펫·위치 localStorage 동기화 · 낙관적 업데이트 + 롤백</p></div></div>
+      <div class="fitem"><span class="fi">⚙️</span><div><h4>배치 파이프라인 교차배치 구축</h4><p>공공 API 수집 → Naver LCS 교차검증 → Gemini Vision 이미지 검증 → AI 별점 산정 → 관리자 검토큐</p></div></div>
+    </div>
+  `},
+
+  /* ── 6: 팀원B 피드 FULL (4 steps) ── */
+  { type:'full', steps:4, html:`
+    <div class="tag step-item" data-step="1">💬 Feed & Social</div>
+    <div class="full-title step-item" data-step="1" style="font-size:42px">피드 & S3 아키텍처</div>
+    <div class="full-sub step-item" data-step="1">팀원B — Spring Boot · JPA · AWS S3 · 소셜 피드</div>
+    <div class="arch diagram">
+      <div class="arch-row-d step-item" data-step="2">
+        <div class="arch-box-d bl"><div class="ab-title">📱 FE (React)</div><div class="ab-sub">Multipart 이미지 선택 · 미리보기</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d hl"><div class="ab-title">🌐 Spring Boot API</div><div class="ab-sub">LoungeController · S3 presigned URL</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d gr"><div class="ab-title">☁️ AWS S3</div><div class="ab-sub">IAM Role · EC2 자격증명</div></div>
+      </div>
+      <div class="arch-conn step-item" data-step="3">↓ PostgreSQL 저장</div>
+      <div class="arch-row-d step-item" data-step="4" style="gap:12px">
+        <div class="arch-box-d"><div class="ab-title">📰 피드 목록</div><div class="ab-sub">페이지네이션 · 좋아요</div></div>
+        <div class="arch-box-d"><div class="ab-title">💬 댓글</div><div class="ab-sub">실시간 반영</div></div>
+        <div class="arch-box-d"><div class="ab-title">🚶 산책톡</div><div class="ab-sub">태그 기반 분류</div></div>
+      </div>
+    </div>
+    <div class="step-indicator"></div>
+    <div class="play-pulse"><div class="pulse-dot"></div><span>자동재생</span></div>
+  `},
+
+  /* ── 7: 팀원B 피드 SPLIT ── */
+  { type:'split', label:'피드 & 소셜', iframe:'https://meongnyangtrip.duckdns.org', navPage:'lounge',
+    actions:[
+      { delay:1200, scroll:350 },   // 피드 게시글 노출
+      { delay:3500, scroll:700 },   // 추가 피드 스크롤
+      { delay:5500, scroll:0   },   // 상단 복귀
+    ], html:`
+    <div class="member-card">
+      <div class="mn">팀원B — 피드 & 소셜</div>
+      <div class="mr">Spring Boot · JPA · AWS S3 · PostgreSQL</div>
+    </div>
+    <div class="stags">
+      <span class="stag g">Spring Boot 3</span><span class="stag b">JPA</span>
+      <span class="stag o">AWS S3</span><span class="stag p">PostgreSQL</span><span class="stag c">Multipart</span>
+    </div>
+    <div class="flist">
+      <div class="fitem"><span class="fi">🖼️</span><div><h4>AWS S3 이미지 업로드</h4><p>EC2 IAM Role 기반 자격증명 · Multipart 직접 업로드</p></div></div>
+      <div class="fitem"><span class="fi">📰</span><div><h4>라운지 피드 시스템</h4><p>게시글 CRUD · 페이지네이션 · 좋아요·댓글</p></div></div>
+      <div class="fitem"><span class="fi">🚶</span><div><h4>산책톡 커뮤니티</h4><p>태그 기반 게시글 분류 · 팔로우 소셜 피드</p></div></div>
+    </div>
+  `},
+
+  /* ── 8: 팀원C AI FULL (4 steps) ── */
+  { type:'full', steps:4, html:`
+    <div class="tag step-item" data-step="1">🤖 AI Service</div>
+    <div class="full-title step-item" data-step="1" style="font-size:42px">AI 파이프라인</div>
+    <div class="full-sub step-item" data-step="1">팀원C — Spring AI · Gemini Vision API · 날씨 연동</div>
+    <div class="arch diagram">
+      <div class="arch-row-d step-item" data-step="2">
+        <div class="arch-box-d gr"><div class="ab-title">🌤️ 날씨 API</div><div class="ab-sub">기온·날씨 상태</div></div>
+        <span class="arch-arrow-d">+</span>
+        <div class="arch-box-d gr"><div class="ab-title">🐾 펫 프로필</div><div class="ab-sub">종·나이·활동량</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d hl"><div class="ab-title">🤖 Spring AI</div><div class="ab-sub">프롬프트 생성</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d hl"><div class="ab-title">✨ Gemini</div><div class="ab-sub">맞춤 코멘트 생성</div></div>
+      </div>
+      <div class="arch-conn pk step-item" data-step="3">⚙️ 별도 배치 파이프라인 교차배치 — 팀원D 구축</div>
+      <div class="arch-row-d step-item" data-step="4" style="gap:12px">
+        <div class="arch-box-d bl"><div class="ab-title">📸 1,200건 이미지</div><div class="ab-sub">공공 API 장소 원본</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d hl"><div class="ab-title">👁️ Gemini Vision</div><div class="ab-sub">이미지 적합성 검증</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d gr"><div class="ab-title">⭐ AI 별점 산정</div><div class="ab-sub">자동 큐레이션 244건</div></div>
+      </div>
+    </div>
+    <div class="step-indicator"></div>
+    <div class="play-pulse"><div class="pulse-dot"></div><span>자동재생</span></div>
+  `},
+
+  /* ── 9: 팀원C AI SPLIT ── */
+  { type:'split', label:'AI 서비스', iframe:'https://meongnyangtrip.duckdns.org', navPage:'ai-walk-guide',
+    actions:[
+      { delay:1400, scroll:300 },   // AI 추천 카드 노출
+      { delay:3500, scroll:0   },   // 상단 복귀
+    ], html:`
+    <div class="member-card">
+      <div class="mn">팀원C — AI & 알림 서비스</div>
+      <div class="mr">Spring AI · Gemini Vision API · 날씨 API</div>
+    </div>
+    <div class="stags">
+      <span class="stag p">Spring AI</span><span class="stag b">Gemini Vision</span>
+      <span class="stag g">pgvector</span><span class="stag o">날씨 API</span><span class="stag c">배치 처리</span>
+    </div>
+    <div class="flist">
+      <div class="fitem"><span class="fi">🌟</span><div><h4>Gemini Vision 배치 검증</h4><p>1,200건 장소 이미지 적합성 자동 검증 · AI 별점 산정</p></div></div>
+      <div class="fitem"><span class="fi">🌤️</span><div><h4>AI 산책 가이드</h4><p>날씨·기온·펫 정보 기반 Spring AI 맞춤 코멘트 생성</p></div></div>
+      <div class="fitem"><span class="fi">🔔</span><div><h4>장소 알림 서비스</h4><p>AI 큐레이션 244건 기반 맞춤 푸시 알림</p></div></div>
+    </div>
+  `},
+
+  /* ── 10: 팀원A 인프라 FULL (4 steps) ── */
+  { type:'full', steps:4, html:`
+    <div class="tag step-item" data-step="1">🚀 Infrastructure</div>
+    <div class="full-title step-item" data-step="1" style="font-size:42px">배포 아키텍처</div>
+    <div class="full-sub step-item" data-step="1">팀원A — AWS EC2 · Docker · GitHub Actions CI/CD</div>
+    <div class="arch diagram">
+      <div class="arch-row-d step-item" data-step="2">
+        <div class="arch-box-d bl"><div class="ab-title">👨‍💻 GitHub Push</div><div class="ab-sub">feat/frontend → main</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d hl"><div class="ab-title">⚙️ GitHub Actions</div><div class="ab-sub">빌드 · 테스트 · SSM 배포</div></div>
+        <span class="arch-arrow-d">→</span>
+        <div class="arch-box-d gr"><div class="ab-title">☁️ AWS EC2</div><div class="ab-sub">54.180.22.22</div></div>
+      </div>
+      <div class="arch-conn step-item" data-step="3">↓ Docker Compose</div>
+      <div class="arch-row-d step-item" data-step="4" style="gap:10px">
+        <div class="arch-box-d hl"><div class="ab-title">🌐 Nginx</div><div class="ab-sub">React SPA + 프록시</div></div>
+        <div class="arch-box-d hl"><div class="ab-title">☕ Spring Boot</div><div class="ab-sub">Java 21 Virtual Threads</div></div>
+        <div class="arch-box-d gr"><div class="ab-title">🐘 PostgreSQL</div><div class="ab-sub">+ PostGIS</div></div>
+        <div class="arch-box-d gr"><div class="ab-title">⚡ Redis</div><div class="ab-sub">캐시 · 세션</div></div>
+      </div>
+    </div>
+    <div class="step-indicator"></div>
+    <div class="play-pulse"><div class="pulse-dot"></div><span>자동재생</span></div>
+  `},
+
+  /* ── 11: 팀원A 인프라 SPLIT ── */
+  { type:'split', label:'인프라 & 배포', iframe:'https://meongnyangtrip.duckdns.org', navPage:'home',
+    actions:[
+      { delay:1200, scroll:300 },   // 서비스 콘텐츠 노출 (빠른 로드 증명)
+      { delay:3000, scroll:0   },
+    ], html:`
+    <div class="member-card">
+      <div class="mn">팀원A — 인프라 & 배포</div>
+      <div class="mr">AWS EC2 · Docker · GitHub Actions · Nginx</div>
+    </div>
+    <div class="stags">
+      <span class="stag o">AWS EC2</span><span class="stag b">Docker</span>
+      <span class="stag g">GitHub Actions</span><span class="stag p">AWS SSM</span>
+      <span class="stag c">Nginx</span><span class="stag pk">Redis 7</span>
+    </div>
+    <div class="flist">
+      <div class="fitem"><span class="fi">🐳</span><div><h4>Docker 멀티 컨테이너</h4><p>Nginx · Spring Boot · PostgreSQL · Redis 분리 운영</p></div></div>
+      <div class="fitem"><span class="fi">⚙️</span><div><h4>GitHub Actions CI/CD</h4><p>Push → 자동 빌드 → SSM → EC2 무중단 배포</p></div></div>
+      <div class="fitem"><span class="fi">⚡</span><div><h4>Java 21 Virtual Threads</h4><p>Spring Boot 3 가상 스레드 · 고동시성 처리</p></div></div>
+    </div>
+  `},
+];
+
+/* ════════════════════════════════════
+   상태 & 상수
+════════════════════════════════════ */
+const TOTAL       = SLIDES.length;
+const STEP_DELAY  = 850;   // ms 각 스텝 사이 간격
+const INIT_DELAY  = 550;   // ms 슬라이드 진입 후 첫 스텝까지 대기
+const HOLD_DELAY  = 1600;  // ms 마지막 스텝 후 split 전환 전 대기
+
+let cur       = 0;
+let autoTimer = null;
+const app     = document.getElementById('app');
+
+/* ════════════════════════════════════
+   타이머
+════════════════════════════════════ */
+function clearAuto() {
+  if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+  clearActions();
+}
+
+/* ════════════════════════════════════
+   스텝 표시
+════════════════════════════════════ */
+function revealStep(slideIdx, step) {
+  const el = app.children[slideIdx];
+  if (!el) return;
+  // 해당 step 번호 요소들 순차 표시 (60ms 스태거)
+  const items = [...el.querySelectorAll('[data-step="' + step + '"]')];
+  items.forEach((item, i) => {
+    setTimeout(() => item.classList.add('visible'), i * 60);
+  });
+  updateDots(slideIdx, step);
+  updateBadge(step);
+}
+
+function revealAll(slideIdx) {
+  const el = app.children[slideIdx];
+  if (!el) return;
+  el.querySelectorAll('.step-item').forEach(i => i.classList.add('visible'));
+  const maxSteps = SLIDES[slideIdx].steps || 1;
+  updateDots(slideIdx, maxSteps);
+  updateBadge(maxSteps);
+  stopPulse(slideIdx);
+}
+
+function resetSteps(slideIdx) {
+  const el = app.children[slideIdx];
+  if (!el) return;
+  el.querySelectorAll('.step-item').forEach(i => i.classList.remove('visible'));
+  updateDots(slideIdx, 0);
+}
+
+/* ════════════════════════════════════
+   인디케이터
+════════════════════════════════════ */
+function updateDots(slideIdx, step) {
+  const el = app.children[slideIdx];
+  if (!el) return;
+  const ind = el.querySelector('.step-indicator');
+  if (!ind) return;
+  const total = SLIDES[slideIdx].steps || 1;
+  ind.innerHTML = '';
+  for (let i = 1; i <= total; i++) {
+    const d = document.createElement('div');
+    d.className = 'sdot' + (i < step ? ' done' : i === step ? ' cur' : '');
+    ind.appendChild(d);
+  }
+}
+
+function stopPulse(slideIdx) {
+  const el = app.children[slideIdx];
+  if (!el) return;
+  const p = el.querySelector('.play-pulse');
+  if (p) p.classList.add('stopped');
+}
+
+/* ════════════════════════════════════
+   자동 재생
+════════════════════════════════════ */
+function autoPlay(slideIdx) {
+  clearAuto();
+  if (SLIDES[slideIdx].type !== 'full') return;
+
+  const maxSteps = SLIDES[slideIdx].steps || 1;
+  let step = 0;
+
+  function tick() {
+    step++;
+    revealStep(slideIdx, step);
+
+    if (step < maxSteps) {
+      autoTimer = setTimeout(tick, STEP_DELAY);
+    } else {
+      // 마지막 스텝 완료 → 펄스 정지 → split으로 자동 전환
+      stopPulse(slideIdx);
+      autoTimer = setTimeout(() => {
+        if (slideIdx + 1 < TOTAL) transitionTo(slideIdx + 1, 1);
+      }, HOLD_DELAY);
+    }
+  }
+
+  autoTimer = setTimeout(tick, INIT_DELAY);
+}
+
+/* ════════════════════════════════════
+   슬라이드 전환
+════════════════════════════════════ */
+function transitionTo(next, dir) {
+  if (next < 0 || next >= TOTAL) return;
+  clearAuto();
+
+  const curEl  = app.children[cur];
+  const nextEl = app.children[next];
+
+  // 현재 슬라이드 나가기
+  curEl.classList.remove('active');
+  if (dir >= 0) {
+    curEl.classList.add(SLIDES[cur].type === 'full' ? 'exit-up' : 'exit-left');
+  } else {
+    curEl.style.cssText = 'opacity:0;transform:translateY(20px)';
+  }
+  setTimeout(() => {
+    curEl.classList.remove('exit-up', 'exit-left');
+    curEl.style.cssText = '';
+  }, 560);
+
+  cur = next;
+
+  // 다음 슬라이드 준비
+  if (SLIDES[cur].type === 'full') {
+    resetSteps(cur);
+  }
+
+  nextEl.classList.add('active');
+  updateNav();
+
+  // 자동 재생 (full) 또는 페이지 이동 명령 (split)
+  if (SLIDES[cur].type === 'full') {
+    autoPlay(cur);
+  } else {
+    activateSplit(cur);
+  }
+}
+
+/* ════════════════════════════════════
+   iframe 자동 동작 (네비게이션 + 스크롤)
+════════════════════════════════════ */
+let actionTimers = [];
+
+function clearActions() {
+  actionTimers.forEach(t => clearTimeout(t));
+  actionTimers = [];
+}
+
+function activateSplit(slideIdx) {
+  clearActions();
+  const slide = SLIDES[slideIdx];
+  if (!slide.navPage) return;
+
+  // 1) 페이지 이동 명령 (postMessage)
+  const t0 = setTimeout(() => {
+    const iframe = getIframe(slideIdx);
+    if (!iframe) return;
+    iframe.contentWindow.postMessage(
+      { type: 'PRESENTATION_NAV', page: slide.navPage },
+      'https://meongnyangtrip.duckdns.org'
+    );
+  }, 300);
+  actionTimers.push(t0);
+
+  // 2) 스크롤 시퀀스 (same-origin DOM 직접 접근)
+  if (!slide.actions) return;
+  slide.actions.forEach(({ delay, scroll }) => {
+    const t = setTimeout(() => {
+      scrollIframe(slideIdx, scroll);
+    }, delay);
+    actionTimers.push(t);
+  });
+}
+
+function getIframe(slideIdx) {
+  return app.children[slideIdx]?.querySelector('.site-iframe') || null;
+}
+
+function scrollIframe(slideIdx, amount, attempt = 0) {
+  if (attempt > 8) return;
+  const iframe = getIframe(slideIdx);
+  if (!iframe?.contentWindow) return;
+  try {
+    const main = iframe.contentWindow.document.getElementById('main-scroll');
+    if (main) {
+      main.scrollTo({ top: amount, behavior: 'smooth' });
+    } else if (attempt < 8) {
+      // 아직 DOM 미준비 → 재시도
+      setTimeout(() => scrollIframe(slideIdx, amount, attempt + 1), 250);
+    }
+  } catch(e) {
+    // cross-origin 등 예외 무시
+  }
+}
+
+/* ════════════════════════════════════
+   네비게이션 버튼
+════════════════════════════════════ */
+// Space / → : 섹션 이동
+function navNext() {
+  clearAuto();
+  if (SLIDES[cur].type === 'full') {
+    // 다이어그램 스킵 → 즉시 split으로
+    revealAll(cur);
+    setTimeout(() => {
+      if (cur + 1 < TOTAL) transitionTo(cur + 1, 1);
+    }, 250);
+  } else {
+    if (cur + 1 < TOTAL) transitionTo(cur + 1, 1);
+  }
+}
+
+// ← : 이전 슬라이드
+function navBack() {
+  clearAuto();
+  if (cur - 1 >= 0) transitionTo(cur - 1, -1);
+}
+
+/* ════════════════════════════════════
+   dot 클릭
+════════════════════════════════════ */
+function goTo(i) {
+  if (i === cur) return;
+  clearAuto();
+  transitionTo(i, i > cur ? 1 : -1);
+}
+
+/* ════════════════════════════════════
+   네비 UI 갱신
+════════════════════════════════════ */
+function updateBadge(step) {
+  const s     = SLIDES[cur];
+  const badge = document.getElementById('typeBadge');
+  if (s.type === 'full') {
+    const total = s.steps || 1;
+    const isDone = step >= total;
+    badge.textContent = isDone
+      ? `▶ 완료 — Space 로 계속`
+      : `▶ 자동재생  ${step || 0} / ${total}`;
+    badge.classList.toggle('playing', !isDone);
+  } else {
+    badge.textContent = 'Space → 다음 섹션';
+    badge.classList.remove('playing');
+  }
+}
+
+function updateNav() {
+  document.getElementById('progressFill').style.width = ((cur+1)/TOTAL*100)+'%';
+  document.getElementById('prevBtn').disabled = cur === 0;
+  document.getElementById('nextBtn').disabled = cur === TOTAL - 1;
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===cur));
+  updateBadge(0);
+}
+
+/* ════════════════════════════════════
+   렌더링
+════════════════════════════════════ */
+function render() {
+  app.innerHTML = '';
+  SLIDES.forEach((s, i) => {
+    const el = document.createElement('div');
+    if (s.type === 'full') {
+      el.className = 'full-slide' + (i === cur ? ' active' : '');
+      el.innerHTML = s.html;
+    } else {
+      el.className = 'split-slide' + (i === cur ? ' active' : '');
+      el.innerHTML = `
+        <div class="split-left">
+          <div class="split-left-header">
+            <div class="logo-dot"></div>
+            <span class="logo">멍냥트립 2.0</span>
+            <span class="counter">${Math.floor(i/2)+1} / ${TOTAL/2}</span>
+          </div>
+          <div class="split-left-body">${s.html}</div>
+        </div>
+        <div class="split-right">
+          <div class="browser-bar">
+            <div class="b-dots">
+              <div class="b-dot r"></div><div class="b-dot y"></div><div class="b-dot g"></div>
+            </div>
+            <div class="b-url"><span class="lock">🔒</span>${s.iframe}</div>
+          </div>
+          <iframe class="site-iframe" src="${s.iframe}" title="멍냥트립 2.0" loading="lazy"></iframe>
+        </div>
+      `;
+    }
+    app.appendChild(el);
+  });
+
+  // dot 생성
+  const dotsEl = document.getElementById('dots');
+  dotsEl.innerHTML = '';
+  SLIDES.forEach((s,i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (s.type==='split' ? ' split-dot' : '') + (i===cur ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotsEl.appendChild(d);
+  });
+
+  updateNav();
+
+  // 첫 슬라이드 자동재생
+  if (SLIDES[cur].type === 'full') autoPlay(cur);
+}
+
+/* ════════════════════════════════════
+   키보드
+════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    e.preventDefault(); navNext();
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault(); navBack();
+  }
+});
+
+render();
+</script>
+</body>
+</html>

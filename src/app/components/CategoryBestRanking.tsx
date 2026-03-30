@@ -96,8 +96,8 @@ export function CategoryBestRanking({ places, onNavigate }: CategoryBestRankingP
                   <h4 className="font-bold text-gray-800 truncate text-[15px] px-[0px] py-[3px]">{place.title}</h4>
 
                   <div className="flex items-center justify-between mt-auto">
-                    <span className="flex items-center gap-1 text-xs text-gray-500 truncate max-w-[120px]">
-                      <MapPin size={12} className="text-gray-400" /> {place.address}
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <MapPin size={12} className="text-gray-400 shrink-0" /> {place.address.slice(0, 16)}
                     </span>
                     {place.reviewCount > 0 ? (
                       <span className="flex items-center gap-0.5 font-bold text-sm text-gray-800">

@@ -122,7 +122,9 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
   const [district, setDistrict]           = useState(initRegion.district);
   const [activityRadius, setActivityRadius] = useState<5 | 15 | 30>(initialData?.activityRadius ?? 15);
   const [personality, setPersonality]     = useState(initialData?.personality || '');
-  const [atmosphere, setAtmosphere]       = useState(initialData?.preferredPlace || '');
+  const [atmospheres, setAtmospheres]     = useState<string[]>(
+    initialData?.preferredPlace ? initialData.preferredPlace.split(',').map(s => s.trim()).filter(Boolean) : []
+  );
   const [notifyEnabled, setNotifyEnabled] = useState(initialData?.notifyEnabled ?? true);
 
   const showRepresentativeToggle = !isEdit && !!hasExistingPets;
@@ -151,7 +153,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
       region: sido + (district ? ` ${district}` : ''),
       activityRadius,
       personality: personality || undefined,
-      preferredPlace: atmosphere || undefined,
+      preferredPlace: atmospheres.length > 0 ? atmospheres.join(',') : undefined,
       notifyEnabled,
     });
   };
@@ -160,7 +162,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
   const selectedRadiusIdx = RADIUS_STEPS.findIndex(s => s.value === activityRadius);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -553,16 +555,20 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
 
                 {/* ④ 선호하는 장소 분위기 */}
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-2.5 block">
-                    선호하는 장소 분위기는? <span className="text-xs font-normal text-gray-400">선택</span>
+                  <label className="text-sm font-bold text-gray-700 mb-1 block">
+                    선호하는 장소 분위기는? <span className="text-xs font-normal text-gray-400">중복선택가능</span>
                   </label>
                   <div className="space-y-2">
                     {ATMOSPHERES.map(({ id, Icon, label, desc, color, bg }) => {
-                      const selected = atmosphere === id;
+                      const selected = atmospheres.includes(id);
                       return (
                         <button
                           key={id}
-                          onClick={() => setAtmosphere(selected ? '' : id)}
+                          onClick={() =>
+                            setAtmospheres(prev =>
+                              prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+                            )
+                          }
                           className={`w-full flex items-center p-3.5 rounded-2xl border-2 transition-spring ${
                             selected ? 'border-primary bg-primary/5' : 'border-gray-100 bg-white hover:bg-gray-50'
                           }`}

@@ -63,6 +63,11 @@ dependencies {
 	// Spring Mail (아이디 찾기 / 임시 비밀번호 발송)
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+
+// AWS S3
+	implementation 'software.amazon.awssdk:s3:2.25.11'
+	implementation 'software.amazon.awssdk:auth:2.25.11'
+
 	// Dev & Test
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

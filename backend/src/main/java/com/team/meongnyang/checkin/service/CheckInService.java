@@ -98,7 +98,11 @@ public class CheckInService {
     private boolean isBadgeUnlocked(int badgeId, long totalVisits) {
         return switch (badgeId) {
             case 1 -> totalVisits >= 1;   // 첫 방문
+            case 2 -> false;              // 연속 방문 7일 - 연속 방문 데이터 미구현
             case 3 -> totalVisits >= 10;  // 장소 탐험가
+            case 4 -> false;              // 사진 수집가 - 추후 photoCount 연동
+            case 5 -> false;              // 리뷰 마스터 - 추후 reviewCount 연동
+            case 6 -> false;              // 인기스타 - 추후 likeCount 연동
             default -> false;
         };
     }

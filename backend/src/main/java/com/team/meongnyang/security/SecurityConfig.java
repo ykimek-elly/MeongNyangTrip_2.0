@@ -52,15 +52,17 @@ public class SecurityConfig {
                     "/api/v1/auth/**",
                     "/api/v1/places/**",
                     "/api/v1/public-places/**",
-                    "/api/v1/admin/**",
-                    "/api/v1/pets/**",
                     "/oauth2/**",
                     "/login/oauth2/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
-                .requestMatchers(
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/upload/**").authenticated()
+                .requestMatchers("/api/v1/pets/**").authenticated()
+.requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
+.requestMatchers(HttpMethod.GET, "/api/v1/lounge/**").permitAll()                
+.requestMatchers(
                     "/api/v1/checkins/**",
                     "/api/v1/wishlists/**",
                     "/api/v1/reviews/**"

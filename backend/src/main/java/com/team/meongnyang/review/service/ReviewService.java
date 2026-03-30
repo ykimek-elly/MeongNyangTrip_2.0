@@ -1,5 +1,7 @@
 package com.team.meongnyang.review.service;
 
+import com.team.meongnyang.exception.BusinessException;
+import com.team.meongnyang.exception.ErrorCode;
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.place.repository.PlaceRepository;
 import com.team.meongnyang.review.dto.ReviewDto;
@@ -32,7 +34,7 @@ public class ReviewService {
                 .orElseThrow(() -> new RuntimeException("장소를 찾을 수 없습니다."));
 
         if (reviewRepository.existsByUser_UserIdAndPlace_Id(user.getUserId(), placeId)) {
-            throw new RuntimeException("이미 리뷰를 작성하셨습니다.");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "이미 리뷰를 작성하셨습니다.");
         }
 
         Review review = Review.builder()
@@ -88,7 +90,7 @@ public class ReviewService {
                 .orElseThrow(() -> new RuntimeException("리뷰를 찾을 수 없습니다."));
 
         if (!review.getUser().getUserId().equals(user.getUserId())) {
-            throw new RuntimeException("본인 리뷰만 삭제할 수 있습니다.");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "본인 리뷰만 삭제할 수 있습니다.");
         }
 
         review.getPlace().removeReview(review.getRating());

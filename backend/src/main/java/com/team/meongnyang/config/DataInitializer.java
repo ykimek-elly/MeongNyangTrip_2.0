@@ -1,4 +1,5 @@
 package com.team.meongnyang.config;
+import com.team.meongnyang.place.service.PlaceService;
 import com.team.meongnyang.user.entity.User;
 import com.team.meongnyang.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,21 @@ import org.springframework.stereotype.Component;
 public class DataInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PlaceService placeService;
     @Override
     public void run(ApplicationArguments args) {
         createAdminIfNotExists("admin@test.com", "password1234", "관리자");
         createAdminIfNotExists("admin@meongtrip.com", "Meong1234!", "관리자2");
+        warmUpPlacesCache();
+    }
+
+    private void warmUpPlacesCache() {
+        try {
+            placeService.getPlaces(null, null);
+            log.info("[DataInitializer] 장소 목록 캐시 워밍 완료");
+        } catch (Exception e) {
+            log.warn("[DataInitializer] 장소 목록 캐시 워밍 실패 (무시): {}", e.getMessage());
+        }
     }
     private void createAdminIfNotExists(String email, String password, String nickname) {
         if (userRepository.existsByEmail(email)) {

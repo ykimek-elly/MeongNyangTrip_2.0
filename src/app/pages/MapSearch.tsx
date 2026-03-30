@@ -62,6 +62,7 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const locatingRef = useRef(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const vetFetchedRef = useRef(false);
 
   // 동물병원 전용 상태
   const [vetPlaces, setVetPlaces] = useState<KakaoVet[]>([]);
@@ -69,6 +70,9 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   const [vetLoading, setVetLoading] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showVetGuide, setShowVetGuide] = useState(false);
+
+  const centerLat = mapCenter?.lat ?? lat ?? 37.5665;
+  const centerLng = mapCenter?.lng ?? lng ?? 126.9780;
 
   const handleLocate = () => {
     setSpinning(true);

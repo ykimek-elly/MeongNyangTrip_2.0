@@ -15,18 +15,13 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-/**
- * OAuth2 인증 성공 핸들러.
- * JWT 발급 후 FE 콜백 URL로 리다이렉트:
- *   {FRONTEND}/oauth2/callback?token=JWT&userId=...&nickname=...&email=...&profileImage=...
- */
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
 
-@Value("${oauth2.redirect-uri:https://meongnyangtrip.duckdns.org/oauth2/callback}")
+    @Value("${oauth2.redirect-uri:https://meongnyangtrip.duckdns.org/oauth2/callback}")
     private String redirectUri;
 
     @Override
@@ -46,6 +41,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .queryParam("nickname", URLEncoder.encode(user.getNickname(), StandardCharsets.UTF_8))
                 .queryParam("email", URLEncoder.encode(email, StandardCharsets.UTF_8))
                 .queryParam("profileImage", URLEncoder.encode(profileImage, StandardCharsets.UTF_8))
+                .queryParam("isNewUser", principal.isNewUser())
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);

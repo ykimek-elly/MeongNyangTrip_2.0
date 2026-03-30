@@ -22,11 +22,19 @@ export function OAuthCallback() {
 
     if (token) {
       localStorage.setItem('accessToken', token);
+
+      // 백엔드가 신규 유저 여부를 전달 — 기존 유저면 무조건 홈으로
+      const isNewUser = searchParams.get('isNewUser') === 'true';
+
       login(nickname || '사용자', email || '', userId ? Number(userId) : undefined, profileImage || '');
 
-      // 온보딩 미완료(신규 가입)이면 온보딩으로, 기존 유저면 홈으로
-      const { hasCompletedOnboarding } = useAppStore.getState();
-      navigate(hasCompletedOnboarding ? '/' : '/onboarding', { replace: true });
+      if (isNewUser) {
+        useAppStore.getState().completeOnboarding(); // 온보딩 완료 후 다시 안 뜨도록
+        navigate('/onboarding', { replace: true });
+      } else {
+        useAppStore.getState().completeOnboarding(); // 기존 유저 — 온보딩 스킵 처리
+        navigate('/', { replace: true });
+      }
     } else {
       // 토큰 없음 = 인증 실패 → 로그인 페이지로
       navigate('/login', { replace: true });

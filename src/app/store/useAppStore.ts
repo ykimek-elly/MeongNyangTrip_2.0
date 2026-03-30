@@ -138,11 +138,32 @@ export const useAppStore = create<AppState>()(
         // 로그인 후 서버 찜 목록 동기화
         wishlistApi.getMyWishlists()
           .then((items) => set({ wishlist: items.map(i => i.placeId) }))
-          .catch(() => {/* mock/오프라인 환경에서는 무시 */});
+          .catch(() => {});
+        // 로그인 후 서버 펫 목록 동기화
+        if (userId) {
+          petApi.getPets(userId)
+            .then((pets) => set({
+              pets: pets.map(p => ({
+                id: p.petId,
+                name: p.petName,
+                type: p.petType,
+                breed: p.petBreed,
+                gender: p.petGender,
+                size: p.petSize,
+                age: p.petAge,
+                weight: p.petWeight ?? undefined,
+                activity: p.petActivity,
+                personality: p.personality ?? undefined,
+                preferredPlace: p.preferredPlace ?? undefined,
+                isRepresentative: p.isRepresentative,
+              }))
+            }))
+            .catch(() => {});
+        }
       },
 
       // TODO: [DB 연동] POST /api/auth/logout → JWT 토큰 블랙리스트(Redis) 처리 + 클라이언트 토큰 삭제
-      logout: () => set({ isLoggedIn: false, isAdmin: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], hasCompletedOnboarding: false, wishlist: [] }),
+      logout: () => set({ isLoggedIn: false, isAdmin: false, userId: null, username: '게스트', email: '', profileImage: '', pets: [], wishlist: [] }),
 
       // TODO: [DB 연동] PUT /api/users/profile → Spring Boot JPA users 테이블 UPDATE (PostgreSQL)
       updateProfile: (data) => set((state) => ({

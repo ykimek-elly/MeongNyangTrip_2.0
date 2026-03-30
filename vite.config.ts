@@ -8,6 +8,20 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/oauth2/authorization': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/login/oauth2': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if

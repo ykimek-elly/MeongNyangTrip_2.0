@@ -23,8 +23,18 @@ export function Home({ onNavigate }: HomeProps) {
   const [searchDate, setSearchDate] = React.useState('');
   const [searchCategory, setSearchCategory] = React.useState('all');
   const [showSignupPrompt, setShowSignupPrompt] = React.useState(false);
+  const [showPetPrompt, setShowPetPrompt] = React.useState(false);
   const isLoggedIn = useAppStore((s) => s.isLoggedIn);
+  const pets = useAppStore((s) => s.pets);
   const places = useAppStore((s) => s.places);
+
+  // 로그인 상태인데 펫이 없으면 알림 표시
+  React.useEffect(() => {
+    if (isLoggedIn && pets.length === 0) {
+      const timer = setTimeout(() => setShowPetPrompt(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, pets.length]);
 
   const handleBannerClick = (page: string) => {
     if (isLoggedIn) {
@@ -320,6 +330,40 @@ export function Home({ onNavigate }: HomeProps) {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* 반려동물 미등록 알림 토스트 */}
+      <AnimatePresence>
+        {showPetPrompt && (
+          <motion.div
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+            className="fixed bottom-28 inset-x-0 flex justify-center px-4 z-50 pointer-events-none"
+          >
+            <div className="w-full max-w-[560px] bg-gray-900 text-white rounded-2xl px-4 py-3.5 shadow-xl flex items-center gap-3 pointer-events-auto">
+              <div className="w-9 h-9 bg-primary/20 rounded-full flex items-center justify-center shrink-0">
+                <PawPrint size={18} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">반려동물을 등록해보세요!</p>
+                <p className="text-xs text-gray-400 mt-0.5">맞춤 장소 추천을 받을 수 있어요</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => { setShowPetPrompt(false); onNavigate('mypage'); }}
+                  className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                >
+                  등록하기
+                </button>
+                <button onClick={() => setShowPetPrompt(false)} className="text-gray-400 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

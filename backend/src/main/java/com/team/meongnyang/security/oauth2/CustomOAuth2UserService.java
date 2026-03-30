@@ -69,18 +69,22 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String finalProfileImage = profileImage;
         String provider          = registrationId.toUpperCase();
 
+        boolean[] isNew = {false};
         User user = userRepository.findByProviderAndProviderId(provider, providerId)
                 .orElseGet(() -> userRepository.findByEmail(finalEmail)
-                        .orElseGet(() -> userRepository.save(User.builder()
-                                .email(finalEmail)
-                                .password("")
-                                .nickname(finalNickname)
-                                .profileImage(finalProfileImage)
-                                .provider(provider)
-                                .providerId(providerId)
-                                .build())));
+                        .orElseGet(() -> {
+                            isNew[0] = true;
+                            return userRepository.save(User.builder()
+                                    .email(finalEmail)
+                                    .password("")
+                                    .nickname(finalNickname)
+                                    .profileImage(finalProfileImage)
+                                    .provider(provider)
+                                    .providerId(providerId)
+                                    .build());
+                        }));
 
-        return new OAuth2UserPrincipal(user, attributes);
+        return new OAuth2UserPrincipal(user, attributes, isNew[0]);
     }
 
     private String resolveUniqueNickname(String base) {

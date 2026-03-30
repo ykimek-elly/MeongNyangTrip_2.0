@@ -17,14 +17,20 @@ public class OAuth2UserPrincipal implements OAuth2User {
 
     private final User user;
     private final Map<String, Object> attributes;
+    private final boolean newUser;
 
-    public OAuth2UserPrincipal(User user, Map<String, Object> attributes) {
+    public OAuth2UserPrincipal(User user, Map<String, Object> attributes, boolean newUser) {
         this.user = user;
         this.attributes = attributes;
+        this.newUser = newUser;
     }
 
     public User getUser() {
         return user;
+    }
+
+    public boolean isNewUser() {
+        return newUser;
     }
 
     @Override

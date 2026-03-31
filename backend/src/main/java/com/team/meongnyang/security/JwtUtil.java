@@ -14,6 +14,9 @@ public class JwtUtil {
     private final Key key;
     private final long expiration;
 
+    // Refresh Token 유효기간: 7일
+    private static final long REFRESH_EXPIRATION = 7L * 24 * 60 * 60 * 1000;
+
     public JwtUtil(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration}") long expiration) {
@@ -21,6 +24,7 @@ public class JwtUtil {
         this.expiration = expiration;
     }
 
+    /** Access Token 발급 (기존 generateToken과 동일, 이름 명확화) */
     public String generateToken(String email) {
         return Jwts.builder()
                 .subject(email)
@@ -28,6 +32,21 @@ public class JwtUtil {
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key)
                 .compact();
+    }
+
+    /** Refresh Token 발급 (7일) */
+    public String generateRefreshToken(String email) {
+        return Jwts.builder()
+                .subject(email)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + REFRESH_EXPIRATION))
+                .signWith(key)
+                .compact();
+    }
+
+    /** Refresh Token 유효기간(초) 반환 — Redis TTL 설정용 */
+    public long getRefreshExpirationSeconds() {
+        return REFRESH_EXPIRATION / 1000;
     }
 
     public String getEmailFromToken(String token) {

@@ -1,6 +1,7 @@
 package com.team.meongnyang.security.oauth2;
 
 import com.team.meongnyang.security.JwtUtil;
+import com.team.meongnyang.security.RefreshTokenService;
 import com.team.meongnyang.user.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${oauth2.redirect-uri:https://meongnyangtrip.duckdns.org/oauth2/callback}")
     private String redirectUri;
@@ -33,10 +35,14 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String email        = user.getEmail() != null ? user.getEmail() : "";
         String profileImage = user.getProfileImage() != null ? user.getProfileImage() : "";
-        String token        = jwtUtil.generateToken(email);
+
+        String accessToken  = jwtUtil.generateToken(email);
+        String refreshToken = jwtUtil.generateRefreshToken(email);
+        refreshTokenService.save(email, refreshToken);
 
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
-                .queryParam("token", token)
+                .queryParam("token", accessToken)
+                .queryParam("refreshToken", refreshToken)
                 .queryParam("userId", user.getUserId())
                 .queryParam("nickname", URLEncoder.encode(user.getNickname(), StandardCharsets.UTF_8))
                 .queryParam("email", URLEncoder.encode(email, StandardCharsets.UTF_8))

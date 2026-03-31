@@ -50,6 +50,7 @@ export interface PlaceDto {
  */
 export interface AuthResponseDto {
   token: string;
+  refreshToken: string;  // ← 이 줄 추가
   userId: number;
   email: string;
   nickname: string;

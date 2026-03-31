@@ -146,6 +146,7 @@ export function Login({ onNavigate }: LoginProps) {
     try {
       const res = await authApi.login(email, password);
       localStorage.setItem('accessToken', res.token);
+      localStorage.setItem('refreshToken', res.refreshToken);
       login(res.nickname, res.email, res.userId, res.profileImage, res.role === 'ADMIN');
       onNavigate('home');
     } catch {

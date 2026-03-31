@@ -46,7 +46,7 @@ public class AuthController {
 
         if (refreshToken == null || !refreshTokenService.validate(refreshToken)) {
             return ResponseEntity.status(401)
-                    .body(ApiResponse.fail(401, "유효하지 않은 리프레시 토큰입니다."));
+                    .body(ApiResponse.error(401, "유효하지 않은 리프레시 토큰입니다."));
         }
 
         String email = refreshTokenService.getEmail(refreshToken);

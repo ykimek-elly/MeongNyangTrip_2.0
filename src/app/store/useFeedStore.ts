@@ -220,16 +220,14 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   editComment: async (postId, commentId, content) => {
     try {
       await api.patch(`${API}/posts/${postId}/comments/${commentId}`, { content });
+      const updateCommentList = (list: any[]) =>
+        list.map((c) => c.id === commentId ? { ...c, content } : c);
       set((state) => ({
         posts: state.posts.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                commentList: p.commentList.map((c) =>
-                  c.id === commentId ? { ...c, content } : c
-                ),
-              }
-            : p
+          p.id === postId ? { ...p, commentList: updateCommentList(p.commentList) } : p
+        ),
+        talks: state.talks.map((t) =>
+          t.id === postId ? { ...t, commentList: updateCommentList(t.commentList) } : t
         ),
       }));
     } catch (e) {
@@ -242,16 +240,14 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   deleteComment: async (postId, commentId) => {
     try {
       await api.delete(`${API}/posts/${postId}/comments/${commentId}`);
+      const removeComment = (p: any) => ({
+        ...p,
+        comments: Math.max(0, p.comments - 1),
+        commentList: p.commentList.filter((c: any) => c.id !== commentId),
+      });
       set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                comments: Math.max(0, p.comments - 1),
-                commentList: p.commentList.filter((c) => c.id !== commentId),
-              }
-            : p
-        ),
+        posts: state.posts.map((p) => p.id === postId ? removeComment(p) : p),
+        talks: state.talks.map((t) => t.id === postId ? removeComment(t) : t),
       }));
     } catch (e) {
       console.error('댓글 삭제 실패', e);
@@ -262,18 +258,16 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   editPost: async (postId, content) => {
     if (typeof content === 'object' && content !== null) {
       set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, ...content } : p
-        ),
+        posts: state.posts.map((p) => p.id === postId ? { ...p, ...content } : p),
+        talks: state.talks.map((t) => t.id === postId ? { ...t, ...content } : t),
       }));
       return;
     }
     try {
       await api.patch(`${API}/posts/${postId}`, { content });
       set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, content } : p
-        ),
+        posts: state.posts.map((p) => p.id === postId ? { ...p, content } : p),
+        talks: state.talks.map((t) => t.id === postId ? { ...t, content } : t),
       }));
     } catch (e) {
       console.error('게시글 수정 실패', e);

@@ -29,7 +29,7 @@ public class NotificationService {
             NotificationRequest request = notificationMessageBuilder.buildRequest(user, pet, place, comment, weatherType);
             NotificationRequest.Message payload = request.getMessages().get(0);
 
-            log.info("[카카오 알림톡] 발송 시도 userId={}, phone={}, placeId={}, weatherType={}, templateCode={}, templateParameter={}, buttonIncluded={}",
+            log.info("[KakaoNotification] send attempt userId={}, phone={}, placeId={}, weatherType={}, templateCode={}, templateParameter={}, buttonIncluded={}",
                     user.getUserId(),
                     payload.getTo(),
                     place != null ? place.getId() : null,
@@ -38,32 +38,35 @@ public class NotificationService {
                     payload.getTemplateParameter(),
                     payload.getButtons() != null && !payload.getButtons().isEmpty());
 
-            log.info("[카카오 알림톡] contentPreview={}",
+            log.info("[KakaoNotification] contentPreview={}",
                     payload.getContent() == null ? null : payload.getContent().replace("\r", "\\r").replace("\n", "\\n"));
 
             NotificationResponse response = ncloudClient.send(request);
 
-            log.info("[카카오 알림톡] 발송 결과 success={}, requestId={}, statusCode={}",
+            log.info("[KakaoNotification] request result success={}, requestId={}, statusCode={}",
                     response.isSuccess(),
                     response.getRequestId(),
                     response.getStatusCode());
 
-            logDeliveryResult(response);
-            return response;
+            return applyFinalDeliveryStatus(response);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("[카카오 알림톡] 요청 생성 실패 userId={}, reason={}", user.getUserId(), e.getMessage(), e);
+            log.warn("[KakaoNotification] request build failed userId={}, reason={}", user.getUserId(), e.getMessage(), e);
             return NotificationResponse.failure("INVALID_REQUEST", e.getMessage());
         }
     }
 
-    private void logDeliveryResult(NotificationResponse response) {
-        if (response == null || response.getRequestId() == null || response.getRequestId().isBlank()) {
-            log.warn("[카카오 알림톡] requestId가 없어 최종 결과 조회를 건너뜁니다.");
-            return;
+    private NotificationResponse applyFinalDeliveryStatus(NotificationResponse response) {
+        if (response == null || !response.isSuccess()) {
+            return response;
+        }
+
+        if (response.getRequestId() == null || response.getRequestId().isBlank()) {
+            log.warn("[KakaoNotification] requestId missing, skip delivery tracking");
+            return NotificationResponse.failure("DELIVERY_TRACKING_UNAVAILABLE", "requestId missing");
         }
 
         NotificationDeliveryResult deliveryResult = notificationDeliveryTracker.trackByRequestId(response.getRequestId());
-        log.info("[카카오 알림톡] 최종 결과 requestId={}, messageId={}, requestStatusCode={}, requestStatusDesc={}, messageStatusCode={}, messageStatusDesc={}",
+        log.info("[KakaoNotification] delivery result requestId={}, messageId={}, requestStatusCode={}, requestStatusDesc={}, messageStatusCode={}, messageStatusDesc={}",
                 deliveryResult.getRequestId(),
                 deliveryResult.getMessageId(),
                 deliveryResult.getRequestStatusCode(),
@@ -71,10 +74,33 @@ public class NotificationService {
                 deliveryResult.getMessageStatusCode(),
                 deliveryResult.getMessageStatusDesc());
 
-        if (deliveryResult.isAccepted() && !deliveryResult.hasFinalMessageStatus()) {
-            log.warn("[카카오 알림톡] SENS 접수는 성공했지만 카카오 최종 상태는 아직 미확정입니다. requestId={}, messageId={}",
+        if (!deliveryResult.isAccepted()) {
+            return NotificationResponse.failure(
+                    deliveryResult.getRequestStatusCode(),
+                    deliveryResult.getRequestStatusDesc()
+            );
+        }
+
+        if (!deliveryResult.hasFinalMessageStatus()) {
+            log.warn("[KakaoNotification] final delivery status is still pending requestId={}, messageId={}",
                     deliveryResult.getRequestId(),
                     deliveryResult.getMessageId());
+            return NotificationResponse.failure("DELIVERY_PENDING", "final message status missing");
         }
+
+        if (!"0000".equals(deliveryResult.getMessageStatusCode())) {
+            return NotificationResponse.failure(
+                    deliveryResult.getMessageStatusCode(),
+                    deliveryResult.getMessageStatusDesc()
+            );
+        }
+
+        return NotificationResponse.builder()
+                .success(true)
+                .requestId(response.getRequestId())
+                .requestTime(response.getRequestTime())
+                .statusCode(deliveryResult.getMessageStatusCode())
+                .statusName(deliveryResult.getMessageStatusDesc())
+                .build();
     }
 }

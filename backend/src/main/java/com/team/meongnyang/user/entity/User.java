@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 회원 엔티티 (ERD: USER)
@@ -19,6 +20,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class User extends BaseEntity {
+    private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -80,7 +83,7 @@ public class User extends BaseEntity {
     private double longitude;
 
     public void markNotificationSent() {
-        this.lastNotificationSentAt = LocalDateTime.now();
+        this.lastNotificationSentAt = LocalDateTime.now(SEOUL_ZONE);
     }
 
     public enum Role {

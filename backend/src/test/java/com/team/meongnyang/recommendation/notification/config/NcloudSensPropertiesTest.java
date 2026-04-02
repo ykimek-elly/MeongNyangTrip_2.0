@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class NcloudSensPropertiesTest {
 
     @Test
-    @DisplayName("날씨별 template code는 정확히 매핑되고 다른 날씨 코드로 fallback하지 않는다")
+    @DisplayName("날씨별 template code는 정확히 매핑된다")
     void resolveTemplateCodeUsesExactWeatherMapping() {
         NcloudSensProperties properties = new NcloudSensProperties();
         NcloudSensProperties.Template template = new NcloudSensProperties.Template();
@@ -29,15 +29,15 @@ class NcloudSensPropertiesTest {
     }
 
     @Test
-    @DisplayName("특정 날씨 template code가 비어 있으면 빈 값으로 남겨 상위 계층에서 fail-fast 할 수 있다")
-    void resolveTemplateCodeDoesNotFallbackAcrossWeatherTypes() {
+    @DisplayName("날씨별 template code가 비면 default code로 fallback한다")
+    void resolveTemplateCodeFallsBackToDefaultCode() {
         NcloudSensProperties properties = new NcloudSensProperties();
         NcloudSensProperties.Template template = new NcloudSensProperties.Template();
         template.setCloudy("TPL_CLOUDY");
         template.setDefaultCode("TPL_DEFAULT");
         properties.setTemplate(template);
 
-        assertThat(properties.resolveTemplateCode(KakaoWeatherTemplateType.SUNNY)).isNull();
+        assertThat(properties.resolveTemplateCode(KakaoWeatherTemplateType.SUNNY)).isEqualTo("TPL_DEFAULT");
         assertThat(properties.resolveTemplateCode(KakaoWeatherTemplateType.CLOUDY)).isEqualTo("TPL_CLOUDY");
     }
 }

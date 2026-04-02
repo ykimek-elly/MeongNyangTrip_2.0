@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.batch;
 public enum NotificationBatchFailureReason {
   USER_NOT_FOUND,
   PET_NOT_FOUND,
+  ALREADY_SENT_TODAY,
   WEATHER_API_ERROR,
   NO_CANDIDATE,
   AI_RESPONSE_ERROR,

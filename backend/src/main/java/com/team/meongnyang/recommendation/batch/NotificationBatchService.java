@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class NotificationBatchService {
-
   private final UserRepository userRepository;
   private final PetRepository petRepository;
   private final RecommendationPipelineService recommendationPipelineService;
@@ -130,7 +129,9 @@ public class NotificationBatchService {
     return userRepository.findAllByNotificationEnabledTrueAndStatusAndRole(
             User.Status.ACTIVE,
             User.Role.USER
-    );
+    ).stream()
+            .filter(user -> !dailyRecommendationCacheService.isSentToday(user.getLastNotificationSentAt()))
+            .toList();
   }
 
   /**
@@ -174,6 +175,14 @@ public class NotificationBatchService {
         log.warn("[NotificationBatch] batch failed userId={}, reason={}",
                 target.getUserId(),
                 NotificationBatchFailureReason.PET_NOT_FOUND);
+        return;
+      }
+
+      if (isAlreadySentToday(target.getUserId())) {
+        summary.fail(NotificationBatchFailureReason.ALREADY_SENT_TODAY);
+        log.warn("[NotificationBatch] skipped userId={}, reason={}",
+                target.getUserId(),
+                NotificationBatchFailureReason.ALREADY_SENT_TODAY);
         return;
       }
 
@@ -288,6 +297,13 @@ public class NotificationBatchService {
     }
 
     return NotificationBatchFailureReason.UNKNOWN_ERROR;
+  }
+
+  private boolean isAlreadySentToday(Long userId) {
+    return userRepository.findById(userId)
+            .map(User::getLastNotificationSentAt)
+            .map(dailyRecommendationCacheService::isSentToday)
+            .orElse(false);
   }
 
   private static class BatchExecutionSummary {

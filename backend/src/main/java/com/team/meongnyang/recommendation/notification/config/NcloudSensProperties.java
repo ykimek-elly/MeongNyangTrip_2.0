@@ -114,13 +114,17 @@ public class NcloudSensProperties {
             return resolveDefaultTemplateCode();
         }
 
-        return switch (weatherType) {
+        String templateCode = switch (weatherType) {
             case SUNNY -> template.getSunny();
             case RAIN -> template.getRain();
             case CLOUDY -> template.getCloudy();
             case HOT -> template.getHot();
             case COLD -> template.getCold();
         };
+        if (templateCode != null && !templateCode.isBlank()) {
+            return templateCode;
+        }
+        return resolveDefaultTemplateCode();
     }
 
     public String resolveTemplateCode(String weatherType) {

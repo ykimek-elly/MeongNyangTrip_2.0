@@ -46,7 +46,7 @@ class RecommendationAuthenticationServiceTest {
                 .email("oauth-user@example.com")
                 .nickname("oauthUser")
                 .build();
-        OAuth2UserPrincipal principal = new OAuth2UserPrincipal(user, Map.of("sub", "oauth-id"));
+        OAuth2UserPrincipal principal = new OAuth2UserPrincipal(user, Map.of("sub", "oauth-id"), false);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 principal, null, principal.getAuthorities());
 

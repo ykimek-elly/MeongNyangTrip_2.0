@@ -48,8 +48,7 @@ public class SecurityConfig {
                 })
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/v1/admin/batch/recommendation-notification/test",
-                                                 "/api/v1/admin/batch/weather-preload/weather").permitAll()
+                    .requestMatchers("/api/v1/admin/batch/recommendation-notification/test").permitAll()
                 .requestMatchers(
                     "/api/v1/auth/**",       // /auth/refresh 포함
                     "/api/v1/places/**",

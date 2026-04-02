@@ -131,6 +131,9 @@ jwt:
 oauth2:
   redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth2/callback}
 
+
+# 알림 자동 발송 세팅
+
 batch:
   weather-preload-cron: 0 50 8 * * *
   notification-cron: 0 0 9 * * *
@@ -158,9 +161,9 @@ ncloud:
     template:
       sunny: ${NCLOUD_SENS_TEMPLATE_CODE_SUNNY:}
       cloudy: ${NCLOUD_SENS_TEMPLATE_CODE_CLOUDY:}
-      cold: ${NCLOUD_SENS_TEMPLATE_CODE_COLD}
-      hot: ${NCLOUD_SENS_TEMPLATE_CODE_HOT}
-      rain: ${NCLOUD_SENS_TEMPLATE_CODE_RAIN}
+      cold: ${NCLOUD_SENS_TEMPLATE_CODE_COLD:}
+      hot: ${NCLOUD_SENS_TEMPLATE_CODE_HOT:}
+      rain: ${NCLOUD_SENS_TEMPLATE_CODE_RAIN:}
       default-code: ${NCLOUD_SENS_TEMPLATE_CODE_DEFAULT:${NCLOUD_SENS_TEMPLATE_CODE:}}
 
 # 회원가입 완료 사용자 JSON 저장 경로 (AI 서비스 데이터 수집용)

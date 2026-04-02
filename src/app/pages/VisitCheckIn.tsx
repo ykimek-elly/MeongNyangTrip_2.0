@@ -403,7 +403,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               </button>
               <button
                 onClick={handleCapture}
-                className="w-20 h-20 rounded-full border-4 border-white bg-white/20 flex items-center justify-center active:scale-95 transition-transform"
+                className="w-20 h-20 rounded-full border-4 border-white bg-white/20 flex items-center justify-center active:scale-[0.97] transition-transform"
               >
                 <div className="w-14 h-14 rounded-full bg-white" />
               </button>
@@ -455,7 +455,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabType)}
-            className={`flex-1 py-3 text-xs font-bold transition-colors relative flex items-center justify-center gap-1 ${
+            className={`flex-1 py-3 text-xs font-bold transition-spring relative flex items-center justify-center gap-1 ${
               activeTab === tab.id ? 'text-primary' : 'text-gray-400'
             }`}
           >
@@ -491,7 +491,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                   현재 위치 확인
                 </h3>
                 {locationStatus === 'idle' && (
-                  <button onClick={handleGetLocation} className="w-full py-3.5 rounded-2xl border-2 border-primary/30 text-primary font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors">
+                  <button onClick={handleGetLocation} className="w-full py-3.5 rounded-2xl border-2 border-primary/30 text-primary font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/5 transition-spring">
                     <LocateFixed size={18} /> 위치 가져오기
                   </button>
                 )}
@@ -529,7 +529,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                             <button
                               key={place.id}
                               onClick={() => setSelectedNearbyPlace(prev => prev?.id === place.id ? null : place)}
-                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl border-2 transition-all text-left ${
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl border-2 transition-spring text-left ${
                                 selectedNearbyPlace?.id === place.id
                                   ? 'border-primary bg-primary/5'
                                   : 'border-gray-100 bg-gray-50 hover:border-primary/30'
@@ -574,7 +574,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                     <div className="w-full py-3 px-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-2 text-sm text-red-600">
                       <AlertCircle size={16} className="shrink-0" /> 위치를 가져올 수 없어요. 권한을 확인해주세요.
                     </div>
-                    <button onClick={handleGetLocation} className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-colors">
+                    <button onClick={handleGetLocation} className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-spring">
                       다시 시도
                     </button>
                   </div>
@@ -603,7 +603,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                     <img src={capturedImage} alt="촬영된 사진" className="w-full h-48 object-cover rounded-2xl" />
                     <button
                       onClick={handleRetakePhoto}
-                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full px-3 py-1 text-xs font-bold hover:bg-black/70 transition-colors flex items-center gap-1"
+                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full px-3 py-1 text-xs font-bold hover:bg-black/70 transition-spring flex items-center gap-1"
                     >
                       <Camera size={12} /> 다시 찍기
                     </button>
@@ -617,7 +617,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               <button
                 onClick={handleCheckinSubmit}
                 disabled={!canCheckinSubmit}
-                className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
+                className={`w-full py-4 rounded-2xl font-bold text-base transition-spring ${
                   canCheckinSubmit ? 'bg-primary text-white shadow-md active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
@@ -694,7 +694,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                         setExifLng(null);
                         if (fileInputRef.current) fileInputRef.current.value = '';
                       }}
-                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold hover:bg-black/70 transition-colors"
+                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold hover:bg-black/70 transition-spring"
                     >
                       ✕
                     </button>
@@ -736,14 +736,14 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                         </div>
                       </div>
                       <div ref={placeWrapRef} className="relative">
-                        <div className={`flex items-center gap-2 border-2 rounded-2xl px-3 py-3 transition-colors ${selectedPlace ? 'border-primary bg-primary/5' : 'border-gray-200 bg-white focus-within:border-primary/50'}`}>
+                        <div className={`flex items-center gap-2 border-2 rounded-2xl px-3 py-3 transition-spring ${selectedPlace ? 'border-primary bg-primary/5' : 'border-gray-200 bg-white focus-within:border-primary/50'}`}>
                           <Search size={16} className="text-gray-400 shrink-0" />
                           {selectedPlace ? (
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
                               <span className="text-sm font-bold text-gray-900 shrink-0">{selectedPlace.place_name}</span>
                               <span className="text-xs text-gray-400 truncate">{selectedPlace.address_name}</span>
-                              <button onClick={clearSelectedPlace} className="ml-auto w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center shrink-0 hover:bg-gray-300 transition-colors">
+                              <button onClick={clearSelectedPlace} className="ml-auto w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center shrink-0 hover:bg-gray-300 transition-spring">
                                 <X size={10} className="text-gray-600" />
                               </button>
                             </div>
@@ -770,7 +770,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                               <div className="px-4 py-3 text-sm text-gray-400">'{placeQuery}'에 대한 결과가 없어요</div>
                             )}
                             {placeResults.map((place) => (
-                              <button key={place.id} onClick={() => handleSelectPlace(place)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 text-left">
+                              <button key={place.id} onClick={() => handleSelectPlace(place)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-spring border-b border-gray-50 last:border-0 text-left">
                                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                                   <MapPin size={14} className="text-primary" />
                                 </div>
@@ -799,7 +799,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                           <Check size={18} className="text-primary shrink-0" />
                         </div>
                       )}
-                      <button onClick={() => fileInputRef.current?.click()} className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-colors">
+                      <button onClick={() => fileInputRef.current?.click()} className="w-full py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-spring">
                         다른 사진 선택
                       </button>
                     </div>
@@ -810,7 +810,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
               <button
                 onClick={handlePhotoSubmit}
                 disabled={!canPhotoSubmit}
-                className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
+                className={`w-full py-4 rounded-2xl font-bold text-base transition-spring ${
                   canPhotoSubmit ? 'bg-primary text-white shadow-lg active:scale-[0.98]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
@@ -848,7 +848,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                 ) : (
                   <div className="space-y-3">
                     {stats.recentHistory.map((visit) => (
-                      <div key={visit.checkinId} className="flex gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                      <div key={visit.checkinId} className="flex gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-spring">
                         <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                           <MapPin className="text-primary" size={24} />
                         </div>

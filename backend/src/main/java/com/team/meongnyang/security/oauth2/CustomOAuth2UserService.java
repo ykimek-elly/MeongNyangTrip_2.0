@@ -12,10 +12,6 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * 소셜 로그인 사용자 정보 처리.
- * Google/Kakao에서 받은 사용자 정보로 DB에 신규 가입 또는 기존 유저 조회.
- */
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
@@ -69,18 +65,22 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String finalProfileImage = profileImage;
         String provider          = registrationId.toUpperCase();
 
+        boolean[] isNew = {false};
         User user = userRepository.findByProviderAndProviderId(provider, providerId)
                 .orElseGet(() -> userRepository.findByEmail(finalEmail)
-                        .orElseGet(() -> userRepository.save(User.builder()
-                                .email(finalEmail)
-                                .password("")
-                                .nickname(finalNickname)
-                                .profileImage(finalProfileImage)
-                                .provider(provider)
-                                .providerId(providerId)
-                                .build())));
+                        .orElseGet(() -> {
+                            isNew[0] = true;
+                            return userRepository.save(User.builder()
+                                    .email(finalEmail)
+                                    .password("")
+                                    .nickname(finalNickname)
+                                    .profileImage(finalProfileImage)
+                                    .provider(provider)
+                                    .providerId(providerId)
+                                    .build());
+                        }));
 
-        return new OAuth2UserPrincipal(user, attributes);
+        return new OAuth2UserPrincipal(user, attributes, isNew[0]);
     }
 
     private String resolveUniqueNickname(String base) {

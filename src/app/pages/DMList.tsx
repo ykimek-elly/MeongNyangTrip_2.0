@@ -31,7 +31,7 @@ export function DMList({ onNavigate }: DMListProps) {
       <div className="sticky top-0 z-50 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => onNavigate('mypage')}
-          className="p-2 -ml-1 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          className="p-2 -ml-1 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-spring"
         >
           <ArrowLeft size={22} className="text-gray-700" />
         </button>
@@ -57,7 +57,7 @@ export function DMList({ onNavigate }: DMListProps) {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="이름 검색..."
-            className="w-full pl-9 pr-8 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-800 placeholder-gray-400 outline-none focus:bg-gray-100 transition-colors"
+            className="w-full pl-9 pr-8 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-800 placeholder-gray-400 outline-none focus:bg-gray-100 transition-spring"
           />
           {searchQuery && (
             <button
@@ -96,7 +96,7 @@ export function DMList({ onNavigate }: DMListProps) {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}
                 onClick={() => onNavigate('dm-detail', { partner: conv.partnerId })}
-                className="w-full flex items-center gap-3.5 px-4 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+                className="w-full flex items-center gap-3.5 px-4 py-4 hover:bg-gray-50 active:bg-gray-100 transition-spring text-left"
               >
                 {/* 아바타 */}
                 <div className="relative shrink-0">

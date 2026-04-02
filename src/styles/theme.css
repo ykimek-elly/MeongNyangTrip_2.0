@@ -229,3 +229,33 @@
     line-height: 1.5;
   }
 }
+
+/* ===== Login 페이지 진입 애니메이션 (motion/react 대체) ===== */
+
+@keyframes loginEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-login-enter {
+  animation: loginEnter 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.32s cubic-bezier(0.34, 1.1, 0.64, 1) both;
+}

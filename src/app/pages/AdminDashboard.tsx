@@ -57,7 +57,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 min-w-[56px] py-2.5 text-xs font-bold transition-colors relative flex items-center justify-center gap-1 ${
+              className={`flex-1 min-w-[56px] py-2.5 text-xs font-bold transition-spring relative flex items-center justify-center gap-1 ${
                 activeTab === tab.key ? 'text-primary' : 'text-gray-500'
               }`}
             >
@@ -288,7 +288,7 @@ function BatchJobCard({
       <button
         onClick={onRun}
         disabled={status === 'running'}
-        className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+        className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-[0.97] ${
           status === 'running'
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : 'bg-primary text-white hover:opacity-90'
@@ -406,7 +406,7 @@ function BatchTab() {
             {/* 토글 */}
             <button
               onClick={e => { e.stopPropagation(); updateSchedule({ enabled: !schedule.enabled }); }}
-              className={`relative w-11 h-6 rounded-full transition-colors ${schedule.enabled ? 'bg-primary' : 'bg-gray-200'}`}
+              className={`relative w-11 h-6 rounded-full transition-spring ${schedule.enabled ? 'bg-primary' : 'bg-gray-200'}`}
             >
               <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${schedule.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </button>
@@ -457,7 +457,7 @@ function BatchTab() {
                       const [h, m] = e.target.value.split(':').map(Number);
                       updateSchedule({ hour: h, minute: m });
                     }}
-                    className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 text-sm text-gray-800 outline-none focus:border-primary transition-colors"
+                    className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 text-sm text-gray-800 outline-none focus:border-primary transition-spring"
                   />
                 </div>
 
@@ -523,7 +523,7 @@ function BatchTab() {
       <div>
         <button
           onClick={() => setShowUtility(v => !v)}
-          className="w-full flex items-center justify-between px-1 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          className="w-full flex items-center justify-between px-1 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-spring"
         >
           <span>유틸리티 (개별 실행)</span>
           {showUtility ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -555,7 +555,7 @@ function BatchTab() {
       <div>
         <button
           onClick={() => setShowHistory(v => !v)}
-          className="w-full flex items-center justify-between px-1 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+          className="w-full flex items-center justify-between px-1 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-spring"
         >
           <span className="flex items-center gap-1.5">
             실행 이력
@@ -702,7 +702,7 @@ function OverviewTab({ onSwitchTab, onSwitchToPlaces }: { onSwitchTab: (tab: Tab
               {/* 사용자 노출 중 → 등록 장소 수정 */}
               <button
                 onClick={() => onSwitchToPlaces('editActive')}
-                className="bg-white rounded-2xl p-4 shadow-sm text-left transition-all active:scale-95 hover:shadow-md"
+                className="bg-white rounded-2xl p-4 shadow-sm text-left transition-all active:scale-[0.97] hover:shadow-md"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg bg-green-100 flex items-center justify-center">
@@ -718,7 +718,7 @@ function OverviewTab({ onSwitchTab, onSwitchToPlaces }: { onSwitchTab: (tab: Tab
               {/* 수집 대기 → 수집 대기 섹션 */}
               <button
                 onClick={() => onSwitchToPlaces('pending')}
-                className={`rounded-2xl p-4 shadow-sm text-left transition-all active:scale-95 hover:shadow-md ${
+                className={`rounded-2xl p-4 shadow-sm text-left transition-all active:scale-[0.97] hover:shadow-md ${
                   (stats?.pending ?? 0) > 0 ? 'bg-amber-50 border-2 border-amber-300' : 'bg-white'
                 }`}
               >
@@ -737,7 +737,7 @@ function OverviewTab({ onSwitchTab, onSwitchToPlaces }: { onSwitchTab: (tab: Tab
               {/* 거절 → 거절된 장소 복구 섹션 */}
               <button
                 onClick={() => onSwitchToPlaces('rejected')}
-                className="bg-white rounded-2xl p-4 shadow-sm text-left transition-all active:scale-95 hover:shadow-md"
+                className="bg-white rounded-2xl p-4 shadow-sm text-left transition-all active:scale-[0.97] hover:shadow-md"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center">
@@ -752,7 +752,7 @@ function OverviewTab({ onSwitchTab, onSwitchToPlaces }: { onSwitchTab: (tab: Tab
               {/* 이미지 없음 → 이미지 없는 장소 섹션 */}
               <button
                 onClick={() => onSwitchToPlaces('noImage')}
-                className={`rounded-2xl p-4 shadow-sm text-left transition-all active:scale-95 hover:shadow-md ${(noImageCount ?? 0) > 0 ? 'bg-orange-50 border border-orange-200' : 'bg-white'}`}
+                className={`rounded-2xl p-4 shadow-sm text-left transition-all active:scale-[0.97] hover:shadow-md ${(noImageCount ?? 0) > 0 ? 'bg-orange-50 border border-orange-200' : 'bg-white'}`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -833,7 +833,7 @@ function OverviewTab({ onSwitchTab, onSwitchToPlaces }: { onSwitchTab: (tab: Tab
                 key={item.key}
                 onClick={item.onClick ?? (() => item.fn && quickRun(item.key, item.fn))}
                 disabled={s === 'running'}
-                className={`border rounded-2xl p-4 text-left transition-all active:scale-95 disabled:opacity-60 ${item.color}`}
+                className={`border rounded-2xl p-4 text-left transition-all active:scale-[0.97] disabled:opacity-60 ${item.color}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   {s === 'running' ? (
@@ -1045,7 +1045,7 @@ function PostsTab({ posts }: { posts: FeedPost[] }) {
                   <div className="flex gap-2 pt-2 border-t border-gray-100">
                     <button
                       onClick={() => toggleHidePost(post.id)}
-                      className={`flex-1 text-xs font-bold py-2 rounded-xl transition-colors flex items-center justify-center gap-1 ${
+                      className={`flex-1 text-xs font-bold py-2 rounded-xl transition-spring flex items-center justify-center gap-1 ${
                         post.isHidden
                           ? 'bg-green-50 text-green-600 hover:bg-green-100'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1059,7 +1059,7 @@ function PostsTab({ posts }: { posts: FeedPost[] }) {
                           deletePost(post.id);
                         }
                       }}
-                      className="flex-1 text-xs font-bold py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 text-xs font-bold py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-spring flex items-center justify-center gap-1"
                     >
                       <Trash2 size={14} /> 삭제
                     </button>
@@ -1267,7 +1267,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
       if (editPlaceForm.address.trim())  payload.address  = editPlaceForm.address.trim();
       if (editPlaceForm.phone.trim())    payload.phone    = editPlaceForm.phone.trim();
       if (editPlaceForm.homepage.trim()) payload.homepage = editPlaceForm.homepage.trim();
-      if (editPlaceForm.imageUrl.trim()) payload.imageUrl = editPlaceForm.imageUrl.trim();
+      payload.imageUrl = editPlaceForm.imageUrl.trim(); // 빈 문자열이면 이미지 삭제
       const updated = await adminApi.editPlace(id, payload);
       setAllActive(prev => prev.map(p => p.id === updated.id ? updated : p));
       setEditingPlaceId(null);
@@ -1419,7 +1419,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
             <button
               key={tab.id}
               onClick={() => tab.id === 'active' ? switchToActive() : setPlaceSubTab(tab.id as any)}
-              className={`flex-1 py-2.5 text-[11px] font-bold flex flex-col items-center gap-0.5 border-b-2 transition-colors ${tabColor(tab.id, isActive)}`}
+              className={`flex-1 py-2.5 text-[11px] font-bold flex flex-col items-center gap-0.5 border-b-2 transition-spring ${tabColor(tab.id, isActive)}`}
             >
               {tab.label}
               {tab.count !== null && (
@@ -1652,7 +1652,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
             <div className="rounded-2xl border border-orange-200 overflow-hidden">
               <button
                 onClick={() => setShowMuseumPreview(v => !v)}
-                className="w-full py-2.5 text-xs font-bold bg-orange-50 text-orange-600 flex items-center justify-center gap-1.5 hover:bg-orange-100 transition-colors"
+                className="w-full py-2.5 text-xs font-bold bg-orange-50 text-orange-600 flex items-center justify-center gap-1.5 hover:bg-orange-100 transition-spring"
               >
                 <X size={13} />
                 박물관/뮤지엄 자동 거절 ({museumPlaces.length}건)
@@ -1700,7 +1700,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                       }
                     }}
                     disabled={bulkLoading}
-                    className="w-full py-2 rounded-xl text-xs font-bold bg-orange-500 text-white flex items-center justify-center gap-1.5 hover:bg-orange-600 transition-colors disabled:opacity-50"
+                    className="w-full py-2 rounded-xl text-xs font-bold bg-orange-500 text-white flex items-center justify-center gap-1.5 hover:bg-orange-600 transition-spring disabled:opacity-50"
                   >
                     {bulkLoading ? <Loader size={12} className="animate-spin" /> : <X size={12} />}
                     {museumPlaces.length}건 일괄 거절 확정
@@ -1744,7 +1744,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                       </div>
                       <button
                         onClick={() => toggleExpandEdit(place.id)}
-                        className={`self-start p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}
+                        className={`self-start p-1.5 rounded-lg transition-spring ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}
                       >
                         <Edit3 size={13} />
                       </button>
@@ -1907,7 +1907,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                       </div>
                       <button
                         onClick={() => toggleExpandEdit(place.id)}
-                        className={`self-start p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}
+                        className={`self-start p-1.5 rounded-lg transition-spring ${isExpanded ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}
                       >
                         <Edit3 size={13} />
                       </button>
@@ -2009,7 +2009,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                       {/* 토글 버튼 */}
                       <button
                         onClick={() => setShowDupPreview(v => !v)}
-                        className="w-full py-2.5 text-xs font-bold bg-red-50 text-red-600 flex items-center justify-center gap-1.5 hover:bg-red-100 transition-colors"
+                        className="w-full py-2.5 text-xs font-bold bg-red-50 text-red-600 flex items-center justify-center gap-1.5 hover:bg-red-100 transition-spring"
                       >
                         <Trash2 size={13} />
                         이미지 없는 중복 자동 정리 ({toDelete.length}건)
@@ -2057,7 +2057,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                                 setAllActiveLoading(false);
                               }
                             }}
-                            className="w-full py-2 rounded-xl text-xs font-bold bg-red-500 text-white flex items-center justify-center gap-1.5 hover:bg-red-600 transition-colors"
+                            className="w-full py-2 rounded-xl text-xs font-bold bg-red-500 text-white flex items-center justify-center gap-1.5 hover:bg-red-600 transition-spring"
                           >
                             <Trash2 size={12} /> {toDelete.length}건 전체 삭제 확정
                           </button>
@@ -2240,7 +2240,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                   if (filtered.length > editPageSize) return (
                     <button
                       onClick={() => setEditPageSize(v => v + 30)}
-                      className="w-full py-2.5 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                      className="w-full py-2.5 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-spring"
                     >
                       더 보기 ({editPageSize}/{filtered.length}건 표시)
                     </button>
@@ -2266,7 +2266,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                              : i === 2;
               return (
                 <React.Fragment key={s}>
-                  <div className={`flex-1 text-center py-1.5 text-[10px] font-bold rounded-full transition-colors ${
+                  <div className={`flex-1 text-center py-1.5 text-[10px] font-bold rounded-full transition-spring ${
                     isDone || isActive ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'
                   }`}>
                     {labels[i]}
@@ -2367,7 +2367,7 @@ function PlacesReviewTab({ initialSection }: { initialSection?: PlacesSection | 
                     setCreateStep('form');
                   }
                 }}
-                className="w-full py-3 rounded-xl text-sm font-bold bg-indigo-500 text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-colors hover:bg-indigo-600"
+                className="w-full py-3 rounded-xl text-sm font-bold bg-indigo-500 text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-spring hover:bg-indigo-600"
               >
                 {createStep === 'analyzing'
                   ? <><Loader size={14} className="animate-spin" /> Naver 분석 중... (10~20초)</>
@@ -2585,7 +2585,7 @@ function DMsTab({ posts }: { posts: FeedPost[] }) {
         allDMs.map(d => (
           <div
             key={`${d.postId}-${d.id}`}
-            className={`bg-white rounded-2xl p-3 shadow-sm border transition-colors ${
+            className={`bg-white rounded-2xl p-3 shadow-sm border transition-spring ${
               d.isRead ? 'border-transparent' : 'border-blue-200 bg-blue-50/30'
             }`}
           >

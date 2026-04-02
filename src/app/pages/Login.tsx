@@ -1,125 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Leaf, X, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { authApi } from '../api/authApi';
 
-import { motion } from 'motion/react';
-
-type ModalType = 'terms' | 'privacy' | 'support' | null;
-
-function FooterModal({ type, onClose }: { type: ModalType; onClose: () => void }) {
-  if (!type) return null;
-
-  const content: Record<NonNullable<ModalType>, { title: string; body: React.ReactNode }> = {
-    terms: {
-      title: '이용약관',
-      body: (
-        <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">제1조 (목적)</h3>
-            <p>본 약관은 멍냥트립(이하 "서비스")이 제공하는 반려동물 동반 여행 정보 서비스의 이용 조건 및 절차에 관한 사항을 규정합니다.</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">제2조 (회원가입)</h3>
-            <p>서비스 이용을 위해 회원가입이 필요하며, 만 14세 이상만 가입 가능합니다. 소셜 로그인(Google, Kakao)을 통한 간편 가입을 지원합니다.</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">제3조 (서비스 이용)</h3>
-            <p>회원은 서비스를 통해 반려동물 동반 가능 장소 검색, 리뷰 작성, 여행 코스 저장 등의 기능을 이용할 수 있습니다.</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">제4조 (금지 행위)</h3>
-            <p>타인의 정보 도용, 허위 정보 게재, 서비스 운영 방해 등의 행위는 금지되며 위반 시 이용이 제한될 수 있습니다.</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">제5조 (책임 제한)</h3>
-            <p>서비스는 장소 정보의 정확성을 위해 노력하나, 실제 운영 상황과 다를 수 있습니다. 방문 전 해당 업체에 직접 확인을 권장합니다.</p>
-          </section>
-          <p className="text-xs text-gray-400 mt-4">시행일: 2025년 1월 1일</p>
-        </div>
-      ),
-    },
-    privacy: {
-      title: '개인정보처리방침',
-      body: (
-        <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">수집하는 개인정보</h3>
-            <p>이메일 주소, 닉네임, 프로필 사진(소셜 로그인 시), 반려동물 정보(선택)</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">수집 목적</h3>
-            <p>회원 식별 및 서비스 제공, 반려동물 맞춤 장소 추천, AI 산책 가이드 개인화</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">보유 및 이용 기간</h3>
-            <p>회원 탈퇴 시까지 보유하며, 탈퇴 후 30일 이내 파기합니다. 단, 관계 법령에 따라 일부 정보는 일정 기간 보존될 수 있습니다.</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">제3자 제공</h3>
-            <p>이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 단, 법령에 의한 경우는 예외입니다.</p>
-          </section>
-          <section>
-            <h3 className="font-bold text-gray-800 mb-1">이용자의 권리</h3>
-            <p>이용자는 언제든지 개인정보 열람, 수정, 삭제를 요청할 수 있으며 고객센터를 통해 처리됩니다.</p>
-          </section>
-          <p className="text-xs text-gray-400 mt-4">시행일: 2025년 1월 1일</p>
-        </div>
-      ),
-    },
-    support: {
-      title: '고객센터',
-      body: (
-        <div className="space-y-5 text-sm text-gray-600">
-          <div className="bg-primary/5 rounded-2xl p-4 space-y-2">
-            <p className="font-bold text-gray-800">이메일 문의</p>
-            <p className="text-primary font-medium">support@meongnyangtrip.com</p>
-            <p className="text-xs text-gray-400">평일 09:00 ~ 18:00 (주말·공휴일 제외)</p>
-          </div>
-          <div className="space-y-3">
-            <p className="font-bold text-gray-800">자주 묻는 질문</p>
-            <div className="space-y-2">
-              {[
-                { q: '반려동물 정보는 어떻게 수정하나요?', a: '마이페이지 > 반려동물 관리에서 수정할 수 있습니다.' },
-                { q: '소셜 로그인 계정을 변경하고 싶어요.', a: '현재 계정 탈퇴 후 새 계정으로 재가입이 필요합니다.' },
-                { q: '장소 정보가 잘못되었어요.', a: '장소 상세 페이지에서 오류 신고 버튼을 이용해주세요.' },
-              ].map(({ q, a }) => (
-                <div key={q} className="bg-gray-50 rounded-xl p-3">
-                  <p className="font-medium text-gray-700 mb-1">Q. {q}</p>
-                  <p className="text-gray-500 text-xs">A. {a}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-  };
-
-  const { title, body } = content[type];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40" />
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="relative w-full max-w-[600px] bg-white rounded-t-3xl max-h-[75vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-bold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="overflow-y-auto px-6 py-5">{body}</div>
-      </motion.div>
-    </div>
-  );
-}
+// FooterModal을 lazy load — 초기 번들에서 제외 (클릭 시에만 로드)
+const FooterModal = lazy(() => import('../components/FooterModal'));
 
 interface LoginProps {
   onNavigate: (page: string) => void;
@@ -130,11 +15,11 @@ export function Login({ onNavigate }: LoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | 'support' | null>(null);
   const login = useAppStore(state => state.login);
 
   const handleSocialLogin = (provider: string) => {
-    const apiHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '');
+    const apiHost = window.location.origin;
     window.location.href = `${apiHost}/oauth2/authorization/${provider}`;
   };
 
@@ -146,6 +31,7 @@ export function Login({ onNavigate }: LoginProps) {
     try {
       const res = await authApi.login(email, password);
       localStorage.setItem('accessToken', res.token);
+      localStorage.setItem('refreshToken', res.refreshToken);
       login(res.nickname, res.email, res.userId, res.profileImage, res.role === 'ADMIN');
       onNavigate('home');
     } catch {
@@ -156,12 +42,8 @@ export function Login({ onNavigate }: LoginProps) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-      className="min-h-screen bg-white flex flex-col px-6"
-    >
+    // motion.div → 일반 div + CSS 애니메이션 (번들 크기 절감)
+    <div className="min-h-screen bg-white flex flex-col px-6 animate-login-enter">
       <header className="pt-4 pb-2 -mx-0">
         <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-spring">
           <ArrowLeft size={24} />
@@ -243,25 +125,30 @@ export function Login({ onNavigate }: LoginProps) {
           <span onClick={() => onNavigate('signup')} className="cursor-pointer hover:text-gray-800 transition-spring">회원가입</span>
         </div>
 
-      </div>{/* flex-1 end */}
+      </div>
 
       {/* Footer */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center justify-center text-[11px] text-gray-500">
         <div className="flex items-center gap-2 mb-2">
-          <span onClick={() => onNavigate('team')} className="cursor-pointer font-semibold hover:text-gray-800 transition-colors">개발팀 소개</span>
+          <span onClick={() => onNavigate('team')} className="cursor-pointer font-semibold hover:text-gray-800 transition-spring">개발팀 소개</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => setActiveModal('terms')} className="cursor-pointer hover:text-gray-800 transition-colors">이용약관</span>
+          <span onClick={() => setActiveModal('terms')} className="cursor-pointer hover:text-gray-800 transition-spring">이용약관</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => setActiveModal('privacy')} className="cursor-pointer font-semibold text-gray-700 hover:text-gray-900 transition-colors">개인정보처리방침</span>
+          <span onClick={() => setActiveModal('privacy')} className="cursor-pointer font-semibold text-gray-700 hover:text-gray-900 transition-spring">개인정보처리방침</span>
           <span className="text-gray-300">|</span>
-          <span onClick={() => setActiveModal('support')} className="cursor-pointer hover:text-gray-800 transition-colors">고객센터</span>
+          <span onClick={() => setActiveModal('support')} className="cursor-pointer hover:text-gray-800 transition-spring">고객센터</span>
         </div>
         <div className="text-gray-400 text-[12px] text-center">
           <p className="mt-0.5">Copyright © {new Date().getFullYear()} Team 멍냥트립. All rights reserved.</p>
         </div>
       </footer>
 
-      <FooterModal type={activeModal} onClose={() => setActiveModal(null)} />
-    </motion.div>
+      {/* FooterModal — lazy load, 클릭 시에만 번들 로드 */}
+      {activeModal && (
+        <Suspense fallback={null}>
+          <FooterModal type={activeModal} onClose={() => setActiveModal(null)} />
+        </Suspense>
+      )}
+    </div>
   );
 }

@@ -5,7 +5,8 @@ import mainBanner2 from '../../assets/main_banner_1080_2.jpg';
 import mainBanner3 from '../../assets/main_banner_1080_3.jpg';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { Search, MapPin, Calendar, Layers, TreeDeciduous, PawPrint, Dog, Cat, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, Map, MessageCircle, Sparkles, Heart, Award, Camera, X, LogIn } from 'lucide-react';
+import { Search, MapPin, Calendar, Layers, TreeDeciduous, PawPrint, Dog, Cat, Tent, Coffee, Bed, ChevronRight, Star, Gift, Flame, MessageCircle, BotMessageSquare, Heart, Award, Camera, X, LogIn } from 'lucide-react';
+import { MapNavOutlineIcon, ChatBubbleOutlineIcon } from '../components/CustomIcon';
 
 import { PlaceImage } from '../components/PlaceImage';
 // 더미 데이터 제거
@@ -23,8 +24,18 @@ export function Home({ onNavigate }: HomeProps) {
   const [searchDate, setSearchDate] = React.useState('');
   const [searchCategory, setSearchCategory] = React.useState('all');
   const [showSignupPrompt, setShowSignupPrompt] = React.useState(false);
+  const [showPetPrompt, setShowPetPrompt] = React.useState(false);
   const isLoggedIn = useAppStore((s) => s.isLoggedIn);
+  const pets = useAppStore((s) => s.pets);
   const places = useAppStore((s) => s.places);
+
+  // 로그인 상태인데 펫이 없으면 알림 표시
+  React.useEffect(() => {
+    if (isLoggedIn && pets.length === 0) {
+      const timer = setTimeout(() => setShowPetPrompt(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, pets.length]);
 
   const handleBannerClick = (page: string) => {
     if (isLoggedIn) {
@@ -159,7 +170,7 @@ export function Home({ onNavigate }: HomeProps) {
         <div className="flex justify-start md:justify-center gap-4 overflow-x-auto scrollbar-hide snap-x px-[4px] pt-[0px] pb-[10px]">
           <div className="snap-start shrink-0">
             <CategoryItem
-              icon={Sparkles}
+              icon={BotMessageSquare}
               label="AI 추천산책"
               onClick={() => onNavigate('ai-walk-guide')}
               className="[&>div]:!bg-green-50 [&>div]:!text-green-500 [&>span]:!text-gray-800 [&>span]:!font-bold"
@@ -168,8 +179,8 @@ export function Home({ onNavigate }: HomeProps) {
           <div className="snap-start shrink-0"><CategoryItem icon={PawPrint} label="멍냥플레이스" onClick={() => onNavigate('list', { category: 'PLACE' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Dog} label="멍냥스테이" onClick={() => onNavigate('list', { category: 'STAY' })} /></div>
           <div className="snap-start shrink-0"><CategoryItem icon={Cat} label="멍냥다이닝" onClick={() => onNavigate('list', { category: 'DINING' })} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={Map} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
-          <div className="snap-start shrink-0"><CategoryItem icon={MessageCircle} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={MapNavOutlineIcon} label="멍냥지도" onClick={() => onNavigate('map')} /></div>
+          <div className="snap-start shrink-0"><CategoryItem icon={ChatBubbleOutlineIcon} label="멍냥라운지" onClick={() => onNavigate('lounge')} /></div>
         </div>
       </div>
 
@@ -320,6 +331,40 @@ export function Home({ onNavigate }: HomeProps) {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* 반려동물 미등록 알림 토스트 */}
+      <AnimatePresence>
+        {showPetPrompt && (
+          <motion.div
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+            className="fixed bottom-28 inset-x-0 flex justify-center px-4 z-50 pointer-events-none"
+          >
+            <div className="w-full max-w-[560px] bg-gray-900 text-white rounded-2xl px-4 py-3.5 shadow-xl flex items-center gap-3 pointer-events-auto">
+              <div className="w-9 h-9 bg-primary/20 rounded-full flex items-center justify-center shrink-0">
+                <PawPrint size={18} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">반려동물을 등록해보세요!</p>
+                <p className="text-xs text-gray-400 mt-0.5">맞춤 장소 추천을 받을 수 있어요</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => { setShowPetPrompt(false); onNavigate('mypage'); }}
+                  className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors"
+                >
+                  등록하기
+                </button>
+                <button onClick={() => setShowPetPrompt(false)} className="text-gray-400 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

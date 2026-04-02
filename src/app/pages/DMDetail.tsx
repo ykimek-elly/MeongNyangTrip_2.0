@@ -64,7 +64,7 @@ export function DMDetail({ partner, onNavigate }: DMDetailProps) {
       <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 shrink-0">
         <button
           onClick={() => onNavigate('dm')}
-          className="p-2 -ml-1 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          className="p-2 -ml-1 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-spring"
         >
           <ArrowLeft size={22} className="text-gray-700" />
         </button>
@@ -171,13 +171,13 @@ export function DMDetail({ partner, onNavigate }: DMDetailProps) {
           onKeyDown={handleKeyDown}
           placeholder="메시지를 입력하세요..."
           rows={1}
-          className="flex-1 resize-none bg-gray-50 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none focus:bg-gray-100 transition-colors overflow-y-auto"
+          className="flex-1 resize-none bg-gray-50 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none focus:bg-gray-100 transition-spring overflow-y-auto"
           style={{ lineHeight: '1.5', maxHeight: '112px' }}
         />
         <button
           onClick={handleSend}
           disabled={!input.trim()}
-          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-spring active:scale-90 ${
             input.trim()
               ? 'bg-primary text-white shadow-md hover:bg-primary/90'
               : 'bg-gray-100 text-gray-300 cursor-not-allowed'

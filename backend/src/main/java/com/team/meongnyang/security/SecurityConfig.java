@@ -51,18 +51,20 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/admin/batch/recommendation-notification/test",
                                                  "/api/v1/admin/batch/weather-preload/weather").permitAll()
                 .requestMatchers(
-                    "/api/v1/auth/**",
+                    "/api/v1/auth/**",       // /auth/refresh 포함
                     "/api/v1/places/**",
                     "/api/v1/public-places/**",
-                    "/api/v1/admin/**",
-                    "/api/v1/pets/**",
                     "/oauth2/**",
                     "/login/oauth2/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/api/v1/ai/walk-guide"
                 ).permitAll()
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/upload/**").authenticated()
+                .requestMatchers("/api/v1/pets/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/lounge/**").permitAll()
                 .requestMatchers(
                     "/api/v1/checkins/**",
                     "/api/v1/wishlists/**",

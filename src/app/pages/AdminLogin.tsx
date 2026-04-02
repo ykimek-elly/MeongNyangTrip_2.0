@@ -73,7 +73,7 @@ export function AdminLogin({ onNavigate }: AdminLoginProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@meongtrip.com"
-                className="w-full pl-10 pr-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-600 outline-none focus:border-primary transition-colors"
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-600 outline-none focus:border-primary transition-spring"
               />
             </div>
           </div>
@@ -88,7 +88,7 @@ export function AdminLogin({ onNavigate }: AdminLoginProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-600 outline-none focus:border-primary transition-colors pr-11"
+                className="w-full px-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-600 outline-none focus:border-primary transition-spring pr-11"
               />
               <button
                 type="button"
@@ -110,7 +110,7 @@ export function AdminLogin({ onNavigate }: AdminLoginProps) {
           <button
             type="submit"
             disabled={!isValid || isLoading}
-            className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mt-2 ${
+            className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-spring mt-2 ${
               isValid && !isLoading
                 ? 'bg-primary text-white hover:bg-primary/90 active:scale-[0.98]'
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
@@ -125,7 +125,7 @@ export function AdminLogin({ onNavigate }: AdminLoginProps) {
         <div className="mt-8 pt-6 border-t border-gray-800 text-center">
           <button
             onClick={() => onNavigate('home')}
-            className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+            className="text-xs text-gray-600 hover:text-gray-400 transition-spring"
           >
             ← 일반 사용자 페이지로 돌아가기
           </button>

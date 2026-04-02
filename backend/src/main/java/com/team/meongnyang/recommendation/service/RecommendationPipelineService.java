@@ -1,20 +1,22 @@
 package com.team.meongnyang.recommendation.service;
 
+import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.recommendation.cache.GeminiCacheService;
+import com.team.meongnyang.recommendation.cache.RecommendationDedupService;
+import com.team.meongnyang.recommendation.cache.RecommendationResultCacheService;
+import com.team.meongnyang.recommendation.cache.WeatherCacheService;
 import com.team.meongnyang.recommendation.context.dto.RecommendationEvidenceContext;
 import com.team.meongnyang.recommendation.context.service.RecommendationEvidenceContextService;
-import com.team.meongnyang.recommendation.log.service.AiLogService;
-import com.team.meongnyang.recommendation.cache.GeminiCacheService;
-import com.team.meongnyang.recommendation.log.RecommendationBatchTraceContext;
 import com.team.meongnyang.recommendation.dto.ScoredPlace;
-import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
-import com.team.meongnyang.place.entity.Place;
+import com.team.meongnyang.recommendation.log.RecommendationBatchTraceContext;
+import com.team.meongnyang.recommendation.log.service.AiLogService;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
-import com.team.meongnyang.user.entity.Pet;
-import com.team.meongnyang.user.entity.User;
+import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
 import com.team.meongnyang.recommendation.weather.dto.WeatherContext;
 import com.team.meongnyang.recommendation.weather.dto.WeatherGridPoint;
-import com.team.meongnyang.recommendation.cache.WeatherCacheService;
 import com.team.meongnyang.recommendation.weather.service.WeatherGridConverter;
+import com.team.meongnyang.user.entity.Pet;
+import com.team.meongnyang.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,473 +26,448 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 추천 생성 파이프라인의 전체 흐름을 담당한다.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class RecommendationPipelineService {
-  private static final int LOG_TOP_PLACE_LIMIT = 3;
-  private static final String NOTIFICATION_SUMMARY_HEADER = "[알림요약]";
-  private static final String DEFAULT_NOTIFICATION_SUMMARY = "오늘 컨디션에 맞는 장소로 가볍게 다녀와 보세요!";
 
-  private final RecommendationUserReader recommendationUserReader;
-  private final RecommendationPetReader recommendationPetReader;
-  private final WeatherCacheService weatherService;
-  private final CandidatePlaceService candidatePlaceService;
-  private final PlaceScoringService placeScoringService;
-  private final RecommendationEvidenceContextService recommendationEvidenceContextService;
-  private final RecommendationPromptService recommendationPromptService;
-  private final GeminiCacheService geminiCacheService;
-  private final GeminiRecommendationService geminiRecommendationService;
-  private final WeatherGridConverter weatherGridConverter;
-  private final AiLogService aiLogservice;
+    private static final int LOG_TOP_PLACE_LIMIT = 3;
+    private static final String NOTIFICATION_SUMMARY_HEADER = "[알림요약]";
+    private static final String DEFAULT_NOTIFICATION_SUMMARY = "오늘 조건에 맞는 산책 장소를 안내해 드릴게요.";
+    private static final String DUPLICATE_REQUEST_MESSAGE = "추천을 생성 중입니다. 잠시 후 다시 시도해 주세요.";
+    private static final String RECOMMENDATION_ERROR_MESSAGE = "추천 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    private static final String RECOMMENDATION_IN_PROGRESS_CODE = "RECOMMENDATION_IN_PROGRESS";
+    private static final String RECOMMENDATION_FAILED_CODE = "RECOMMENDATION_FAILED";
 
-  /**
-   * 수동 진입시
-   * @param email
-   * @return
-   */
-  public RecommendationNotificationResult recommendForCurrentUser(String email) {
-    log.info("[추천 파이프라인] START");
+    private final RecommendationUserReader recommendationUserReader;
+    private final RecommendationPetReader recommendationPetReader;
+    private final WeatherCacheService weatherCacheService;
+    private final CandidatePlaceService candidatePlaceService;
+    private final PlaceScoringService placeScoringService;
+    private final RecommendationEvidenceContextService recommendationEvidenceContextService;
+    private final RecommendationPromptService recommendationPromptService;
+    private final GeminiCacheService geminiCacheService;
+    private final GeminiContextFingerprintService geminiContextFingerprintService;
+    private final GeminiRecommendationService geminiRecommendationService;
+    private final WeatherGridConverter weatherGridConverter;
+    private final AiLogService aiLogService;
+    private final RecommendationContextKeyFactory recommendationContextKeyFactory;
+    private final RecommendationResultCacheService recommendationResultCacheService;
+    private final RecommendationDedupService recommendationDedupService;
 
-    User user = recommendationUserReader.getCurrentUserByEmail(email);
-    log.info("[추천 파이프라인] 사용자 조회 결과 email={}, userId={}, nickname={}", email, user.getUserId(), user.getNickname());
-    Pet pet = recommendationPetReader.getPrimaryPet(user);
-    log.info("[추천 파이프라인] 대표 반려견 조회 결과 petId={}, name={}, preferredPlace={}", pet.getPetId(), pet.getPetName(), pet.getPreferredPlace());
+    /**
+     * 현재 로그인한 사용자의 추천 결과를 생성한다.
+     */
+    public RecommendationNotificationResult recommendForCurrentUser(String email) {
+        User user = recommendationUserReader.getCurrentUserByEmail(email);
+        Pet pet = recommendationPetReader.getPrimaryPet(user);
 
-    return recommendForNotification(user, pet);
-  }
-
-  /**
-   * 배치 스케줄러 알림 진입시
-   * @param user
-   * @param pet
-   * @return
-   */
-  public RecommendationNotificationResult recommendForNotification(User user, Pet pet) {
-    return recommendForNotification(user, pet, null);
-  }
-
-  /**
-   * 배치 실행 시에는 batchExecutionId를 함께 전달해서 사용자 단위 추적을 강화한다.
-   */
-  public RecommendationNotificationResult recommendForNotification(User user, Pet pet, String batchExecutionId) {
-
-    try (RecommendationBatchTraceContext.TraceScope ignored =
-                 RecommendationBatchTraceContext.open(batchExecutionId, user.getUserId(), pet.getPetId())) {
-    log.info("[추천 파이프라인-알림] 시작 userId={}, petId={}", user.getUserId(), pet.getPetId());
-
-    double latitude = user.getLatitude();
-    double longitude = user.getLongitude();
-    log.info("[추천 파이프라인-알림] 사용자 위경도 lat={}, lng={}", latitude, longitude);
-
-    WeatherGridPoint gridPoint = weatherGridConverter.convertToGrid(latitude, longitude);
-    int nx = gridPoint.getNx();
-    int ny = gridPoint.getNy();
-    log.info("[추천 파이프라인-알림] 위경도 -> 기상청 격자 변환 결과 lat={}, lng={}, nx={}, ny={}",
-            latitude, longitude, nx, ny);
-
-    WeatherContext weatherContext = weatherService.getOrLoadWeather(nx, ny);
-    log.info(
-            "[추천 파이프라인-알림] 날씨 요약 정보 walkLevel={}, temp={}, humidity={}, precipitationType={}, rainfall={}, windSpeed={}",
-            weatherContext.getWalkLevel(),
-            weatherContext.getTemperature(),
-            weatherContext.getHumidity(),
-            weatherContext.getPrecipitationType(),
-            weatherContext.getRainfall(),
-            weatherContext.getWindSpeed()
-    );
-
-    List<Place> candidates = candidatePlaceService.getInitialCandidates(
-            user,
-            pet,
-            weatherContext,
-            latitude,
-            longitude
-    );
-    log.info("[추천 파이프라인-알림] 장소 후보 개수 및 상위 이름 count={}, topNames={}",
-            candidates.size(),
-            summarizePlaceNames(candidates, LOG_TOP_PLACE_LIMIT));
-
-    if (candidates.isEmpty()) {
-      log.warn("[추천 파이프라인-알림] 후보 장소 없음");
-
-      return RecommendationNotificationResult.builder()
-              .userId(user.getUserId())
-              .petId(pet.getPetId())
-              .petName(pet.getPetName())
-              .weatherType(resolveWeatherType(weatherContext))
-              .weatherWalkLevel(weatherContext.getWalkLevel())
-              .weatherSummary(buildWeatherSummary(weatherContext))
-              .place(null)
-              .message("추천 가능한 장소가 없습니다. 인기 있는 장소를 추천합니다.")
-              .fallbackUsed(false)
-              .cacheHit(false)
-              .build();
-    }
-
-    // 1. 최근 추천 이력을 조회해 다양성 패널티 후보를 준비한다.
-    Map<Long, AiLogService.RecommendationDiversityPenalty> diversityPenalties = loadDiversityPenalties(user);
-
-    // 2. 기존 점수 + 다양성 패널티를 함께 반영해 최종 순위를 계산한다.
-    List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
-            candidates,
-            user,
-            pet,
-            weatherContext,
-            latitude,
-            longitude,
-            diversityPenalties
-    );
-
-    log.info("[추천 파이프라인-알림] 점수 계산 결과 상위 장소 count={}, topScores={}",
-            rankedPlaces.size(),
-            summarizeScoredPlaces(rankedPlaces, LOG_TOP_PLACE_LIMIT));
-
-    if (rankedPlaces.isEmpty()) {
-      log.warn("[추천 파이프라인-알림] 점수 결과 없음 userId={}, petId={}, candidateCount={}",
-              user.getUserId(),
-              pet.getPetId(),
-              candidates.size());
-      return RecommendationNotificationResult.builder()
-              .userId(user.getUserId())
-              .petId(pet.getPetId())
-              .petName(pet.getPetName())
-              .weatherType(resolveWeatherType(weatherContext))
-              .weatherWalkLevel(weatherContext.getWalkLevel())
-              .weatherSummary(buildWeatherSummary(weatherContext))
-              .place(null)
-              .message("추천 가능한 장소가 없습니다.")
-              .fallbackUsed(false)
-              .cacheHit(false)
-              .build();
-    }
-
-    Place topPlace = rankedPlaces.stream()
-            .map(ScoredPlace::getPlace)
-            .findFirst()
-            .orElse(null);
-
-    RecommendationEvidenceContext evidenceContext = recommendationEvidenceContextService.buildContext(
-            user,
-            pet,
-            weatherContext,
-            rankedPlaces
-    );
-    log.info("[추천 파이프라인-알림] 추천 컨텍스트 길이 및 요약 length={}, preview={}",
-            evidenceContext.getContextSnapshot().length(),
-            RecommendationTextUtils.abbreviate(evidenceContext.getContextSnapshot(), 200));
-
-    String prompt = recommendationPromptService.buildRecommendationPrompt(evidenceContext);
-    log.info("[추천 파이프라인-알림] 프롬프트 길이 및 핵심 정보 length={}, preview={}",
-            prompt.length(),
-            RecommendationTextUtils.abbreviate(prompt, 200));
-
-    String recommendedPlaces = buildTopPlaceSummary(rankedPlaces);
-    log.info("[추천 파이프라인-알림] 상위 장소 요약 summary={}", recommendedPlaces);
-
-    try {
-      String cacheKey = geminiCacheService.generateKey(prompt);
-      log.info("[추천 파이프라인-알림] Gemini cache key 생성 key={}", cacheKey);
-
-      String cachedResponse = geminiCacheService.get(cacheKey);
-
-      if (cachedResponse != null) {
-        String notificationSummary = extractNotificationSummary(cachedResponse);
-        if (notificationSummary == null || notificationSummary.isBlank()) {
-          notificationSummary = DEFAULT_NOTIFICATION_SUMMARY;
+        boolean lockAcquired = recommendationDedupService.tryAcquireUserRequestLock(user.getUserId());
+        if (!lockAcquired) {
+            log.info("[RecommendationPipeline] duplicate request blocked. userId={}", user.getUserId());
+            return inProgressRecommendation(user, pet);
         }
-        log.info("[추천 파이프라인-알림] Gemini cache hit responseLength={}, generateRecommendation호출={}",
-                cachedResponse.length(),
-                false);
 
-        aiLogservice.save(
-                user,
-                pet,
-                prompt,
-                recommendedPlaces,
-                topPlace == null ? null : topPlace.getId(),
-                evidenceContext.getContextSnapshot(),
-                cachedResponse,
-                false,
-                true,
-                0L
-        );
+        return recommendForNotification(user, pet);
+    }
 
-        log.info("[추천 파이프라인-알림] AI 로그 저장 완료 fallbackUsed={}, cacheHit={}, latencyMs={}",
-                false, true, 0L);
+    public RecommendationNotificationResult recommendForNotification(User user, Pet pet) {
+        return recommendForNotification(user, pet, null);
+    }
+
+    public RecommendationNotificationResult recommendForNotification(User user, Pet pet, String batchExecutionId) {
+        try (RecommendationBatchTraceContext.TraceScope ignored =
+                     RecommendationBatchTraceContext.open(batchExecutionId, user.getUserId(), pet.getPetId())) {
+
+            double latitude = user.getLatitude();
+            double longitude = user.getLongitude();
+            WeatherGridPoint gridPoint = weatherGridConverter.convertToGrid(latitude, longitude);
+            WeatherContext weatherContext = weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy());
+
+            List<Place> candidates = candidatePlaceService.getInitialCandidates(
+                    user,
+                    pet,
+                    weatherContext,
+                    latitude,
+                    longitude
+            );
+
+            log.info("[RecommendationPipeline] candidate count={}, topNames={}",
+                    candidates.size(),
+                    summarizePlaceNames(candidates, LOG_TOP_PLACE_LIMIT));
+
+            if (candidates.isEmpty()) {
+                return emptyRecommendation(
+                        user,
+                        pet,
+                        weatherContext,
+                        "추천 가능한 장소가 없습니다. 조건을 조금 바꿔 다시 시도해 주세요."
+                );
+            }
+
+            String recommendationCacheKey = recommendationContextKeyFactory.buildResultKey(
+                    user,
+                    pet,
+                    weatherContext,
+                    candidates,
+                    recommendationDedupService.getLastRecommendedPlaceId(user.getUserId())
+            );
+
+            RecommendationNotificationResult cachedResult = recommendationResultCacheService.get(recommendationCacheKey);
+            if (cachedResult != null) {
+                return cachedResult;
+            }
+
+            Map<Long, AiLogService.RecommendationDiversityPenalty> diversityPenalties = loadDiversityPenalties(user);
+
+            List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
+                    candidates,
+                    user,
+                    pet,
+                    weatherContext,
+                    latitude,
+                    longitude,
+                    diversityPenalties
+            );
+
+            log.info("[RecommendationPipeline] ranked count={}, topScores={}",
+                    rankedPlaces.size(),
+                    summarizeScoredPlaces(rankedPlaces, LOG_TOP_PLACE_LIMIT));
+
+            if (rankedPlaces.isEmpty()) {
+                return emptyRecommendation(user, pet, weatherContext, "추천 가능한 장소가 없습니다.");
+            }
+
+            Place topPlace = rankedPlaces.stream()
+                    .map(ScoredPlace::getPlace)
+                    .findFirst()
+                    .orElse(null);
+
+            RecommendationEvidenceContext evidenceContext = recommendationEvidenceContextService.buildContext(
+                    user,
+                    pet,
+                    weatherContext,
+                    rankedPlaces
+            );
+
+            String prompt = recommendationPromptService.buildRecommendationPrompt(evidenceContext);
+            String recommendedPlaces = buildTopPlaceSummary(rankedPlaces);
+            String geminiContextKey = geminiCacheService.generateContextKey(
+                    geminiContextFingerprintService.buildFingerprint(weatherContext, pet, rankedPlaces)
+            );
+
+            String contextCachedResponse = geminiCacheService.get(geminiContextKey);
+            if (contextCachedResponse != null) {
+                RecommendationNotificationResult result = buildRecommendationResult(
+                        user,
+                        pet,
+                        weatherContext,
+                        topPlace,
+                        contextCachedResponse,
+                        true,
+                        false,
+                        geminiContextKey
+                );
+                recommendationResultCacheService.save(recommendationCacheKey, result);
+                if (topPlace != null) {
+                    recommendationDedupService.recordRecommendation(user.getUserId(), topPlace.getId());
+                }
+                return result;
+            }
+
+            String promptCacheKey = geminiCacheService.generateKey(prompt);
+            String promptCachedResponse = geminiCacheService.get(promptCacheKey);
+            if (promptCachedResponse != null) {
+                aiLogService.save(
+                        user,
+                        pet,
+                        prompt,
+                        recommendedPlaces,
+                        topPlace == null ? null : topPlace.getId(),
+                        evidenceContext.getContextSnapshot(),
+                        promptCachedResponse,
+                        false,
+                        true,
+                        0L
+                );
+
+                RecommendationNotificationResult result = buildRecommendationResult(
+                        user,
+                        pet,
+                        weatherContext,
+                        topPlace,
+                        promptCachedResponse,
+                        true,
+                        false,
+                        promptCacheKey
+                );
+                recommendationResultCacheService.save(recommendationCacheKey, result);
+                if (topPlace != null) {
+                    recommendationDedupService.recordRecommendation(user.getUserId(), topPlace.getId());
+                }
+                return result;
+            }
+
+            long startTime = System.currentTimeMillis();
+            String geminiMessage = geminiRecommendationService.generateRecommendation(prompt);
+            long latencyMs = System.currentTimeMillis() - startTime;
+            boolean fallbackUsed = geminiRecommendationService.isFallbackResponse(geminiMessage);
+
+            if (!fallbackUsed) {
+                geminiCacheService.save(promptCacheKey, geminiMessage);
+                geminiCacheService.saveContext(geminiContextKey, geminiMessage);
+            }
+
+            aiLogService.save(
+                    user,
+                    pet,
+                    prompt,
+                    recommendedPlaces,
+                    topPlace == null ? null : topPlace.getId(),
+                    evidenceContext.getContextSnapshot(),
+                    geminiMessage,
+                    fallbackUsed,
+                    false,
+                    latencyMs
+            );
+
+            RecommendationNotificationResult result = buildRecommendationResult(
+                    user,
+                    pet,
+                    weatherContext,
+                    topPlace,
+                    geminiMessage,
+                    false,
+                    fallbackUsed,
+                    fallbackUsed ? null : promptCacheKey
+            );
+            recommendationResultCacheService.save(recommendationCacheKey, result);
+            if (topPlace != null) {
+                recommendationDedupService.recordRecommendation(user.getUserId(), topPlace.getId());
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("[RecommendationPipeline] recommendation pipeline failed.", e);
+            return errorRecommendation(user, pet);
+        }
+    }
+
+    private RecommendationNotificationResult emptyRecommendation(
+            User user,
+            Pet pet,
+            WeatherContext weatherContext,
+            String message
+    ) {
+        return RecommendationNotificationResult.builder()
+                .userId(user.getUserId())
+                .petId(pet.getPetId())
+                .petName(pet.getPetName())
+                .weatherType(resolveWeatherType(weatherContext))
+                .weatherWalkLevel(weatherContext == null ? null : weatherContext.getWalkLevel())
+                .weatherSummary(buildWeatherSummary(weatherContext))
+                .place(null)
+                .message(message)
+                .fallbackUsed(false)
+                .cacheHit(false)
+                .error(false)
+                .build();
+    }
+
+    private RecommendationNotificationResult buildRecommendationResult(
+            User user,
+            Pet pet,
+            WeatherContext weatherContext,
+            Place topPlace,
+            String aiResponse,
+            boolean cacheHit,
+            boolean fallbackUsed,
+            String cacheKey
+    ) {
+        String notificationSummary = extractNotificationSummary(aiResponse);
+        if (notificationSummary == null || notificationSummary.isBlank()) {
+            notificationSummary = DEFAULT_NOTIFICATION_SUMMARY;
+        }
 
         return RecommendationNotificationResult.builder()
                 .userId(user.getUserId())
                 .petId(pet.getPetId())
                 .petName(pet.getPetName())
                 .weatherType(resolveWeatherType(weatherContext))
-                .weatherWalkLevel(weatherContext.getWalkLevel())
+                .weatherWalkLevel(weatherContext == null ? null : weatherContext.getWalkLevel())
                 .weatherSummary(buildWeatherSummary(weatherContext))
                 .place(topPlace)
                 .message(notificationSummary)
-                .fallbackUsed(false)
-                .cacheHit(true)
-                .aiResponse(cachedResponse)
+                .fallbackUsed(fallbackUsed)
+                .cacheHit(cacheHit)
+                .error(false)
+                .aiResponse(aiResponse)
                 .geminiCacheKey(cacheKey)
                 .build();
-      }
-
-      log.info("[추천 파이프라인-알림] Gemini cache miss");
-
-      long startTime = System.currentTimeMillis();
-      String geminiMessage = geminiRecommendationService.generateRecommendation(prompt);
-      String notificationSummary = extractNotificationSummary(geminiMessage);
-      if (notificationSummary == null || notificationSummary.isBlank()) {
-        notificationSummary = DEFAULT_NOTIFICATION_SUMMARY;
-      }
-      long latencyMs = System.currentTimeMillis() - startTime;
-      boolean fallbackUsed = geminiRecommendationService.isFallbackResponse(geminiMessage);
-
-      if (fallbackUsed) {
-        log.warn("[추천 파이프라인-알림] fallback 여부 used={}", true);
-      }
-      if (!fallbackUsed) {
-        geminiCacheService.save(cacheKey, geminiMessage);
-      }
-
-      aiLogservice.save(
-              user,
-              pet,
-              prompt,
-              recommendedPlaces,
-              topPlace == null ? null : topPlace.getId(),
-              evidenceContext.getContextSnapshot(),
-              geminiMessage,
-              fallbackUsed,
-              false,
-              latencyMs
-      );
-
-      log.info("[추천 파이프라인-알림] AI 로그 저장 완료 fallbackUsed={}, cacheHit={}, latencyMs={}",
-              fallbackUsed, false, latencyMs);
-
-      return RecommendationNotificationResult.builder()
-              .userId(user.getUserId())
-              .petId(pet.getPetId())
-              .petName(pet.getPetName())
-              .weatherType(resolveWeatherType(weatherContext))
-              .weatherWalkLevel(weatherContext.getWalkLevel())
-              .weatherSummary(buildWeatherSummary(weatherContext))
-              .place(topPlace)
-              .message(notificationSummary)
-              .fallbackUsed(fallbackUsed)
-              .cacheHit(false)
-              .aiResponse(geminiMessage)
-              .geminiCacheKey(cacheKey)
-              .build();
-
-    } catch (Exception e) {
-      log.error("[추천 파이프라인-알림] Gemini 호출 실패", e);
-
-      String fallbackResponse = DEFAULT_NOTIFICATION_SUMMARY;
-      aiLogservice.save(
-              user,
-              pet,
-              prompt,
-              recommendedPlaces,
-              topPlace == null ? null : topPlace.getId(),
-              evidenceContext.getContextSnapshot(),
-              fallbackResponse,
-              true,
-              false,
-              0L
-      );
-
-      log.info("[추천 파이프라인-알림] AI 로그 저장 완료 fallbackUsed={}, cacheHit={}, latencyMs={}",
-              true, false, 0L);
-
-      return RecommendationNotificationResult.builder()
-              .userId(user.getUserId())
-              .petId(pet.getPetId())
-              .petName(pet.getPetName())
-              .weatherType(resolveWeatherType(weatherContext))
-              .weatherWalkLevel(weatherContext.getWalkLevel())
-              .weatherSummary(buildWeatherSummary(weatherContext))
-              .place(topPlace)
-              .message(fallbackResponse)
-              .fallbackUsed(true)
-              .cacheHit(false)
-              .aiResponse(fallbackResponse)
-              .geminiCacheKey(null)
-              .build();
-    }
-    }
-  }
-
-  /**
-   * 날씨 컨텍스트를 알림/응답에서 사용하는 날씨 타입 코드로 변환한다.
-   *
-   * @param weatherContext 현재 날씨 정보
-   * @return 날씨 타입 코드
-   */
-  private String resolveWeatherType(WeatherContext weatherContext) {
-    if (weatherContext == null) {
-      return "SUNNY";
     }
 
-    if (weatherContext.isRaining()) {
-      return "RAIN";
+    private RecommendationNotificationResult inProgressRecommendation(User user, Pet pet) {
+        return RecommendationNotificationResult.builder()
+                .userId(user.getUserId())
+                .petId(pet.getPetId())
+                .petName(pet.getPetName())
+                .weatherType("IN_PROGRESS")
+                .weatherWalkLevel(null)
+                .weatherSummary("")
+                .place(null)
+                .message(DUPLICATE_REQUEST_MESSAGE)
+                .fallbackUsed(false)
+                .cacheHit(false)
+                .error(true)
+                .errorCode(RECOMMENDATION_IN_PROGRESS_CODE)
+                .build();
     }
 
-    if (weatherContext.isHot()) {
-      return "HOT";
+    private RecommendationNotificationResult errorRecommendation(User user, Pet pet) {
+        return RecommendationNotificationResult.builder()
+                .userId(user.getUserId())
+                .petId(pet.getPetId())
+                .petName(pet.getPetName())
+                .weatherType("ERROR")
+                .weatherWalkLevel("ERROR")
+                .weatherSummary("")
+                .place(null)
+                .message(RECOMMENDATION_ERROR_MESSAGE)
+                .fallbackUsed(false)
+                .cacheHit(false)
+                .error(true)
+                .errorCode(RECOMMENDATION_FAILED_CODE)
+                .aiResponse(RECOMMENDATION_ERROR_MESSAGE)
+                .geminiCacheKey(null)
+                .build();
     }
 
-    if (weatherContext.isCold()) {
-      return "COLD";
+    private String resolveWeatherType(WeatherContext weatherContext) {
+        if (weatherContext == null) {
+            return "SUNNY";
+        }
+        if (weatherContext.isRaining()) {
+            return "RAIN";
+        }
+        if (weatherContext.isHot()) {
+            return "HOT";
+        }
+        if (weatherContext.isCold()) {
+            return "COLD";
+        }
+        String walkLevel = weatherContext.getWalkLevel();
+        if (walkLevel != null && ("CAUTION".equalsIgnoreCase(walkLevel) || "DANGEROUS".equalsIgnoreCase(walkLevel))) {
+            return "CLOUDY";
+        }
+        return "SUNNY";
     }
 
-    String walkLevel = weatherContext.getWalkLevel();
-    if (walkLevel != null && ("CAUTION".equalsIgnoreCase(walkLevel) || "DANGEROUS".equalsIgnoreCase(walkLevel))) {
-      return "CLOUDY";
+    private String buildWeatherSummary(WeatherContext weatherContext) {
+        if (weatherContext == null) {
+            return "";
+        }
+        return String.format(
+                "산책지수 %s, 기온 %.1f도, 습도 %d%%, 강수 %s, 강수량 %.1fmm, 풍속 %.1fm/s",
+                weatherContext.getWalkLevel(),
+                weatherContext.getTemperature(),
+                weatherContext.getHumidity(),
+                weatherContext.getPrecipitationType(),
+                weatherContext.getRainfall(),
+                weatherContext.getWindSpeed()
+        );
     }
 
-    return "SUNNY";
-  }
+    private String buildTopPlaceSummary(List<ScoredPlace> rankedPlaces) {
+        if (rankedPlaces == null || rankedPlaces.isEmpty()) {
+            return "추천 장소 없음";
+        }
 
-  /**
-   * 현재 날씨 정보를 사용자에게 보여줄 한 줄 요약 문자열로 만든다.
-   *
-   * @param weatherContext 현재 날씨 정보
-   * @return 날씨 요약 문자열
-   */
-  private String buildWeatherSummary(WeatherContext weatherContext) {
-    if (weatherContext == null) {
-      return "";
+        return rankedPlaces.stream()
+                .limit(3)
+                .map(scoredPlace -> {
+                    Place place = scoredPlace.getPlace();
+                    return place.getTitle() + "(" + scoredPlace.getTotalScore() + ")";
+                })
+                .collect(Collectors.joining(", "));
     }
 
-    return String.format(
-            "산책지수 %s, 기온 %.1f도, 습도 %d%%, 강수 %s, 강수량 %.1fmm, 풍속 %.1fm/s",
-            weatherContext.getWalkLevel(),
-            weatherContext.getTemperature(),
-            weatherContext.getHumidity(),
-            weatherContext.getPrecipitationType(),
-            weatherContext.getRainfall(),
-            weatherContext.getWindSpeed()
-    );
-  }
+    private Map<Long, AiLogService.RecommendationDiversityPenalty> loadDiversityPenalties(User user) {
+        if (user == null) {
+            return Map.of();
+        }
 
-  /**
-   * 상위 추천 장소 목록을 AI 로그 저장용 요약 문자열로 변환한다.
-   *
-   * @param rankedPlaces 점수 계산이 완료된 장소 목록
-   * @return 상위 추천 장소 요약 문자열
-   */
-  private String buildTopPlaceSummary(List<ScoredPlace> rankedPlaces) {
-    if (rankedPlaces == null || rankedPlaces.isEmpty()) {
-      return "추천 장소 없음";
+        Map<Long, AiLogService.RecommendationDiversityPenalty> penalties =
+                aiLogService.getRecentRecommendedPlacePenalties(user.getUserId());
+        if (penalties == null || penalties.isEmpty()) {
+            return Map.of();
+        }
+
+        log.info("[RecommendationPipeline] diversity penalty count={}, userId={}",
+                penalties.size(),
+                user.getUserId());
+        return penalties;
     }
 
-    return rankedPlaces.stream()
-            .limit(3)
-            .map(scoredPlace -> {
-              Place place = scoredPlace.getPlace();
-              return place.getTitle() + "(" + scoredPlace.getTotalScore() + "점)";
-            })
-            .collect(Collectors.joining(", "));
-  }
+    private String summarizePlaceNames(List<Place> places, int limit) {
+        if (places == null || places.isEmpty()) {
+            return "[]";
+        }
 
-  private Map<Long, AiLogService.RecommendationDiversityPenalty> loadDiversityPenalties(User user) {
-    if (user == null) {
-      return Map.of();
+        return places.stream()
+                .limit(limit)
+                .map(place -> place == null ? "null" : place.getTitle())
+                .collect(Collectors.joining(", ", "[", "]"));
     }
 
-    Map<Long, AiLogService.RecommendationDiversityPenalty> penalties =
-            aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId());
-    if (penalties == null || penalties.isEmpty()) {
-      return Map.of();
+    private String summarizeScoredPlaces(List<ScoredPlace> rankedPlaces, int limit) {
+        if (rankedPlaces == null || rankedPlaces.isEmpty()) {
+            return "[]";
+        }
+
+        return rankedPlaces.stream()
+                .limit(limit)
+                .map(scoredPlace -> {
+                    Place place = scoredPlace.getPlace();
+                    String title = place == null ? "null" : place.getTitle();
+                    return title + "|" + scoredPlace.getTotalScore() + "|" +
+                            RecommendationTextUtils.abbreviate(scoredPlace.getSummary(), 80);
+                })
+                .collect(Collectors.joining(", ", "[", "]"));
     }
 
-    log.info("[추천 파이프라인-알림] 다양성 패널티 대상 count={}, userId={}",
-            penalties.size(),
-            user.getUserId());
-    return penalties;
-  }
+    private String extractNotificationSummary(String geminiResponse) {
+        if (geminiResponse == null || geminiResponse.isBlank()) {
+            return null;
+        }
 
-  /**
-   * 후보 장소 목록에서 상위 일부 이름만 추려 로그용 문자열로 만든다.
-   *
-   * @param places 후보 장소 목록
-   * @param limit 포함할 최대 개수
-   * @return 장소명 요약 문자열
-   */
-  private String summarizePlaceNames(List<Place> places, int limit) {
-    if (places == null || places.isEmpty()) {
-      return "[]";
+        int summaryHeaderIndex = geminiResponse.indexOf(NOTIFICATION_SUMMARY_HEADER);
+        if (summaryHeaderIndex < 0) {
+            return null;
+        }
+
+        String summarySection = geminiResponse.substring(summaryHeaderIndex + NOTIFICATION_SUMMARY_HEADER.length()).trim();
+        if (summarySection.isBlank()) {
+            return null;
+        }
+
+        int nextSectionIndex = summarySection.indexOf("\n[");
+        if (nextSectionIndex >= 0) {
+            summarySection = summarySection.substring(0, nextSectionIndex).trim();
+        }
+
+        String firstLine = summarySection.lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .findFirst()
+                .orElse(null);
+
+        if (firstLine == null || firstLine.isBlank()) {
+            return null;
+        }
+
+        return firstLine.replaceFirst("^[-*\\s]*", "").trim();
     }
-
-    return places.stream()
-            .limit(limit)
-            .map(place -> place == null ? "null" : place.getTitle())
-            .collect(Collectors.joining(", ", "[", "]"));
-  }
-
-  /**
-   * 점수 계산 결과에서 상위 일부 장소의 이름, 점수, 요약을 추려 로그 문자열로 만든다.
-   *
-   * @param rankedPlaces 점수 계산이 완료된 장소 목록
-   * @param limit 포함할 최대 개수
-   * @return 점수 결과 요약 문자열
-   */
-  private String summarizeScoredPlaces(List<ScoredPlace> rankedPlaces, int limit) {
-    if (rankedPlaces == null || rankedPlaces.isEmpty()) {
-      return "[]";
-    }
-
-    return rankedPlaces.stream()
-            .limit(limit)
-            .map(scoredPlace -> {
-              Place place = scoredPlace.getPlace();
-              String title = place == null ? "null" : place.getTitle();
-              return title + "|" + scoredPlace.getTotalScore() + "|" + RecommendationTextUtils.abbreviate(scoredPlace.getSummary(), 80);
-            })
-            .collect(Collectors.joining(", ", "[", "]"));
-  }
-
-
-
-  /**
-   * Gemini 전체 응답에서 알림 본문에 사용할 요약 섹션의 첫 줄만 추출한다.
-   *
-   * @param geminiResponse Gemini가 반환한 전체 응답 문자열
-   * @return 알림용 한 줄 요약, 없으면 {@code null}
-   */
-  private String extractNotificationSummary(String geminiResponse) {
-    if (geminiResponse == null || geminiResponse.isBlank()) {
-      return null;
-    }
-
-    int summaryHeaderIndex = geminiResponse.indexOf(NOTIFICATION_SUMMARY_HEADER);
-    if (summaryHeaderIndex < 0) {
-      return null;
-    }
-
-    String summarySection = geminiResponse.substring(summaryHeaderIndex + NOTIFICATION_SUMMARY_HEADER.length()).trim();
-    if (summarySection.isBlank()) {
-      return null;
-    }
-
-    int nextSectionIndex = summarySection.indexOf("\n[");
-    if (nextSectionIndex >= 0) {
-      summarySection = summarySection.substring(0, nextSectionIndex).trim();
-    }
-
-    String firstLine = summarySection.lines()
-            .map(String::trim)
-            .filter(line -> !line.isBlank())
-            .findFirst()
-            .orElse(null);
-
-    if (firstLine == null || firstLine.isBlank()) {
-      return null;
-    }
-    firstLine = firstLine.replaceFirst("^[-•]\\s*", "").trim();
-    return firstLine;
-  }
 }

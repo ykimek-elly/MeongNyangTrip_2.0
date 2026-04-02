@@ -2,6 +2,8 @@ package com.team.meongnyang.recommendation.service;
 
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.recommendation.cache.GeminiCacheService;
+import com.team.meongnyang.recommendation.cache.RecommendationDedupService;
+import com.team.meongnyang.recommendation.cache.RecommendationResultCacheService;
 import com.team.meongnyang.recommendation.cache.WeatherCacheService;
 import com.team.meongnyang.recommendation.context.dto.RecommendationEvidenceContext;
 import com.team.meongnyang.recommendation.context.service.RecommendationEvidenceContextService;
@@ -16,7 +18,6 @@ import com.team.meongnyang.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,10 +28,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.longThat;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,28 +39,17 @@ class RecommendationPipelineServiceTest {
 
     private static final String EMAIL = "user@example.com";
     private static final String PROMPT = "recommendation prompt";
-    private static final String CACHE_KEY = "gemini:test:key";
+    private static final String PROMPT_CACHE_KEY = "gemini:prompt:key";
+    private static final String CONTEXT_CACHE_KEY = "gemini:context:key";
+    private static final String RECOMMENDATION_CACHE_KEY = "recommendation:result:key";
     private static final double USER_LAT = 37.5665;
     private static final double USER_LNG = 126.9780;
     private static final String GEMINI_RESPONSE = """
-            - [추천설명]
-            알파 카페는 반려동물과 함께 머무르기 편안한 장소입니다.
-            실내 중심 동선이라 현재 날씨 부담이 적습니다.
-            상위 점수 근거도 균형이 좋아 1순위로 적합합니다.
-            베타 파크는 활동성은 좋지만 오늘 조건에서는 비교 우위가 낮습니다.
+            [추천설명]
+            Alpha Cafe는 현재 조건과 반려동물 특성을 고려했을 때 가장 무난한 선택입니다.
 
-            - [알림요약]
-            알파 카페는 오늘 반려견과 가볍게 들르기 좋아요
-            """;
-    private static final String CACHED_RESPONSE = """
-            - [추천설명]
-            알파 카페는 오늘 조건에서 가장 무난한 선택입니다.
-            실내 공간 활용성이 좋아 현재 날씨 제약을 덜 받습니다.
-            반려동물 동반 편의 정보도 충분합니다.
-            다른 후보보다 거리와 편의성 균형이 좋습니다.
-
-            - [알림요약]
-            알파 카페는 오늘 반려견과 편하게 가기 좋아요
+            [알림요약]
+            Alpha Cafe가 오늘 방문하기 좋습니다.
             """;
 
     @Mock
@@ -70,7 +57,7 @@ class RecommendationPipelineServiceTest {
     @Mock
     private RecommendationPetReader recommendationPetReader;
     @Mock
-    private WeatherCacheService weatherService;
+    private WeatherCacheService weatherCacheService;
     @Mock
     private CandidatePlaceService candidatePlaceService;
     @Mock
@@ -82,17 +69,25 @@ class RecommendationPipelineServiceTest {
     @Mock
     private GeminiCacheService geminiCacheService;
     @Mock
+    private GeminiContextFingerprintService geminiContextFingerprintService;
+    @Mock
     private GeminiRecommendationService geminiRecommendationService;
     @Mock
     private WeatherGridConverter weatherGridConverter;
     @Mock
-    private AiLogService aiLogservice;
+    private AiLogService aiLogService;
+    @Mock
+    private RecommendationContextKeyFactory recommendationContextKeyFactory;
+    @Mock
+    private RecommendationResultCacheService recommendationResultCacheService;
+    @Mock
+    private RecommendationDedupService recommendationDedupService;
 
     @InjectMocks
     private RecommendationPipelineService recommendationPipelineService;
 
     @Test
-    @DisplayName("캐시 미스 시 Gemini 응답을 생성하고 AI 로그를 저장한다")
+    @DisplayName("Gemini 캐시가 없으면 응답을 생성하고 추천 결과를 캐시한다")
     void recommendForCurrentUser_success() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
@@ -104,15 +99,25 @@ class RecommendationPipelineServiceTest {
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
+        when(recommendationDedupService.tryAcquireUserRequestLock(user.getUserId())).thenReturn(true);
         when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
+        when(weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
         when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(candidates);
-        when(aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of())).thenReturn(rankedPlaces);
-        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
+        when(recommendationDedupService.getLastRecommendedPlaceId(user.getUserId())).thenReturn(null);
+        when(recommendationContextKeyFactory.buildResultKey(user, pet, weatherContext, candidates, null))
+                .thenReturn(RECOMMENDATION_CACHE_KEY);
+        when(recommendationResultCacheService.get(RECOMMENDATION_CACHE_KEY)).thenReturn(null);
+        when(aiLogService.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
+        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of()))
+                .thenReturn(rankedPlaces);
+        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces))
+                .thenReturn(evidenceContext);
         when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(null);
+        when(geminiContextFingerprintService.buildFingerprint(weatherContext, pet, rankedPlaces)).thenReturn("context-fingerprint");
+        when(geminiCacheService.generateContextKey("context-fingerprint")).thenReturn(CONTEXT_CACHE_KEY);
+        when(geminiCacheService.get(CONTEXT_CACHE_KEY)).thenReturn(null);
+        when(geminiCacheService.generateKey(PROMPT)).thenReturn(PROMPT_CACHE_KEY);
+        when(geminiCacheService.get(PROMPT_CACHE_KEY)).thenReturn(null);
         when(geminiRecommendationService.generateRecommendation(PROMPT)).thenReturn(GEMINI_RESPONSE);
         when(geminiRecommendationService.isFallbackResponse(GEMINI_RESPONSE)).thenReturn(false);
 
@@ -123,102 +128,55 @@ class RecommendationPipelineServiceTest {
         assertThat(result.getPlace()).isNotNull();
         assertThat(result.getPlace().getTitle()).isEqualTo("Alpha Cafe");
         assertThat(result.getWeatherType()).isEqualTo("SUNNY");
-        assertThat(result.getMessage()).isEqualTo("알파 카페는 오늘 반려견과 가볍게 들르기 좋아요");
+        assertThat(result.getMessage()).isEqualTo("Alpha Cafe가 오늘 방문하기 좋습니다.");
         assertThat(result.isCacheHit()).isFalse();
         assertThat(result.isFallbackUsed()).isFalse();
+        assertThat(result.isError()).isFalse();
 
-        InOrder inOrder = inOrder(
-                recommendationUserReader,
-                recommendationPetReader,
-                weatherGridConverter,
-                weatherService,
-                candidatePlaceService,
-                aiLogservice,
-                placeScoringService,
-                recommendationEvidenceContextService,
-                recommendationPromptService,
-                geminiCacheService,
-                geminiRecommendationService
-        );
-
-        inOrder.verify(recommendationUserReader).getCurrentUserByEmail(EMAIL);
-        inOrder.verify(recommendationPetReader).getPrimaryPet(user);
-        inOrder.verify(weatherGridConverter).convertToGrid(USER_LAT, USER_LNG);
-        inOrder.verify(weatherService).getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy());
-        inOrder.verify(candidatePlaceService).getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG);
-        inOrder.verify(aiLogservice).getRecentRecommendedPlacePenalties(user.getUserId());
-        inOrder.verify(placeScoringService).scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of());
-        inOrder.verify(recommendationEvidenceContextService).buildContext(user, pet, weatherContext, rankedPlaces);
-        inOrder.verify(recommendationPromptService).buildRecommendationPrompt(evidenceContext);
-        inOrder.verify(geminiCacheService).generateKey(PROMPT);
-        inOrder.verify(geminiCacheService).get(CACHE_KEY);
-        inOrder.verify(geminiRecommendationService).generateRecommendation(PROMPT);
-        inOrder.verify(geminiRecommendationService).isFallbackResponse(GEMINI_RESPONSE);
-        inOrder.verify(geminiCacheService).save(CACHE_KEY, GEMINI_RESPONSE);
-
-        verify(aiLogservice, times(1)).save(
-                eq(user),
-                eq(pet),
-                eq(PROMPT),
-                argThat(this::containsTopPlaceSummary),
-                eq(100L),
-                eq(evidenceContext.getContextSnapshot()),
-                eq(GEMINI_RESPONSE),
-                eq(false),
-                eq(false),
-                longThat(latency -> latency >= 0L)
-        );
+        verify(geminiCacheService, times(1)).save(PROMPT_CACHE_KEY, GEMINI_RESPONSE);
+        verify(geminiCacheService, times(1)).saveContext(CONTEXT_CACHE_KEY, GEMINI_RESPONSE);
+        verify(recommendationResultCacheService, times(1))
+                .save(eq(RECOMMENDATION_CACHE_KEY), any(RecommendationNotificationResult.class));
+        verify(recommendationDedupService, times(1)).recordRecommendation(user.getUserId(), 100L);
     }
 
     @Test
-    @DisplayName("캐시 히트 시 Gemini 호출 없이 캐시 응답을 반환한다")
-    void recommendForCurrentUser_cacheHit() {
+    @DisplayName("추천 결과 캐시가 있으면 점수 계산과 Gemini 호출 없이 바로 반환한다")
+    void recommendForCurrentUser_recommendationCacheHit() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
         WeatherGridPoint gridPoint = fixtureGridPoint();
         WeatherContext weatherContext = fixtureWeatherContext();
         List<Place> candidates = fixtureCandidates();
-        List<ScoredPlace> rankedPlaces = fixtureRankedPlaces();
-        RecommendationEvidenceContext evidenceContext = fixtureEvidenceContext();
+        RecommendationNotificationResult cachedResult = RecommendationNotificationResult.builder()
+                .userId(user.getUserId())
+                .petId(pet.getPetId())
+                .petName(pet.getPetName())
+                .weatherType("SUNNY")
+                .place(fixturePlace(100L, "Alpha Cafe"))
+                .message("cached message")
+                .build();
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
+        when(recommendationDedupService.tryAcquireUserRequestLock(user.getUserId())).thenReturn(true);
         when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
+        when(weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
         when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(candidates);
-        when(aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of())).thenReturn(rankedPlaces);
-        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
-        when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(CACHED_RESPONSE);
+        when(recommendationDedupService.getLastRecommendedPlaceId(user.getUserId())).thenReturn(null);
+        when(recommendationContextKeyFactory.buildResultKey(user, pet, weatherContext, candidates, null))
+                .thenReturn(RECOMMENDATION_CACHE_KEY);
+        when(recommendationResultCacheService.get(RECOMMENDATION_CACHE_KEY)).thenReturn(cachedResult);
 
         RecommendationNotificationResult result = recommendationPipelineService.recommendForCurrentUser(EMAIL);
 
-        assertThat(result.getWeatherType()).isEqualTo("SUNNY");
-        assertThat(result.getMessage()).isEqualTo("알파 카페는 오늘 반려견과 편하게 가기 좋아요");
-        assertThat(result.isCacheHit()).isTrue();
-        assertThat(result.isFallbackUsed()).isFalse();
-
-        verify(geminiRecommendationService, never()).generateRecommendation(PROMPT);
-        verify(geminiRecommendationService, never()).isFallbackResponse(any());
-        verify(geminiCacheService, never()).save(CACHE_KEY, CACHED_RESPONSE);
-        verify(aiLogservice, times(1)).save(
-                eq(user),
-                eq(pet),
-                eq(PROMPT),
-                argThat(this::containsTopPlaceSummary),
-                eq(100L),
-                eq(evidenceContext.getContextSnapshot()),
-                eq(CACHED_RESPONSE),
-                eq(false),
-                eq(true),
-                eq(0L)
-        );
+        assertThat(result).isSameAs(cachedResult);
+        verify(placeScoringService, never()).scorePlaces(any(), any(), any(), any(), any(Double.class), any(Double.class), any());
+        verify(geminiRecommendationService, never()).generateRecommendation(any());
     }
 
     @Test
-    @DisplayName("후보 장소가 없으면 추천 불가 응답을 반환하고 후속 단계를 호출하지 않는다")
+    @DisplayName("후보 장소가 없으면 즉시 빈 추천 결과를 반환한다")
     void recommendForCurrentUser_noCandidates() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
@@ -227,26 +185,21 @@ class RecommendationPipelineServiceTest {
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
+        when(recommendationDedupService.tryAcquireUserRequestLock(user.getUserId())).thenReturn(true);
         when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
+        when(weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
         when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(List.of());
 
         RecommendationNotificationResult result = recommendationPipelineService.recommendForCurrentUser(EMAIL);
 
         assertThat(result.getPlace()).isNull();
         assertThat(result.getMessage()).contains("추천 가능한 장소");
-        assertThat(result.isCacheHit()).isFalse();
-        assertThat(result.isFallbackUsed()).isFalse();
-
         verify(placeScoringService, never()).scorePlaces(any(), any(), any(), any(), any(Double.class), any(Double.class), any());
-        verify(recommendationEvidenceContextService, never()).buildContext(any(), any(), any(), any());
-        verify(recommendationPromptService, never()).buildRecommendationPrompt(any());
         verify(geminiCacheService, never()).generateKey(any());
-        verify(aiLogservice, never()).save(any(), any(), any(), any(), any(), any(), any(), any(Boolean.class), any(Boolean.class), any(Long.class));
     }
 
     @Test
-    @DisplayName("비가 아니어도 walkLevel이 CAUTION이면 CLOUDY를 반환한다")
+    @DisplayName("주의 단계 날씨면 CLOUDY 타입을 반환한다")
     void recommendForCurrentUser_cautionWeatherType() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
@@ -258,19 +211,65 @@ class RecommendationPipelineServiceTest {
 
         when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
         when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
+        when(recommendationDedupService.tryAcquireUserRequestLock(user.getUserId())).thenReturn(true);
         when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
-        when(weatherService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
+        when(weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
         when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(candidates);
-        when(aiLogservice.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
-        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of())).thenReturn(rankedPlaces);
-        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces)).thenReturn(evidenceContext);
+        when(recommendationDedupService.getLastRecommendedPlaceId(user.getUserId())).thenReturn(null);
+        when(recommendationContextKeyFactory.buildResultKey(user, pet, weatherContext, candidates, null))
+                .thenReturn(RECOMMENDATION_CACHE_KEY);
+        when(recommendationResultCacheService.get(RECOMMENDATION_CACHE_KEY)).thenReturn(null);
+        when(aiLogService.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
+        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of()))
+                .thenReturn(rankedPlaces);
+        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces))
+                .thenReturn(evidenceContext);
         when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
-        when(geminiCacheService.generateKey(PROMPT)).thenReturn(CACHE_KEY);
-        when(geminiCacheService.get(CACHE_KEY)).thenReturn(CACHED_RESPONSE);
+        when(geminiContextFingerprintService.buildFingerprint(weatherContext, pet, rankedPlaces)).thenReturn("context-fingerprint");
+        when(geminiCacheService.generateContextKey("context-fingerprint")).thenReturn(CONTEXT_CACHE_KEY);
+        when(geminiCacheService.get(CONTEXT_CACHE_KEY)).thenReturn(GEMINI_RESPONSE);
 
         RecommendationNotificationResult result = recommendationPipelineService.recommendForCurrentUser(EMAIL);
 
         assertThat(result.getWeatherType()).isEqualTo("CLOUDY");
+    }
+
+    @Test
+    @DisplayName("동시 요청 락을 얻지 못하면 안내 메시지와 오류 코드를 반환한다")
+    void recommendForCurrentUser_duplicateRequestBlocked() {
+        User user = fixtureUser();
+        Pet pet = fixturePet(user);
+
+        when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
+        when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
+        when(recommendationDedupService.tryAcquireUserRequestLock(user.getUserId())).thenReturn(false);
+
+        RecommendationNotificationResult result = recommendationPipelineService.recommendForCurrentUser(EMAIL);
+
+        assertThat(result.isError()).isTrue();
+        assertThat(result.getErrorCode()).isEqualTo("RECOMMENDATION_IN_PROGRESS");
+        assertThat(result.getWeatherType()).isEqualTo("IN_PROGRESS");
+        verify(weatherGridConverter, never()).convertToGrid(any(Double.class), any(Double.class));
+    }
+
+    @Test
+    @DisplayName("파이프라인 예외가 발생하면 오류 응답을 숨기지 않고 반환한다")
+    void recommendForCurrentUser_pipelineExceptionReturnsError() {
+        User user = fixtureUser();
+        Pet pet = fixturePet(user);
+
+        when(recommendationUserReader.getCurrentUserByEmail(EMAIL)).thenReturn(user);
+        when(recommendationPetReader.getPrimaryPet(user)).thenReturn(pet);
+        when(recommendationDedupService.tryAcquireUserRequestLock(user.getUserId())).thenReturn(true);
+        when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenThrow(new IllegalStateException("boom"));
+
+        RecommendationNotificationResult result = recommendationPipelineService.recommendForCurrentUser(EMAIL);
+
+        assertThat(result.isError()).isTrue();
+        assertThat(result.getErrorCode()).isEqualTo("RECOMMENDATION_FAILED");
+        assertThat(result.getWeatherType()).isEqualTo("ERROR");
+        assertThat(result.getWeatherWalkLevel()).isEqualTo("ERROR");
+        assertThat(result.getMessage()).contains("오류");
     }
 
     private User fixtureUser() {
@@ -399,13 +398,5 @@ class RecommendationPipelineServiceTest {
                 .phone("010-0000-0000")
                 .tags("indoor,pet,cafe")
                 .build();
-    }
-
-    private boolean containsTopPlaceSummary(String summary) {
-        return summary != null
-                && summary.contains("Alpha Cafe")
-                && summary.contains("Beta Park")
-                && summary.contains("97.3")
-                && summary.contains("88.1");
     }
 }

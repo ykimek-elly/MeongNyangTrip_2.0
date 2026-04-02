@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * 회원 엔티티 (ERD: USER)
+ * 회원 엔티티다.
  */
 @Entity
 @Table(name = "users")
@@ -34,7 +34,7 @@ public class User extends BaseEntity {
     @Column(unique = true, nullable = false, length = 100)
     private String email;
 
-    /** 소셜 로그인 사용자는 password = null */
+    /** 소셜 로그인 사용자는 password가 null일 수 있다. */
     @Column(length = 100)
     private String password;
 
@@ -53,37 +53,51 @@ public class User extends BaseEntity {
     @Builder.Default
     private Status status = Status.ACTIVE;
 
-    /** 소셜 로그인 제공자 (GOOGLE, KAKAO, null=이메일 가입) */
+    /** 로그인 제공자 정보다. */
     @Column(length = 20)
     private String provider;
 
-    /** 소셜 제공자의 고유 사용자 ID */
+    /** 제공자별 고유 사용자 ID다. */
     @Column(name = "provider_id", length = 100)
     private String providerId;
 
-    /** 프로필 이미지 URL (소셜 로그인 시 수집) */
+    /** 프로필 이미지 URL이다. */
     @Column(name = "profile_image", length = 500)
     private String profileImage;
 
-    /** 사용자 전화번호 (카카오 알림 발송용) */
+    /** 알림 발송에 사용하는 전화번호다. */
     @Column(length = 20)
     private String phoneNumber;
 
-    /** 알림 수신 여부 */
+    /** 알림 수신 동의 여부다. */
     @Column(nullable = false)
     @Builder.Default
     private boolean notificationEnabled = true;
 
-    /** 마지막 알림 발송 시각 */
+    /** 마지막 알림 발송 시각이다. */
     @Column
     private LocalDateTime lastNotificationSentAt;
+
     @Column
     private double latitude;
+
     @Column
     private double longitude;
 
+    /**
+     * 현재 시각 기준으로 알림 발송 시각을 갱신한다.
+     */
     public void markNotificationSent() {
         this.lastNotificationSentAt = LocalDateTime.now(SEOUL_ZONE);
+    }
+
+    /**
+     * 지정한 시각으로 알림 발송 시각을 갱신한다.
+     *
+     * @param sentAt 발송 시각
+     */
+    public void markNotificationSent(LocalDateTime sentAt) {
+        this.lastNotificationSentAt = sentAt;
     }
 
     public enum Role {
@@ -94,17 +108,27 @@ public class User extends BaseEntity {
         ACTIVE, SUSPENDED, BLOCK, DELETED
     }
 
-    /** 닉네임 업데이트 (소셜 로그인 재방문 시 최신화) */
+    /**
+     * 닉네임을 변경한다.
+     *
+     * @param nickname 새 닉네임
+     */
     public void updateNickname(String nickname) {
         this.nickname = nickname;
     }
 
-    /** 비밀번호 업데이트 (BCrypt 인코딩된 값으로 교체) */
+    /**
+     * 인코딩된 비밀번호로 교체한다.
+     *
+     * @param encodedPassword 인코딩된 비밀번호
+     */
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
 
-    /** 회원 탈퇴 — DELETED 상태로 변경 (소프트 딜리트) */
+    /**
+     * 회원 상태를 삭제로 변경한다.
+     */
     public void markAsDeleted() {
         this.status = Status.DELETED;
     }

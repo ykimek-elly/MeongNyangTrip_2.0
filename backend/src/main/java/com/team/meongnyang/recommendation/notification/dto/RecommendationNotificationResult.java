@@ -8,9 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 추천 파이프라인 실행 후 알림 단계로 전달되는 결과 DTO.
- *
- * <p>알림 메시지 조합과 웹 조회 재사용에 필요한 사용자/날씨/장소/AI 응답 요약 정보를 담는다.
+ * 추천 파이프라인과 알림 단계에서 함께 사용하는 결과 DTO.
  */
 @Getter
 @Builder
@@ -28,12 +26,14 @@ public class RecommendationNotificationResult {
   private String message;
   private boolean fallbackUsed;
   private boolean cacheHit;
+  private boolean error;
+  private String errorCode;
 
-  /** 배치 일자 캐시 저장용 원본 AI 응답 */
+  /** 배치/조회 캐시 저장용 원본 AI 응답 */
   @JsonIgnore
   private String aiResponse;
 
-  /** 배치 일자 캐시 저장용 Gemini 캐시 키 */
+  /** 배치/조회 캐시 저장용 Gemini 캐시 키 */
   @JsonIgnore
   private String geminiCacheKey;
 }

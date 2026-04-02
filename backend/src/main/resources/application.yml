@@ -136,7 +136,7 @@ oauth2:
 
 batch:
   weather-preload-cron: 0 50 8 * * *
-  notification-cron: 0 0 9 * * *
+  notification-cron: 0 0/30 9,18 * * *
   notification-parallelism: 5
 
 redis:
@@ -144,8 +144,14 @@ redis:
   daily-recommendation-cache-ttl: 24h
   weather-cache-key: weather
   weather-cache-ttl: 3h
+  weather-cache-ttl-stable: 30m
+  weather-cache-ttl-severe: 10m
   gemini-cache-key: gemini
   gemini-cache-ttl: 6h
+  gemini-context-cache-ttl: 12h
+  recommendation-cache-ttl: 10m
+  recommendation-request-lock-ttl: 2m
+  recommendation-history-ttl: 72h
 
 ncloud:
   sens:

@@ -92,6 +92,8 @@ export interface PetRequest {
   petActivity: 'LOW' | 'NORMAL' | 'HIGH';
   personality?: string;
   preferredPlace?: string;
+  region?: string;
+  activityRadius?: number;
 }
 
 /**

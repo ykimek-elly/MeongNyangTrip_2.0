@@ -43,4 +43,8 @@ public class PetRequestDto {
     private String personality;
 
     private String preferredPlace;
+
+    private String region;
+
+    private Integer activityRadius;
 }

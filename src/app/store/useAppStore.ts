@@ -17,6 +17,8 @@ const toPetRequest = (pet: PetInfo): PetRequest => ({
   petActivity: pet.activity,
   personality: pet.personality,
   preferredPlace: pet.preferredPlace,
+  region: pet.region,
+  activityRadius: pet.activityRadius,
 });
 
 /**
@@ -155,6 +157,8 @@ export const useAppStore = create<AppState>()(
                 activity: p.petActivity,
                 personality: p.personality ?? undefined,
                 preferredPlace: p.preferredPlace ?? undefined,
+                region: p.region ?? undefined,
+                activityRadius: p.activityRadius ?? undefined,
                 isRepresentative: p.isRepresentative,
               }))
             }))

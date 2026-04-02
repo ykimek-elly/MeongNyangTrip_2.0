@@ -25,6 +25,8 @@ public class PetResponseDto {
     private PetActivity petActivity;
     private String personality;
     private String preferredPlace;
+    private String region;
+    private Integer activityRadius;
     private Boolean isRepresentative;
 
     public static PetResponseDto from(Pet pet) {
@@ -40,6 +42,8 @@ public class PetResponseDto {
                 .petActivity(pet.getPetActivity())
                 .personality(pet.getPersonality())
                 .preferredPlace(pet.getPreferredPlace())
+                .region(pet.getRegion())
+                .activityRadius(pet.getActivityRadius())
                 .isRepresentative(pet.getIsRepresentative())
                 .build();
     }

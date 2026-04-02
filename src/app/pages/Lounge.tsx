@@ -1037,9 +1037,9 @@ function WalkTalkView({
                     댓글 {talk.comments || 0}개 모두 보기...
                   </button>
                 ) : (
-                  <div className="space-y-3 animate-in fade-in duration-200">
+                  <div className="space-y-3 animate-in fade-in duration-200 overflow-visible">
                     {/* 댓글 리스트 — 수정/삭제 기능 추가 */}
-                    <div className="max-h-[150px] overflow-y-auto space-y-2.5 pr-1 scrollbar-hide py-1">
+                      <div className="max-h-[150px] overflow-visible space-y-2.5 pr-1 scrollbar-hide py-1">
                       {talk.commentList?.map((c) => (
                         <div key={c.id} className="flex gap-2 items-start text-[11px] relative">
                           <span className="font-bold text-gray-900 flex-shrink-0">{c.user || "나"}</span>

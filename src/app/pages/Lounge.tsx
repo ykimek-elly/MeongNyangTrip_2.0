@@ -64,9 +64,9 @@ export function Lounge({ onNavigate }: LoungeProps) {
     setIsWriteModalOpen(false);
   };
 
-  const handleCreateTalk = async (content: string, _location: string) => {
+const handleCreateTalk = async (content: string, _location: string, placeId?: number) => {
     try {
-      await addTalk(content);
+    await addTalk(content, placeId);
       setIsLiveTalkModalOpen(false);
     } catch (e) {
       alert("산책 톡 등록에 실패했어요. 다시 시도해줘요.");
@@ -1168,7 +1168,7 @@ function LiveTalkWriteModal({
   onSubmit,
 }: {
   onClose: () => void;
-  onSubmit: (content: string, location: string) => void;
+onSubmit: (content: string, location: string, placeId?: number) => void;
 }) {
   const [content, setContent] = useState("");
   const [placeQuery, setPlaceQuery] = useState("");
@@ -1282,7 +1282,7 @@ function LiveTalkWriteModal({
             disabled={!content.trim()}
             onClick={() => {
               const finalLocation = selectedPlace ? selectedPlace.title : "내 주변";
-              onSubmit(content.trim(), finalLocation);
+onSubmit(content.trim(), finalLocation, selectedPlaceId ?? undefined);
               setContent("");
               setSelectedPlaceId(null);
               setPlaceQuery("");

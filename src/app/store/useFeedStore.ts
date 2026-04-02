@@ -39,7 +39,7 @@ interface FeedState {
   fetchPosts: () => Promise<void>;
   fetchTalks: () => Promise<void>;
   addPost: (post: { content: string; imageUrl: string; placeId?: number }) => Promise<void>;
-  addTalk: (content: string) => Promise<void>;
+  addTalk: (content: string, placeId?: number) => Promise<void>;
   toggleLike: (postId: number) => Promise<void>;
   addComment: (postId: number, user: string, content: string) => Promise<void>;
   addTalkComment: (talkId: number, content: string) => Promise<void>;
@@ -125,9 +125,9 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   },
 
   // 산책 톡 작성
-  addTalk: async (content) => {
-    try {
-      const res = await api.post(`${API}/posts`, { content, postType: 'TALK' });
+  addTalk: async (content, placeId?) => {
+  try {
+    const res = await api.post(`${API}/posts`, { content, postType: 'TALK', placeId });
       const newTalk = mapPost(res.data?.data);
       set((state) => ({ talks: [newTalk, ...state.talks] }));
     } catch (e) {

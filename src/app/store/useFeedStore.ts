@@ -7,6 +7,7 @@ export interface CommentItem {
   content: string;
   time: string;
   createdAt: string;
+  isOwner: boolean;   // ← 추가: 댓글 소유자 여부
 }
 
 export interface FeedPost {
@@ -23,7 +24,7 @@ export interface FeedPost {
   time: string;
   createdAt: string;
   isLiked: boolean;
-  isOwner: boolean;   // ← 추가!
+  isOwner: boolean;
   likedBy: string[];
   commentList: CommentItem[];
   dmList: any[];
@@ -42,6 +43,7 @@ interface FeedState {
   toggleLike: (postId: number) => Promise<void>;
   addComment: (postId: number, user: string, content: string) => Promise<void>;
   addTalkComment: (talkId: number, content: string) => Promise<void>;
+  editComment: (postId: number, commentId: number, content: string) => Promise<void>;  // ← 추가
   deleteComment: (postId: number, commentId: number) => Promise<void>;
   editPost: (postId: number, content: any) => Promise<void>;
   deletePost: (postId: number) => Promise<void>;
@@ -75,6 +77,7 @@ const mapPost = (p: any): FeedPost => ({
     content: c.content,
     time: '',
     createdAt: c.createdAt ?? '',
+    isOwner: c.isOwner ?? false,   // ← 추가
   })),
   dmList: [],
   isReported: false,
@@ -169,6 +172,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
                     content,
                     time: '방금 전',
                     createdAt: newComment?.createdAt ?? new Date().toISOString(),
+                    isOwner: true,   // 본인이 작성한 댓글이므로 항상 true
                   },
                 ],
               }
@@ -199,6 +203,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
                     content,
                     time: '방금 전',
                     createdAt: newComment?.createdAt ?? new Date().toISOString(),
+                    isOwner: true,
                   },
                 ],
               }
@@ -211,7 +216,29 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
   },
 
-  // 댓글 삭제
+  // 댓글 수정 (API 연동)
+  editComment: async (postId, commentId, content) => {
+    try {
+      await api.patch(`${API}/posts/${postId}/comments/${commentId}`, { content });
+      set((state) => ({
+        posts: state.posts.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                commentList: p.commentList.map((c) =>
+                  c.id === commentId ? { ...c, content } : c
+                ),
+              }
+            : p
+        ),
+      }));
+    } catch (e) {
+      console.error('댓글 수정 실패', e);
+      throw e;
+    }
+  },
+
+  // 댓글 삭제 (API 연동)
   deleteComment: async (postId, commentId) => {
     try {
       await api.delete(`${API}/posts/${postId}/comments/${commentId}`);

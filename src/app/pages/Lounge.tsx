@@ -64,7 +64,6 @@ export function Lounge({ onNavigate }: LoungeProps) {
     setIsWriteModalOpen(false);
   };
 
-  // 산책 톡 등록 함수 (API 연동)
   const handleCreateTalk = async (content: string, _location: string) => {
     try {
       await addTalk(content);
@@ -74,7 +73,6 @@ export function Lounge({ onNavigate }: LoungeProps) {
     }
   };
 
-  // 산책 톡 댓글 등록 함수 (API 연동)
   const handleCreateTalkComment = async (talkId: number, content: string) => {
     if (!content.trim()) return;
     try {
@@ -497,22 +495,30 @@ function FeedView({
   posts: FeedPost[];
   onNavigate: (page: string, params?: any) => void;
 }) {
-  const { toggleLike, addComment, deletePost, editPost } = useFeedStore();
+  const { toggleLike, addComment, deletePost, editPost, deleteComment, editComment } = useFeedStore();
   const places = useAppStore((s) => s.places);
-  const isAdmin = useAppStore((s) => s.isAdmin); // ← 추가
+  const isAdmin = useAppStore((s) => s.isAdmin);
+
   const [commentingPostId, setCommentingPostId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
-  const [editValue, setEditValue] = useState("");
   const [sharePostData, setSharePostData] = useState<{
     id: number;
     img: string;
     user: string;
   } | null>(null);
-  const [menuOpenPostId, setMenuOpenPostId] = useState<number | null>(null);
-  const [editingPost, setEditingPost] = useState<{
-    id: number;
+
+  // ─── 게시글 메뉴/수정 state (게시글 전용) ───────────────────────
+  const [postMenuId, setPostMenuId] = useState<number | null>(null);
+  const [editingPost, setEditingPost] = useState<{ id: number; content: string } | null>(null);
+
+  // ─── 댓글 메뉴/수정 state (댓글 전용, 게시글과 완전히 분리) ──────
+  const [commentMenuId, setCommentMenuId] = useState<number | null>(null);
+  const [editingComment, setEditingComment] = useState<{
+    postId: number;
+    commentId: number;
     content: string;
   } | null>(null);
+  const [editCommentValue, setEditCommentValue] = useState("");
 
   const handleAddComment = (postId: number) => {
     if (!commentText.trim()) return;
@@ -521,30 +527,24 @@ function FeedView({
     setCommentingPostId(null);
   };
 
+  // 댓글 삭제 — store의 deleteComment(API 호출) 사용
   const onDeleteComment = (postId: number, commentId: number) => {
     if (confirm("정말 삭제하시겠습니까?")) {
-      const targetPost = posts.find((p) => p.id === postId);
-      if (targetPost) {
-        const newCommentList = targetPost.commentList.filter((c) => c.id !== commentId);
-        editPost(postId, {
-          commentList: newCommentList,
-          comments: Math.max(0, targetPost.comments - 1),
-        } as any);
-      }
+      deleteComment(postId, commentId);
     }
-    setMenuOpenPostId(null);
+    setCommentMenuId(null);
   };
 
-  const onUpdateComment = (postId: number, commentId: number) => {
-    const targetPost = posts.find((p) => p.id === postId);
-    if (targetPost) {
-      const newCommentList = targetPost.commentList.map((c) =>
-        c.id === commentId ? { ...c, content: editValue } : c
-      );
-      editPost(postId, { commentList: newCommentList } as any);
+  // 댓글 수정 저장 — store의 editComment(API 호출) 사용
+  const onSaveComment = async (postId: number, commentId: number) => {
+    if (!editCommentValue.trim()) return;
+    try {
+      await editComment(postId, commentId, editCommentValue.trim());
+    } catch {
+      alert("댓글 수정에 실패했어요.");
     }
-    setEditingPost(null);
-    setEditValue("");
+    setEditingComment(null);
+    setEditCommentValue("");
   };
 
   const feedContent = (
@@ -565,23 +565,20 @@ function FeedView({
               <span className="text-sm font-bold text-gray-800">{post.user}</span>
             </div>
 
-            {/* ← 수정: 본인 또는 관리자만 ··· 버튼 표시 */}
+            {/* 게시글 ··· 버튼 — 본인 or 관리자만 */}
             {(post.isOwner || isAdmin) && (
               <button
                 className="text-gray-400 hover:text-gray-600 relative"
-                onClick={() => {
-                  setMenuOpenPostId(menuOpenPostId === post.id ? null : post.id);
-                }}
+                onClick={() => setPostMenuId(postMenuId === post.id ? null : post.id)}
               >
                 <MoreHorizontal size={20} />
               </button>
             )}
 
             <AnimatePresence>
-              {/* ← 수정: 본인 또는 관리자만 드롭다운 메뉴 표시 */}
-              {menuOpenPostId === post.id && (post.isOwner || isAdmin) && (
+              {postMenuId === post.id && (post.isOwner || isAdmin) && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpenPostId(null)} />
+                  <div className="fixed inset-0 z-10" onClick={() => setPostMenuId(null)} />
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -593,7 +590,7 @@ function FeedView({
                       className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       onClick={() => {
                         setEditingPost({ id: post.id, content: post.content });
-                        setMenuOpenPostId(null);
+                        setPostMenuId(null);
                       }}
                     >
                       <Pencil size={15} className="text-gray-500" />
@@ -606,7 +603,7 @@ function FeedView({
                         if (confirm("정말 이 게시물을 삭제할까요?")) {
                           deletePost(post.id);
                         }
-                        setMenuOpenPostId(null);
+                        setPostMenuId(null);
                       }}
                     >
                       <Trash2 size={15} />
@@ -678,40 +675,57 @@ function FeedView({
                     <div key={c.id} className="flex items-start justify-between mb-1 relative text-sm min-h-[24px]">
                       <div className="flex-1 pr-2">
                         <span className="font-bold mr-1">{c.user}</span>
-                        {editingPost?.id === c.id ? (
+                        {/* 댓글 인라인 수정 — editingComment로 판별 (게시글 수정 state와 완전히 분리) */}
+                        {editingComment?.commentId === c.id ? (
                           <div className="inline-flex items-center gap-2">
                             <input
                               className="border-b border-primary outline-none bg-transparent py-0 h-auto text-sm"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
+                              value={editCommentValue}
+                              onChange={(e) => setEditCommentValue(e.target.value)}
                               autoFocus
-                              onKeyDown={(e) => e.key === "Enter" && onUpdateComment(post.id, c.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                  onSaveComment(post.id, c.id);
+                                }
+                              }}
                             />
-                            <button onClick={() => onUpdateComment(post.id, c.id)} className="text-[10px] text-primary font-bold">저장</button>
-                            <button onClick={() => { setEditingPost(null); setEditValue(""); }} className="text-[10px] text-gray-400">취소</button>
+                            <button
+                              onClick={() => onSaveComment(post.id, c.id)}
+                              className="text-[10px] text-primary font-bold"
+                            >
+                              저장
+                            </button>
+                            <button
+                              onClick={() => { setEditingComment(null); setEditCommentValue(""); }}
+                              className="text-[10px] text-gray-400"
+                            >
+                              취소
+                            </button>
                           </div>
                         ) : (
                           <span className="text-gray-700">{c.content}</span>
                         )}
                       </div>
-                      {editingPost?.id !== c.id && (
+
+                      {/* 댓글 ··· 버튼 — 본인 댓글만 표시 */}
+                      {editingComment?.commentId !== c.id && c.isOwner && (
                         <div className="relative flex-shrink-0">
                           <button
-                            onClick={() => setMenuOpenPostId(menuOpenPostId === c.id ? null : c.id)}
+                            onClick={() => setCommentMenuId(commentMenuId === c.id ? null : c.id)}
                             className="p-1 text-gray-300 hover:text-gray-600 transition-colors"
                           >
                             <MoreHorizontal size={14} />
                           </button>
-                          {menuOpenPostId === c.id && (
+                          {commentMenuId === c.id && (
                             <>
-                              <div className="fixed inset-0 z-10" onClick={() => setMenuOpenPostId(null)} />
+                              <div className="fixed inset-0 z-10" onClick={() => setCommentMenuId(null)} />
                               <div className="absolute right-0 top-6 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
                                 <button
                                   className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                                   onClick={() => {
-                                    setEditingPost({ id: c.id, content: c.content });
-                                    setEditValue(c.content);
-                                    setMenuOpenPostId(null);
+                                    setEditingComment({ postId: post.id, commentId: c.id, content: c.content });
+                                    setEditCommentValue(c.content);
+                                    setCommentMenuId(null);
                                   }}
                                 >
                                   <Pencil size={10} /> 수정
@@ -781,6 +795,7 @@ function FeedView({
         postImage={sharePostData?.img ?? ""}
         postUser={sharePostData?.user ?? ""}
       />
+      {/* 게시글 수정 모달 — editingPost state만 사용 (댓글 수정 state와 완전히 분리) */}
       <AnimatePresence>
         {editingPost && (
           <EditPostModal
@@ -893,7 +908,6 @@ function WalkTalkView({
               key={talk.id}
               className="p-4 rounded-[28px] border border-black/[0.03] bg-blue-50/50 relative transition-all shadow-sm"
             >
-              {/* 상단 정보 */}
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-gray-800">{talk.user}</span>
@@ -904,10 +918,8 @@ function WalkTalkView({
                 </div>
               </div>
 
-              {/* 본문 */}
               <p className="text-sm text-gray-700 leading-relaxed mb-3 px-1">{talk.content}</p>
 
-              {/* 댓글 영역 */}
               <div className="mt-2 px-1">
                 {!isExpanded ? (
                   <button
@@ -918,7 +930,6 @@ function WalkTalkView({
                   </button>
                 ) : (
                   <div className="space-y-3 animate-in fade-in duration-200">
-                    {/* 댓글 리스트 */}
                     <div className="max-h-[150px] overflow-y-auto space-y-2.5 pr-1 scrollbar-hide py-1">
                       {talk.commentList?.map((c, i) => (
                         <div key={i} className="flex gap-2 items-start text-[11px]">
@@ -930,7 +941,6 @@ function WalkTalkView({
 
                     <div className="h-[1px] w-full bg-black/[0.05] mt-3" />
 
-                    {/* 댓글 입력 */}
                     <div className="space-y-1.5 pt-2">
                       <div className="flex items-center gap-2">
                         <input

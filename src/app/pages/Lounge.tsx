@@ -969,7 +969,7 @@ function WalkTalkView({
                       {talkMenuId === talk.id && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setTalkMenuId(null)} />
-                          <div className="absolute right-0 top-5 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                          <div className="absolute right-0 bottom-6 z-[100] bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
                             <button
                               className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                               onClick={() => {
@@ -1080,7 +1080,7 @@ function WalkTalkView({
                               {commentMenuId === c.id && (
                                 <>
                                   <div className="fixed inset-0 z-10" onClick={() => setCommentMenuId(null)} />
-                                  <div className="absolute right-0 top-5 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                                  <div className="absolute right-0 bottom-5 z-[100] bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
                                     <button
                                       className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                                       onClick={() => {

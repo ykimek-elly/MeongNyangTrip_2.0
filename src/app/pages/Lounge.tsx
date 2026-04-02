@@ -863,13 +863,14 @@ function EditPostModal({
   );
 }
 // 추가 — 파스텔 색상 배열 (WalkTalkView 함수 위에)
+// 변경 후
 const PASTEL_COLORS = [
-  "bg-pink-50/60 border-pink-100",
-  "bg-blue-50/60 border-blue-100",
-  "bg-green-50/60 border-green-100",
-  "bg-yellow-50/60 border-yellow-100",
-  "bg-purple-50/60 border-purple-100",
-  "bg-orange-50/60 border-orange-100",
+  { bg: "rgba(255,182,193,0.3)", border: "rgba(255,182,193,0.5)" },
+  { bg: "rgba(173,216,230,0.3)", border: "rgba(173,216,230,0.5)" },
+  { bg: "rgba(144,238,144,0.3)", border: "rgba(144,238,144,0.5)" },
+  { bg: "rgba(255,255,153,0.3)", border: "rgba(255,255,153,0.5)" },
+  { bg: "rgba(216,191,216,0.3)", border: "rgba(216,191,216,0.5)" },
+  { bg: "rgba(255,200,150,0.3)", border: "rgba(255,200,150,0.5)" },
 ];
 
 function WalkTalkView({
@@ -955,8 +956,11 @@ function WalkTalkView({
           return (
             <div
               key={talk.id}
-              className={`p-4 rounded-[28px] border relative transition-all shadow-sm ${PASTEL_COLORS[talk.id % PASTEL_COLORS.length]}`}
-            >
+className="p-4 rounded-[28px] border relative transition-all shadow-sm"
+style={{
+  backgroundColor: PASTEL_COLORS[talk.id % PASTEL_COLORS.length].bg,
+  borderColor: PASTEL_COLORS[talk.id % PASTEL_COLORS.length].border,
+}}            >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-gray-800">{talk.user}</span>

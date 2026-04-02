@@ -74,6 +74,17 @@ public class LoungeController {
                 loungeService.addComment(userDetails.getUsername(), postId, req)));
     }
 
+    /** 댓글 수정 */
+    @PatchMapping("/posts/{postId}/comments/{commentId}")
+    public ResponseEntity<ApiResponse<LoungeDto.CommentResponse>> updateComment(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @RequestBody LoungeDto.CommentRequest req) {
+        return ResponseEntity.ok(ApiResponse.success("댓글이 수정됐어요!",
+                loungeService.updateComment(userDetails.getUsername(), postId, commentId, req)));
+    }
+
     /** 댓글 삭제 */
     @DeleteMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<ApiResponse<Void>> deleteComment(

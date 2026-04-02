@@ -7,6 +7,7 @@ export interface CommentItem {
   content: string;
   time: string;
   createdAt: string;
+  isOwner: boolean;   // ← 추가: 댓글 소유자 여부
 }
 
 export interface FeedPost {
@@ -23,7 +24,7 @@ export interface FeedPost {
   time: string;
   createdAt: string;
   isLiked: boolean;
-  isOwner: boolean;   // ← 추가!
+  isOwner: boolean;
   likedBy: string[];
   commentList: CommentItem[];
   dmList: any[];
@@ -38,10 +39,11 @@ interface FeedState {
   fetchPosts: () => Promise<void>;
   fetchTalks: () => Promise<void>;
   addPost: (post: { content: string; imageUrl: string; placeId?: number }) => Promise<void>;
-  addTalk: (content: string) => Promise<void>;
+  addTalk: (content: string, placeId?: number) => Promise<void>;
   toggleLike: (postId: number) => Promise<void>;
   addComment: (postId: number, user: string, content: string) => Promise<void>;
   addTalkComment: (talkId: number, content: string) => Promise<void>;
+  editComment: (postId: number, commentId: number, content: string) => Promise<void>;  // ← 추가
   deleteComment: (postId: number, commentId: number) => Promise<void>;
   editPost: (postId: number, content: any) => Promise<void>;
   deletePost: (postId: number) => Promise<void>;
@@ -75,6 +77,7 @@ const mapPost = (p: any): FeedPost => ({
     content: c.content,
     time: '',
     createdAt: c.createdAt ?? '',
+    isOwner: c.isOwner ?? false,   // ← 추가
   })),
   dmList: [],
   isReported: false,
@@ -122,9 +125,9 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   },
 
   // 산책 톡 작성
-  addTalk: async (content) => {
-    try {
-      const res = await api.post(`${API}/posts`, { content, postType: 'TALK' });
+  addTalk: async (content, placeId?) => {
+  try {
+    const res = await api.post(`${API}/posts`, { content, postType: 'TALK', placeId });
       const newTalk = mapPost(res.data?.data);
       set((state) => ({ talks: [newTalk, ...state.talks] }));
     } catch (e) {
@@ -169,6 +172,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
                     content,
                     time: '방금 전',
                     createdAt: newComment?.createdAt ?? new Date().toISOString(),
+                    isOwner: true,   // 본인이 작성한 댓글이므로 항상 true
                   },
                 ],
               }
@@ -199,6 +203,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
                     content,
                     time: '방금 전',
                     createdAt: newComment?.createdAt ?? new Date().toISOString(),
+                    isOwner: true,
                   },
                 ],
               }
@@ -211,20 +216,38 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
   },
 
-  // 댓글 삭제
+  // 댓글 수정 (API 연동)
+  editComment: async (postId, commentId, content) => {
+    try {
+      await api.patch(`${API}/posts/${postId}/comments/${commentId}`, { content });
+      const updateCommentList = (list: any[]) =>
+        list.map((c) => c.id === commentId ? { ...c, content } : c);
+      set((state) => ({
+        posts: state.posts.map((p) =>
+          p.id === postId ? { ...p, commentList: updateCommentList(p.commentList) } : p
+        ),
+        talks: state.talks.map((t) =>
+          t.id === postId ? { ...t, commentList: updateCommentList(t.commentList) } : t
+        ),
+      }));
+    } catch (e) {
+      console.error('댓글 수정 실패', e);
+      throw e;
+    }
+  },
+
+  // 댓글 삭제 (API 연동)
   deleteComment: async (postId, commentId) => {
     try {
       await api.delete(`${API}/posts/${postId}/comments/${commentId}`);
+      const removeComment = (p: any) => ({
+        ...p,
+        comments: Math.max(0, p.comments - 1),
+        commentList: p.commentList.filter((c: any) => c.id !== commentId),
+      });
       set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                comments: Math.max(0, p.comments - 1),
-                commentList: p.commentList.filter((c) => c.id !== commentId),
-              }
-            : p
-        ),
+        posts: state.posts.map((p) => p.id === postId ? removeComment(p) : p),
+        talks: state.talks.map((t) => t.id === postId ? removeComment(t) : t),
       }));
     } catch (e) {
       console.error('댓글 삭제 실패', e);
@@ -235,18 +258,16 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   editPost: async (postId, content) => {
     if (typeof content === 'object' && content !== null) {
       set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, ...content } : p
-        ),
+        posts: state.posts.map((p) => p.id === postId ? { ...p, ...content } : p),
+        talks: state.talks.map((t) => t.id === postId ? { ...t, ...content } : t),
       }));
       return;
     }
     try {
       await api.patch(`${API}/posts/${postId}`, { content });
       set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, content } : p
-        ),
+        posts: state.posts.map((p) => p.id === postId ? { ...p, content } : p),
+        talks: state.talks.map((t) => t.id === postId ? { ...t, content } : t),
       }));
     } catch (e) {
       console.error('게시글 수정 실패', e);

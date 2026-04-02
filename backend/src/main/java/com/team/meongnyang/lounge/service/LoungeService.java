@@ -33,11 +33,9 @@ public class LoungeService {
         List<LoungePost> posts;
 
         if ("TALK".equalsIgnoreCase(type)) {
-            // 산책 톡: 24시간 이내만
             LocalDateTime since = LocalDateTime.now().minusHours(24);
             posts = postRepository.findByIsHiddenFalseAndPostTypeAndRegDateAfterOrderByPostIdDesc("TALK", since);
         } else {
-            // 일반 피드
             posts = postRepository.findByIsHiddenFalseAndPostTypeOrderByPostIdDesc("FEED");
         }
 
@@ -113,7 +111,23 @@ public class LoungeService {
                 .content(req.getContent())
                 .build();
         commentRepository.save(comment);
-        return LoungeDto.CommentResponse.from(comment);
+        return LoungeDto.CommentResponse.from(comment, email);
+    }
+
+    /** 댓글 수정 */
+    @Transactional
+    public LoungeDto.CommentResponse updateComment(String email, Long postId, Long commentId, LoungeDto.CommentRequest req) {
+        LoungeComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글이 없어요."));
+        // postId 일치 검증 (다른 게시글 댓글 조작 방지)
+        if (!comment.getPost().getPostId().equals(postId)) {
+            throw new IllegalArgumentException("잘못된 요청이에요.");
+        }
+        if (!comment.getUser().getEmail().equals(email)) {
+            throw new IllegalArgumentException("본인 댓글만 수정할 수 있어요.");
+        }
+        comment.updateContent(req.getContent());
+        return LoungeDto.CommentResponse.from(comment, email);
     }
 
     /** 댓글 삭제 */

@@ -64,17 +64,15 @@ export function Lounge({ onNavigate }: LoungeProps) {
     setIsWriteModalOpen(false);
   };
 
-  // 산책 톡 등록 함수 (API 연동)
-  const handleCreateTalk = async (content: string, _location: string) => {
+const handleCreateTalk = async (content: string, _location: string, placeId?: number) => {
     try {
-      await addTalk(content);
+    await addTalk(content, placeId);
       setIsLiveTalkModalOpen(false);
     } catch (e) {
       alert("산책 톡 등록에 실패했어요. 다시 시도해줘요.");
     }
   };
 
-  // 산책 톡 댓글 등록 함수 (API 연동)
   const handleCreateTalkComment = async (talkId: number, content: string) => {
     if (!content.trim()) return;
     try {
@@ -497,22 +495,30 @@ function FeedView({
   posts: FeedPost[];
   onNavigate: (page: string, params?: any) => void;
 }) {
-  const { toggleLike, addComment, deletePost, editPost } = useFeedStore();
+  const { toggleLike, addComment, deletePost, editPost, deleteComment, editComment } = useFeedStore();
   const places = useAppStore((s) => s.places);
-  const isAdmin = useAppStore((s) => s.isAdmin); // ← 추가
+  const isAdmin = useAppStore((s) => s.isAdmin);
+
   const [commentingPostId, setCommentingPostId] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
-  const [editValue, setEditValue] = useState("");
   const [sharePostData, setSharePostData] = useState<{
     id: number;
     img: string;
     user: string;
   } | null>(null);
-  const [menuOpenPostId, setMenuOpenPostId] = useState<number | null>(null);
-  const [editingPost, setEditingPost] = useState<{
-    id: number;
+
+  // ─── 게시글 메뉴/수정 state (게시글 전용) ───────────────────────
+  const [postMenuId, setPostMenuId] = useState<number | null>(null);
+  const [editingPost, setEditingPost] = useState<{ id: number; content: string } | null>(null);
+
+  // ─── 댓글 메뉴/수정 state (댓글 전용, 게시글과 완전히 분리) ──────
+  const [commentMenuId, setCommentMenuId] = useState<number | null>(null);
+  const [editingComment, setEditingComment] = useState<{
+    postId: number;
+    commentId: number;
     content: string;
   } | null>(null);
+  const [editCommentValue, setEditCommentValue] = useState("");
 
   const handleAddComment = (postId: number) => {
     if (!commentText.trim()) return;
@@ -521,30 +527,24 @@ function FeedView({
     setCommentingPostId(null);
   };
 
+  // 댓글 삭제 — store의 deleteComment(API 호출) 사용
   const onDeleteComment = (postId: number, commentId: number) => {
     if (confirm("정말 삭제하시겠습니까?")) {
-      const targetPost = posts.find((p) => p.id === postId);
-      if (targetPost) {
-        const newCommentList = targetPost.commentList.filter((c) => c.id !== commentId);
-        editPost(postId, {
-          commentList: newCommentList,
-          comments: Math.max(0, targetPost.comments - 1),
-        } as any);
-      }
+      deleteComment(postId, commentId);
     }
-    setMenuOpenPostId(null);
+    setCommentMenuId(null);
   };
 
-  const onUpdateComment = (postId: number, commentId: number) => {
-    const targetPost = posts.find((p) => p.id === postId);
-    if (targetPost) {
-      const newCommentList = targetPost.commentList.map((c) =>
-        c.id === commentId ? { ...c, content: editValue } : c
-      );
-      editPost(postId, { commentList: newCommentList } as any);
+  // 댓글 수정 저장 — store의 editComment(API 호출) 사용
+  const onSaveComment = async (postId: number, commentId: number) => {
+    if (!editCommentValue.trim()) return;
+    try {
+      await editComment(postId, commentId, editCommentValue.trim());
+    } catch {
+      alert("댓글 수정에 실패했어요.");
     }
-    setEditingPost(null);
-    setEditValue("");
+    setEditingComment(null);
+    setEditCommentValue("");
   };
 
   const feedContent = (
@@ -565,23 +565,20 @@ function FeedView({
               <span className="text-sm font-bold text-gray-800">{post.user}</span>
             </div>
 
-            {/* ← 수정: 본인 또는 관리자만 ··· 버튼 표시 */}
+            {/* 게시글 ··· 버튼 — 본인 or 관리자만 */}
             {(post.isOwner || isAdmin) && (
               <button
                 className="text-gray-400 hover:text-gray-600 relative"
-                onClick={() => {
-                  setMenuOpenPostId(menuOpenPostId === post.id ? null : post.id);
-                }}
+                onClick={() => setPostMenuId(postMenuId === post.id ? null : post.id)}
               >
                 <MoreHorizontal size={20} />
               </button>
             )}
 
             <AnimatePresence>
-              {/* ← 수정: 본인 또는 관리자만 드롭다운 메뉴 표시 */}
-              {menuOpenPostId === post.id && (post.isOwner || isAdmin) && (
+              {postMenuId === post.id && (post.isOwner || isAdmin) && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpenPostId(null)} />
+                  <div className="fixed inset-0 z-10" onClick={() => setPostMenuId(null)} />
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -593,7 +590,7 @@ function FeedView({
                       className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       onClick={() => {
                         setEditingPost({ id: post.id, content: post.content });
-                        setMenuOpenPostId(null);
+                        setPostMenuId(null);
                       }}
                     >
                       <Pencil size={15} className="text-gray-500" />
@@ -606,7 +603,7 @@ function FeedView({
                         if (confirm("정말 이 게시물을 삭제할까요?")) {
                           deletePost(post.id);
                         }
-                        setMenuOpenPostId(null);
+                        setPostMenuId(null);
                       }}
                     >
                       <Trash2 size={15} />
@@ -678,40 +675,57 @@ function FeedView({
                     <div key={c.id} className="flex items-start justify-between mb-1 relative text-sm min-h-[24px]">
                       <div className="flex-1 pr-2">
                         <span className="font-bold mr-1">{c.user}</span>
-                        {editingPost?.id === c.id ? (
+                        {/* 댓글 인라인 수정 — editingComment로 판별 (게시글 수정 state와 완전히 분리) */}
+                        {editingComment?.commentId === c.id ? (
                           <div className="inline-flex items-center gap-2">
                             <input
                               className="border-b border-primary outline-none bg-transparent py-0 h-auto text-sm"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
+                              value={editCommentValue}
+                              onChange={(e) => setEditCommentValue(e.target.value)}
                               autoFocus
-                              onKeyDown={(e) => e.key === "Enter" && onUpdateComment(post.id, c.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                  onSaveComment(post.id, c.id);
+                                }
+                              }}
                             />
-                            <button onClick={() => onUpdateComment(post.id, c.id)} className="text-[10px] text-primary font-bold">저장</button>
-                            <button onClick={() => { setEditingPost(null); setEditValue(""); }} className="text-[10px] text-gray-400">취소</button>
+                            <button
+                              onClick={() => onSaveComment(post.id, c.id)}
+                              className="text-[10px] text-primary font-bold"
+                            >
+                              저장
+                            </button>
+                            <button
+                              onClick={() => { setEditingComment(null); setEditCommentValue(""); }}
+                              className="text-[10px] text-gray-400"
+                            >
+                              취소
+                            </button>
                           </div>
                         ) : (
                           <span className="text-gray-700">{c.content}</span>
                         )}
                       </div>
-                      {editingPost?.id !== c.id && (
+
+                      {/* 댓글 ··· 버튼 — 본인 댓글만 표시 */}
+                      {editingComment?.commentId !== c.id && c.isOwner && (
                         <div className="relative flex-shrink-0">
                           <button
-                            onClick={() => setMenuOpenPostId(menuOpenPostId === c.id ? null : c.id)}
+                            onClick={() => setCommentMenuId(commentMenuId === c.id ? null : c.id)}
                             className="p-1 text-gray-300 hover:text-gray-600 transition-colors"
                           >
                             <MoreHorizontal size={14} />
                           </button>
-                          {menuOpenPostId === c.id && (
+                          {commentMenuId === c.id && (
                             <>
-                              <div className="fixed inset-0 z-10" onClick={() => setMenuOpenPostId(null)} />
+                              <div className="fixed inset-0 z-10" onClick={() => setCommentMenuId(null)} />
                               <div className="absolute right-0 top-6 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
                                 <button
                                   className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                                   onClick={() => {
-                                    setEditingPost({ id: c.id, content: c.content });
-                                    setEditValue(c.content);
-                                    setMenuOpenPostId(null);
+                                    setEditingComment({ postId: post.id, commentId: c.id, content: c.content });
+                                    setEditCommentValue(c.content);
+                                    setCommentMenuId(null);
                                   }}
                                 >
                                   <Pencil size={10} /> 수정
@@ -781,6 +795,7 @@ function FeedView({
         postImage={sharePostData?.img ?? ""}
         postUser={sharePostData?.user ?? ""}
       />
+      {/* 게시글 수정 모달 — editingPost state만 사용 (댓글 수정 state와 완전히 분리) */}
       <AnimatePresence>
         {editingPost && (
           <EditPostModal
@@ -847,6 +862,16 @@ function EditPostModal({
     </div>
   );
 }
+// 추가 — 파스텔 색상 배열 (WalkTalkView 함수 위에)
+// 변경 후
+const PASTEL_COLORS = [
+  { bg: "rgba(255,182,193,0.3)", border: "rgba(255,182,193,0.5)" },
+  { bg: "rgba(173,216,230,0.3)", border: "rgba(173,216,230,0.5)" },
+  { bg: "rgba(144,238,144,0.3)", border: "rgba(144,238,144,0.5)" },
+  { bg: "rgba(255,255,153,0.3)", border: "rgba(255,255,153,0.5)" },
+  { bg: "rgba(216,191,216,0.3)", border: "rgba(216,191,216,0.5)" },
+  { bg: "rgba(255,200,150,0.3)", border: "rgba(255,200,150,0.5)" },
+];
 
 function WalkTalkView({
   talks,
@@ -857,6 +882,42 @@ function WalkTalkView({
 }) {
   const [activeTalkId, setActiveTalkId] = React.useState<number | null>(null);
   const [commentValues, setCommentValues] = useState<{ [key: number]: string }>({});
+
+  // 댓글 수정/삭제 state
+  const [commentMenuId, setCommentMenuId] = useState<number | null>(null);
+  const [editingComment, setEditingComment] = useState<{
+    postId: number;
+    commentId: number;
+    content: string;
+  } | null>(null);
+  const [editCommentValue, setEditCommentValue] = useState("");
+
+  // 원본 글 수정/삭제 state
+  const [talkMenuId, setTalkMenuId] = useState<number | null>(null);
+  const [editingTalk, setEditingTalk] = useState<{ id: number; content: string } | null>(null);
+  const [editTalkValue, setEditTalkValue] = useState("");
+
+  const { editComment, deleteComment, deletePost, editPost } = useFeedStore();
+  const places = useAppStore((s) => s.places);
+  const isAdmin = useAppStore((s) => s.isAdmin);
+
+  const onDeleteTalkComment = (talkId: number, commentId: number) => {
+    if (confirm("정말 삭제하시겠습니까?")) {
+      deleteComment(talkId, commentId);
+    }
+    setCommentMenuId(null);
+  };
+
+  const onSaveTalkComment = async (talkId: number, commentId: number) => {
+    if (!editCommentValue.trim()) return;
+    try {
+      await editComment(talkId, commentId, editCommentValue.trim());
+    } catch {
+      alert("댓글 수정에 실패했어요.");
+    }
+    setEditingComment(null);
+    setEditCommentValue("");
+  };
 
   return (
     <motion.div
@@ -887,27 +948,99 @@ function WalkTalkView({
         {talks.map((talk) => {
           const isExpanded = activeTalkId === talk.id;
           const hasText = (commentValues[talk.id]?.length ?? 0) > 0;
+          // 장소 이름 — placeId 있으면 장소명, 없으면 "내 주변"
+          const locationLabel = talk.placeId
+            ? places.find((p) => p.id === talk.placeId)?.title ?? "내 주변"
+            : "내 주변";
 
           return (
             <div
               key={talk.id}
-              className="p-4 rounded-[28px] border border-black/[0.03] bg-blue-50/50 relative transition-all shadow-sm"
-            >
-              {/* 상단 정보 */}
+className="p-4 rounded-[28px] border relative transition-all shadow-sm"
+style={{
+  backgroundColor: PASTEL_COLORS[talk.id % PASTEL_COLORS.length].bg,
+  borderColor: PASTEL_COLORS[talk.id % PASTEL_COLORS.length].border,
+}}            >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-gray-800">{talk.user}</span>
                   <span className="text-[10px] text-gray-400">{talk.time}</span>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-gray-500 font-medium bg-white/30 px-2 py-0.5 rounded-full">
-                  <MapPin size={10} className="text-gray-400" /> 내 주변
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 font-medium bg-white/30 px-2 py-0.5 rounded-full">
+                    <MapPin size={10} className="text-gray-400" /> {locationLabel}
+                  </div>
+                  {/* 원본 글 ··· 버튼 — 본인 or 관리자만 */}
+                  {(talk.isOwner || isAdmin) && (
+                    <div className="relative">
+                      <button
+                        onClick={() => setTalkMenuId(talkMenuId === talk.id ? null : talk.id)}
+                        className="text-gray-300 hover:text-gray-500 transition-colors"
+                      >
+                        <MoreHorizontal size={14} />
+                      </button>
+                      {talkMenuId === talk.id && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setTalkMenuId(null)} />
+                          <div className="absolute right-0 bottom-6 z-[100] bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                            <button
+                              className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                              onClick={() => {
+                                setEditingTalk({ id: talk.id, content: talk.content });
+                                setEditTalkValue(talk.content);
+                                setTalkMenuId(null);
+                              }}
+                            >
+                              <Pencil size={10} /> 수정
+                            </button>
+                            <button
+                              className="w-full px-3 py-2 text-[11px] text-left hover:bg-red-50 text-red-500 flex items-center gap-2"
+                              onClick={() => {
+                                if (confirm("정말 삭제할까요?")) deletePost(talk.id);
+                                setTalkMenuId(null);
+                              }}
+                            >
+                              <Trash2 size={10} /> 삭제
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* 본문 */}
-              <p className="text-sm text-gray-700 leading-relaxed mb-3 px-1">{talk.content}</p>
+              {/* 원본 글 인라인 수정 */}
+              {editingTalk?.id === talk.id ? (
+                <div className="mb-3 px-1">
+                  <textarea
+                    className="w-full text-sm text-gray-700 bg-blue-50 border border-blue-200 rounded-xl p-2 outline-none resize-none"
+                    rows={3}
+                    value={editTalkValue}
+                    onChange={(e) => setEditTalkValue(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => {
+                        if (editTalkValue.trim()) {
+                          editPost(talk.id, editTalkValue.trim());
+                        }
+                        setEditingTalk(null);
+                        setEditTalkValue("");
+                      }}
+                      className="text-[11px] text-blue-500 font-bold"
+                    >저장</button>
+                    <button
+                      onClick={() => { setEditingTalk(null); setEditTalkValue(""); }}
+                      className="text-[11px] text-gray-400"
+                    >취소</button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-700 leading-relaxed mb-3 px-1">{talk.content}</p>
+              )}
 
-              {/* 댓글 영역 */}
               <div className="mt-2 px-1">
                 {!isExpanded ? (
                   <button
@@ -917,20 +1050,77 @@ function WalkTalkView({
                     댓글 {talk.comments || 0}개 모두 보기...
                   </button>
                 ) : (
-                  <div className="space-y-3 animate-in fade-in duration-200">
-                    {/* 댓글 리스트 */}
-                    <div className="max-h-[150px] overflow-y-auto space-y-2.5 pr-1 scrollbar-hide py-1">
-                      {talk.commentList?.map((c, i) => (
-                        <div key={i} className="flex gap-2 items-start text-[11px]">
+                  <div className="space-y-3 animate-in fade-in duration-200 overflow-visible">
+                    {/* 댓글 리스트 — 수정/삭제 기능 추가 */}
+                      <div className="max-h-[150px] overflow-visible space-y-2.5 pr-1 scrollbar-hide py-1">
+                      {talk.commentList?.map((c) => (
+                        <div key={c.id} className="flex gap-2 items-start text-[11px] relative">
                           <span className="font-bold text-gray-900 flex-shrink-0">{c.user || "나"}</span>
-                          <span className="text-gray-800 font-medium leading-snug break-all">{c.content}</span>
+                          {editingComment?.commentId === c.id ? (
+                            <div className="flex-1 flex items-center gap-1">
+                              <input
+                                className="flex-1 border-b border-blue-400 outline-none bg-transparent text-[11px] text-gray-800"
+                                value={editCommentValue}
+                                onChange={(e) => setEditCommentValue(e.target.value)}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                    onSaveTalkComment(talk.id, c.id);
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={() => onSaveTalkComment(talk.id, c.id)}
+                                className="text-[10px] text-blue-500 font-bold"
+                              >저장</button>
+                              <button
+                                onClick={() => { setEditingComment(null); setEditCommentValue(""); }}
+                                className="text-[10px] text-gray-400"
+                              >취소</button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-800 font-medium leading-snug break-all flex-1">{c.content}</span>
+                          )}
+                          {/* 본인 댓글만 ··· 버튼 표시 */}
+                          {editingComment?.commentId !== c.id && c.isOwner && (
+                            <div className="relative flex-shrink-0">
+                              <button
+                                onClick={() => setCommentMenuId(commentMenuId === c.id ? null : c.id)}
+                                className="p-0.5 text-gray-300 hover:text-gray-500"
+                              >
+                                <MoreHorizontal size={12} />
+                              </button>
+                              {commentMenuId === c.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setCommentMenuId(null)} />
+                                  <div className="absolute right-0 bottom-5 z-[100] bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                                    <button
+                                      className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                                      onClick={() => {
+                                        setEditingComment({ postId: talk.id, commentId: c.id, content: c.content });
+                                        setEditCommentValue(c.content);
+                                        setCommentMenuId(null);
+                                      }}
+                                    >
+                                      <Pencil size={10} /> 수정
+                                    </button>
+                                    <button
+                                      className="w-full px-3 py-2 text-[11px] text-left hover:bg-red-50 text-red-500 flex items-center gap-2"
+                                      onClick={() => onDeleteTalkComment(talk.id, c.id)}
+                                    >
+                                      <Trash2 size={10} /> 삭제
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
 
                     <div className="h-[1px] w-full bg-black/[0.05] mt-3" />
 
-                    {/* 댓글 입력 */}
                     <div className="space-y-1.5 pt-2">
                       <div className="flex items-center gap-2">
                         <input
@@ -964,7 +1154,6 @@ function WalkTalkView({
                           게시
                         </button>
                       </div>
-                      <div className="text-[10px] text-gray-400/80">방금 전</div>
                     </div>
 
                     <button
@@ -987,13 +1176,12 @@ function WalkTalkView({
     </motion.div>
   );
 }
-
 function LiveTalkWriteModal({
   onClose,
   onSubmit,
 }: {
   onClose: () => void;
-  onSubmit: (content: string, location: string) => void;
+onSubmit: (content: string, location: string, placeId?: number) => void;
 }) {
   const [content, setContent] = useState("");
   const [placeQuery, setPlaceQuery] = useState("");
@@ -1107,7 +1295,7 @@ function LiveTalkWriteModal({
             disabled={!content.trim()}
             onClick={() => {
               const finalLocation = selectedPlace ? selectedPlace.title : "내 주변";
-              onSubmit(content.trim(), finalLocation);
+onSubmit(content.trim(), finalLocation, selectedPlaceId ?? undefined);
               setContent("");
               setSelectedPlaceId(null);
               setPlaceQuery("");

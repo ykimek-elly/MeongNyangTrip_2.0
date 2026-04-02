@@ -72,6 +72,13 @@ public class Pet extends BaseEntity {
     @Column(name = "preferred_place", length = 50)
     private String preferredPlace;
 
+    @Size(max = 50)
+    @Column(name = "region", length = 50)
+    private String region;
+
+    @Column(name = "activity_radius")
+    private Integer activityRadius;
+
     @Column(name = "is_representative", nullable = false)
     @Builder.Default
     private Boolean isRepresentative = false;
@@ -94,7 +101,8 @@ public class Pet extends BaseEntity {
 
     public void update(String petName, PetType petType, String petBreed, PetGender petGender,
                        PetSize petSize, Integer petAge, BigDecimal petWeight,
-                       PetActivity petActivity, String personality, String preferredPlace) {
+                       PetActivity petActivity, String personality, String preferredPlace,
+                       String region, Integer activityRadius) {
         this.petName = petName;
         this.petType = petType;
         this.petBreed = petBreed;
@@ -105,6 +113,8 @@ public class Pet extends BaseEntity {
         this.petActivity = petActivity;
         this.personality = personality;
         this.preferredPlace = preferredPlace;
+        this.region = region;
+        this.activityRadius = activityRadius;
     }
 
     public void setRepresentative(boolean isRepresentative) {

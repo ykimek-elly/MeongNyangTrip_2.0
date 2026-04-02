@@ -46,6 +46,8 @@ public class PetService {
                 .petActivity(request.getPetActivity())
                 .personality(request.getPersonality())
                 .preferredPlace(request.getPreferredPlace())
+                .region(request.getRegion())
+                .activityRadius(request.getActivityRadius())
                 .isRepresentative(hasNoPets) // 첫 번째 반려동물은 자동 대표 설정
                 .build();
 
@@ -59,7 +61,8 @@ public class PetService {
                 request.getPetName(), request.getPetType(), request.getPetBreed(),
                 request.getPetGender(), request.getPetSize(), request.getPetAge(),
                 request.getPetWeight(), request.getPetActivity(),
-                request.getPersonality(), request.getPreferredPlace()
+                request.getPersonality(), request.getPreferredPlace(),
+                request.getRegion(), request.getActivityRadius()
         );
         return PetResponseDto.from(pet);
     }

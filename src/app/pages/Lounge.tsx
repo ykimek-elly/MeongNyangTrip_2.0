@@ -873,7 +873,7 @@ function WalkTalkView({
   const [activeTalkId, setActiveTalkId] = React.useState<number | null>(null);
   const [commentValues, setCommentValues] = useState<{ [key: number]: string }>({});
 
-  // 댓글 수정/삭제 state (피드와 동일한 구조)
+  // 댓글 수정/삭제 state
   const [commentMenuId, setCommentMenuId] = useState<number | null>(null);
   const [editingComment, setEditingComment] = useState<{
     postId: number;
@@ -882,8 +882,14 @@ function WalkTalkView({
   } | null>(null);
   const [editCommentValue, setEditCommentValue] = useState("");
 
-  const { editComment, deleteComment } = useFeedStore();
+  // 원본 글 수정/삭제 state
+  const [talkMenuId, setTalkMenuId] = useState<number | null>(null);
+  const [editingTalk, setEditingTalk] = useState<{ id: number; content: string } | null>(null);
+  const [editTalkValue, setEditTalkValue] = useState("");
+
+  const { editComment, deleteComment, deletePost, editPost } = useFeedStore();
   const places = useAppStore((s) => s.places);
+  const isAdmin = useAppStore((s) => s.isAdmin);
 
   const onDeleteTalkComment = (talkId: number, commentId: number) => {
     if (confirm("정말 삭제하시겠습니까?")) {
@@ -947,13 +953,80 @@ function WalkTalkView({
                   <span className="font-bold text-sm text-gray-800">{talk.user}</span>
                   <span className="text-[10px] text-gray-400">{talk.time}</span>
                 </div>
-                {/* 위치 — 하드코딩 제거 */}
-                <div className="flex items-center gap-1 text-[10px] text-gray-500 font-medium bg-white/30 px-2 py-0.5 rounded-full">
-                  <MapPin size={10} className="text-gray-400" /> {locationLabel}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 font-medium bg-white/30 px-2 py-0.5 rounded-full">
+                    <MapPin size={10} className="text-gray-400" /> {locationLabel}
+                  </div>
+                  {/* 원본 글 ··· 버튼 — 본인 or 관리자만 */}
+                  {(talk.isOwner || isAdmin) && (
+                    <div className="relative">
+                      <button
+                        onClick={() => setTalkMenuId(talkMenuId === talk.id ? null : talk.id)}
+                        className="text-gray-300 hover:text-gray-500 transition-colors"
+                      >
+                        <MoreHorizontal size={14} />
+                      </button>
+                      {talkMenuId === talk.id && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setTalkMenuId(null)} />
+                          <div className="absolute right-0 top-5 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                            <button
+                              className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                              onClick={() => {
+                                setEditingTalk({ id: talk.id, content: talk.content });
+                                setEditTalkValue(talk.content);
+                                setTalkMenuId(null);
+                              }}
+                            >
+                              <Pencil size={10} /> 수정
+                            </button>
+                            <button
+                              className="w-full px-3 py-2 text-[11px] text-left hover:bg-red-50 text-red-500 flex items-center gap-2"
+                              onClick={() => {
+                                if (confirm("정말 삭제할까요?")) deletePost(talk.id);
+                                setTalkMenuId(null);
+                              }}
+                            >
+                              <Trash2 size={10} /> 삭제
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <p className="text-sm text-gray-700 leading-relaxed mb-3 px-1">{talk.content}</p>
+              {/* 원본 글 인라인 수정 */}
+              {editingTalk?.id === talk.id ? (
+                <div className="mb-3 px-1">
+                  <textarea
+                    className="w-full text-sm text-gray-700 bg-blue-50 border border-blue-200 rounded-xl p-2 outline-none resize-none"
+                    rows={3}
+                    value={editTalkValue}
+                    onChange={(e) => setEditTalkValue(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => {
+                        if (editTalkValue.trim()) {
+                          editPost(talk.id, editTalkValue.trim());
+                        }
+                        setEditingTalk(null);
+                        setEditTalkValue("");
+                      }}
+                      className="text-[11px] text-blue-500 font-bold"
+                    >저장</button>
+                    <button
+                      onClick={() => { setEditingTalk(null); setEditTalkValue(""); }}
+                      className="text-[11px] text-gray-400"
+                    >취소</button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-700 leading-relaxed mb-3 px-1">{talk.content}</p>
+              )}
 
               <div className="mt-2 px-1">
                 {!isExpanded ? (

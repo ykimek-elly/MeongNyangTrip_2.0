@@ -23,6 +23,7 @@ public class DataInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         createAdminIfNotExists("admin@test.com", "password1234", "관리자");
         warmUpPlacesCache();
+        warmUpAuth();
     }
 
     private void warmUpPlacesCache() {
@@ -31,6 +32,22 @@ public class DataInitializer implements ApplicationRunner {
             log.info("[DataInitializer] 장소 목록 캐시 워밍 완료");
         } catch (Exception e) {
             log.warn("[DataInitializer] 장소 목록 캐시 워밍 실패 (무시): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * JVM 콜드 스타트 방지용 인증 워밍업.
+     * BCrypt, JPA, SecurityContext 등 로그인 경로의 핵심 빈을 미리 초기화한다.
+     */
+    private void warmUpAuth() {
+        try {
+            // BCrypt 해시 연산 1회 실행 → PasswordEncoder 초기화
+            passwordEncoder.encode("warmup");
+            // UserRepository 쿼리 1회 실행 → JPA/HikariCP 연결 풀 워밍
+            userRepository.findByEmail("__warmup__@noop.dev");
+            log.info("[DataInitializer] 인증 워밍업 완료 (BCrypt + JPA)");
+        } catch (Exception e) {
+            log.warn("[DataInitializer] 인증 워밍업 실패 (무시): {}", e.getMessage());
         }
     }
 

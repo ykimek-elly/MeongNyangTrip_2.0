@@ -873,6 +873,36 @@ function WalkTalkView({
   const [activeTalkId, setActiveTalkId] = React.useState<number | null>(null);
   const [commentValues, setCommentValues] = useState<{ [key: number]: string }>({});
 
+  // 댓글 수정/삭제 state (피드와 동일한 구조)
+  const [commentMenuId, setCommentMenuId] = useState<number | null>(null);
+  const [editingComment, setEditingComment] = useState<{
+    postId: number;
+    commentId: number;
+    content: string;
+  } | null>(null);
+  const [editCommentValue, setEditCommentValue] = useState("");
+
+  const { editComment, deleteComment } = useFeedStore();
+  const places = useAppStore((s) => s.places);
+
+  const onDeleteTalkComment = (talkId: number, commentId: number) => {
+    if (confirm("정말 삭제하시겠습니까?")) {
+      deleteComment(talkId, commentId);
+    }
+    setCommentMenuId(null);
+  };
+
+  const onSaveTalkComment = async (talkId: number, commentId: number) => {
+    if (!editCommentValue.trim()) return;
+    try {
+      await editComment(talkId, commentId, editCommentValue.trim());
+    } catch {
+      alert("댓글 수정에 실패했어요.");
+    }
+    setEditingComment(null);
+    setEditCommentValue("");
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -902,6 +932,10 @@ function WalkTalkView({
         {talks.map((talk) => {
           const isExpanded = activeTalkId === talk.id;
           const hasText = (commentValues[talk.id]?.length ?? 0) > 0;
+          // 장소 이름 — placeId 있으면 장소명, 없으면 "내 주변"
+          const locationLabel = talk.placeId
+            ? places.find((p) => p.id === talk.placeId)?.title ?? "내 주변"
+            : "내 주변";
 
           return (
             <div
@@ -913,8 +947,9 @@ function WalkTalkView({
                   <span className="font-bold text-sm text-gray-800">{talk.user}</span>
                   <span className="text-[10px] text-gray-400">{talk.time}</span>
                 </div>
+                {/* 위치 — 하드코딩 제거 */}
                 <div className="flex items-center gap-1 text-[10px] text-gray-500 font-medium bg-white/30 px-2 py-0.5 rounded-full">
-                  <MapPin size={10} className="text-gray-400" /> 내 주변
+                  <MapPin size={10} className="text-gray-400" /> {locationLabel}
                 </div>
               </div>
 
@@ -930,11 +965,70 @@ function WalkTalkView({
                   </button>
                 ) : (
                   <div className="space-y-3 animate-in fade-in duration-200">
+                    {/* 댓글 리스트 — 수정/삭제 기능 추가 */}
                     <div className="max-h-[150px] overflow-y-auto space-y-2.5 pr-1 scrollbar-hide py-1">
-                      {talk.commentList?.map((c, i) => (
-                        <div key={i} className="flex gap-2 items-start text-[11px]">
+                      {talk.commentList?.map((c) => (
+                        <div key={c.id} className="flex gap-2 items-start text-[11px] relative">
                           <span className="font-bold text-gray-900 flex-shrink-0">{c.user || "나"}</span>
-                          <span className="text-gray-800 font-medium leading-snug break-all">{c.content}</span>
+                          {editingComment?.commentId === c.id ? (
+                            <div className="flex-1 flex items-center gap-1">
+                              <input
+                                className="flex-1 border-b border-blue-400 outline-none bg-transparent text-[11px] text-gray-800"
+                                value={editCommentValue}
+                                onChange={(e) => setEditCommentValue(e.target.value)}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                    onSaveTalkComment(talk.id, c.id);
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={() => onSaveTalkComment(talk.id, c.id)}
+                                className="text-[10px] text-blue-500 font-bold"
+                              >저장</button>
+                              <button
+                                onClick={() => { setEditingComment(null); setEditCommentValue(""); }}
+                                className="text-[10px] text-gray-400"
+                              >취소</button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-800 font-medium leading-snug break-all flex-1">{c.content}</span>
+                          )}
+                          {/* 본인 댓글만 ··· 버튼 표시 */}
+                          {editingComment?.commentId !== c.id && c.isOwner && (
+                            <div className="relative flex-shrink-0">
+                              <button
+                                onClick={() => setCommentMenuId(commentMenuId === c.id ? null : c.id)}
+                                className="p-0.5 text-gray-300 hover:text-gray-500"
+                              >
+                                <MoreHorizontal size={12} />
+                              </button>
+                              {commentMenuId === c.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setCommentMenuId(null)} />
+                                  <div className="absolute right-0 top-5 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                                    <button
+                                      className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                                      onClick={() => {
+                                        setEditingComment({ postId: talk.id, commentId: c.id, content: c.content });
+                                        setEditCommentValue(c.content);
+                                        setCommentMenuId(null);
+                                      }}
+                                    >
+                                      <Pencil size={10} /> 수정
+                                    </button>
+                                    <button
+                                      className="w-full px-3 py-2 text-[11px] text-left hover:bg-red-50 text-red-500 flex items-center gap-2"
+                                      onClick={() => onDeleteTalkComment(talk.id, c.id)}
+                                    >
+                                      <Trash2 size={10} /> 삭제
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -974,7 +1068,6 @@ function WalkTalkView({
                           게시
                         </button>
                       </div>
-                      <div className="text-[10px] text-gray-400/80">방금 전</div>
                     </div>
 
                     <button
@@ -997,7 +1090,6 @@ function WalkTalkView({
     </motion.div>
   );
 }
-
 function LiveTalkWriteModal({
   onClose,
   onSubmit,

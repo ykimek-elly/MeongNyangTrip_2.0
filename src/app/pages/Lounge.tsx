@@ -865,12 +865,12 @@ function EditPostModal({
 // 추가 — 파스텔 색상 배열 (WalkTalkView 함수 위에)
 // 변경 후
 const PASTEL_COLORS = [
-  { bg: "rgba(255,182,193,0.3)", border: "rgba(255,182,193,0.5)" },
-  { bg: "rgba(173,216,230,0.3)", border: "rgba(173,216,230,0.5)" },
-  { bg: "rgba(144,238,144,0.3)", border: "rgba(144,238,144,0.5)" },
-  { bg: "rgba(255,255,153,0.3)", border: "rgba(255,255,153,0.5)" },
-  { bg: "rgba(216,191,216,0.3)", border: "rgba(216,191,216,0.5)" },
-  { bg: "rgba(255,200,150,0.3)", border: "rgba(255,200,150,0.5)" },
+  { bg: "rgba(255,182,193,0.15)", border: "rgba(255,182,193,0.25)" },
+  { bg: "rgba(173,216,230,0.15)", border: "rgba(173,216,230,0.25)" },
+  { bg: "rgba(144,238,144,0.15)", border: "rgba(144,238,144,0.25)" },
+  { bg: "rgba(255,255,153,0.15)", border: "rgba(255,255,153,0.25)" },
+  { bg: "rgba(216,191,216,0.15)", border: "rgba(216,191,216,0.25)" },
+  { bg: "rgba(255,200,150,0.15)", border: "rgba(255,200,150,0.25)" },
 ];
 
 function WalkTalkView({

@@ -1,6 +1,7 @@
 package com.team.meongnyang.user.repository;
 
 import com.team.meongnyang.user.entity.Pet;
+import com.team.meongnyang.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,6 +13,8 @@ import java.util.Optional;
 public interface PetRepository extends JpaRepository<Pet, Long> {
 
     List<Pet> findByUserUserId(Long userId);
+
+    List<Pet> findAllByUserUserIdInAndIsRepresentativeTrueAndUserStatusAndUserRole(List<Long> userIds, User.Status status, User.Role role);
 
     Optional<Pet> findByUserUserIdAndIsRepresentativeTrue(Long userId);
 }

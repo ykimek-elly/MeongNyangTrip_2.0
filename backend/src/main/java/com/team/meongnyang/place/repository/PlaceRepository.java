@@ -2,6 +2,7 @@ package com.team.meongnyang.place.repository;
 
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.place.entity.PlaceStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -132,4 +133,5 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
         @Param("category") String category,
         @Param("limit") int limit
     );
+
 }

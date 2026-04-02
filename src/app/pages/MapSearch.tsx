@@ -74,13 +74,22 @@ export function MapSearch({ onNavigate, initialPlaceId }: MapSearchProps) {
   const centerLat = mapCenter?.lat ?? lat ?? 37.5665;
   const centerLng = mapCenter?.lng ?? lng ?? 126.9780;
 
-  const handleLocate = () => {
-    setSpinning(true);
-    setShowVetGuide(false);
-    locatingRef.current = true;
-    getLocation();
-    setTimeout(() => setSpinning(false), 600);
-  };
+const handleLocate = () => {
+  setSpinning(true);
+  setShowVetGuide(false);
+  setTimeout(() => setSpinning(false), 600);
+
+  // 이미 위치 있으면 바로 지도 이동
+  if (lat && lng && mapRef.current) {
+    mapRef.current.setLevel(5);
+    mapRef.current.setCenter(new window.kakao.maps.LatLng(lat, lng));
+    setMapLevel(5);
+    return;
+  }
+
+  locatingRef.current = true;
+  getLocation();
+};
 
   // 위치 정보 받아오면 상태 업데이트 + 버튼 클릭 시 지도 이동 & 줌 리셋
   React.useEffect(() => {

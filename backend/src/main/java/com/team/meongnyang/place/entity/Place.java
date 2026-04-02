@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDate;
@@ -25,6 +27,8 @@ import java.util.List;
 @Builder
 public class Place {
 
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -37,8 +41,8 @@ public class Place {
     @Column(name = "kakao_id", unique = true)
     private String kakaoId;
 
-    /** PostGIS 공간 좌표 (SRID:4326) — ST_DWithin 검색용 */
-    @Column(columnDefinition = "geometry(Point,4326)")
+    /** PostGIS 공간 좌표 (SRID:4326) - ST_DWithin 검색용 */
+    @Column(name = "geom", columnDefinition = "geometry(Point,4326)")
     private Point geom;
 
     /** Optimistic Lock — 리뷰/평점 동시 갱신 제어 */
@@ -185,6 +189,7 @@ public class Place {
         if (lat != null) this.latitude = lat;
         if (lng != null) this.longitude = lng;
         if (geom != null) this.geom = geom;
+        else syncGeomFromCoordinates();
         this.status = PlaceStatus.ACTIVE;
         this.pendingReason = null;
         this.isVerified = true;
@@ -215,6 +220,7 @@ public class Place {
         this.imageUrl = imageUrl;
         this.phone = phone;
         this.tags = tags;
+        syncGeomFromCoordinates();
     }
 
     /** 관리자 필드 부분 수정 — null은 기존값 유지 */
@@ -424,5 +430,20 @@ public class Place {
         if (operatingHours != null) this.operatingHours = operatingHours;
         this.isVerified = isVerified;
         if (kakaoId != null) this.kakaoId = kakaoId;
+        if (this.geom == null) {
+            syncGeomFromCoordinates();
+        }
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void syncGeomFromCoordinates() {
+        if (latitude == null || longitude == null) {
+            return;
+        }
+
+        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+        point.setSRID(4326);
+        this.geom = point;
     }
 }

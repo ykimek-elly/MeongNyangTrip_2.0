@@ -48,6 +48,7 @@ public class SecurityConfig {
                 })
             )
             .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/api/v1/admin/batch/recommendation-notification/test").permitAll()
                 .requestMatchers(
                     "/api/v1/auth/**",       // /auth/refresh 포함
                     "/api/v1/places/**",
@@ -55,7 +56,8 @@ public class SecurityConfig {
                     "/oauth2/**",
                     "/login/oauth2/**",
                     "/swagger-ui/**",
-                    "/v3/api-docs/**"
+                    "/v3/api-docs/**",
+                    "/api/v1/ai/walk-guide"
                 ).permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/upload/**").authenticated()

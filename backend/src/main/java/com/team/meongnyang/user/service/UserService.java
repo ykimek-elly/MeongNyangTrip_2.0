@@ -71,6 +71,13 @@ public class UserService {
         user.updateLocation(lat, lng, radius, region);
     }
 
+    /** 휴대폰 번호 업데이트 */
+    @Transactional
+    public void updatePhoneNumber(String email, String phoneNumber) {
+        User user = getByEmail(email);
+        user.updatePhoneNumber(phoneNumber);
+    }
+
     private User getByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));

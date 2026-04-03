@@ -77,6 +77,7 @@ public class NotificationPolicyService {
         NOTIFICATION_DISABLED,
         MISSING_PHONE_NUMBER,
         PET_NOT_FOUND,
-        ALREADY_SENT_TODAY
+        ALREADY_SENT_TODAY,
+        COORDINATE_INVALID
     }
 }

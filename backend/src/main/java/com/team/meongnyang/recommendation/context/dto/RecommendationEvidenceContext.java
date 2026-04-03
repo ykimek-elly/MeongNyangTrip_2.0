@@ -15,6 +15,7 @@ public class RecommendationEvidenceContext {
     private final String petProfileSection;
     private final String weatherSection;
     private final String recommendationDecisionSummary;
+    private final String explanationFocusSection;
     private final String topPlaceEvidenceSection;
     private final String supplementalGuidelineSection;
     private final String contextSnapshot;

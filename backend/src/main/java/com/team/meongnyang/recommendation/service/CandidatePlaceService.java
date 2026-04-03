@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -41,8 +42,11 @@ public class CandidatePlaceService {
   private static final double CAUTION_MAX_DISTANCE_KM = 8.0;
   /** Walk Level == Dangerous 일때 최대 거리 */
   private static final double DANGEROUS_MAX_DISTANCE_KM = 5.0;
+  private static final String[] QUIET_INDOOR_KEYWORDS = {"실내", "카페", "조용", "휴식", "아늑", "편안", "라운지"};
+  private static final String[] ACTIVE_OUTDOOR_KEYWORDS = {"공원", "산책로", "야외", "운동", "넓음", "잔디", "트레킹"};
+  private static final String[] SMALL_FRIENDLY_KEYWORDS = {"실내", "카페", "아늑", "조용", "휴식"};
 
-
+  // todo : 반경 설정 값 반영
   private final PlaceRepository placeRepository;
   private final DistanceCalculator distanceCalculator;
 
@@ -71,7 +75,7 @@ public class CandidatePlaceService {
 
     // 2. walkLevel을 정규화한 뒤 산책 등급별 최대 반경을 계산하고 미터 단위로 변환
     String walkLevel = RecommendationTextUtils.normalizeTrimLower(weather.getWalkLevel()); // WalkLevel
-    double maxDistanceKm = resolveMaxDistanceKm(walkLevel); // 최대거리 기준
+    double maxDistanceKm = resolveMaxDistanceKm(walkLevel, pet); // 최대거리 기준
     int radiusMeters = toMeters(maxDistanceKm); // 미터로 변환
 
     // 3. 사용자 주변 반경 내 장소를 최대 BASE_FETCH_LIMIT개까지 조회
@@ -182,8 +186,6 @@ public class CandidatePlaceService {
           double userLng,
           boolean relaxWeather
   ) {
-    String walkLevel = RecommendationTextUtils.normalizeTrimLower(weather.getWalkLevel());
-    double maxDistanceKm = resolveMaxDistanceKm(walkLevel);
     List<Place> result = new ArrayList<>();
 
     for (Place place : places) {
@@ -200,9 +202,6 @@ public class CandidatePlaceService {
         continue;
       }
       // 거리 제한
-      if (!isWithinDistance(place, userLat, userLng, maxDistanceKm)) {
-        continue;
-      }
       // 날씨 조건에 맞는지 확인
       if (!matchesWeatherPolicy(place, weather, relaxWeather)) {
         continue;
@@ -251,6 +250,7 @@ public class CandidatePlaceService {
   private List<Place> limitAndPrioritize(List<Place> candidates, Pet pet) {
     List<Place> prioritized = weaklyPrioritizePreferredPlace(candidates, pet);
     return prioritized.stream()
+            .sorted(Comparator.<Place>comparingInt(place -> personalizationPriorityScore(place, pet)).reversed())
             .limit(RESULT_LIMIT)
             .toList();
   }
@@ -271,7 +271,7 @@ public class CandidatePlaceService {
     List<Place> normalMatches = new ArrayList<>();
 
     for (Place place : candidates) {
-      if (containsKeyword(place, preferredPlace)) {
+      if (containsKeyword(place, preferredPlace) || matchesPreferredPlace(place, preferredPlace)) {
         // 선호 장소가 일치하는 경우 우선순위를 높임
         preferredMatches.add(place);
       } else {
@@ -292,6 +292,49 @@ public class CandidatePlaceService {
             preferredMatches.size(),
             normalMatches.size());
     return prioritized;
+  }
+
+  private int personalizationPriorityScore(Place place, Pet pet) {
+    if (pet == null) {
+      return 0;
+    }
+
+    int score = 0;
+    String preferredPlace = RecommendationTextUtils.normalizeTrimLower(pet.getPreferredPlace());
+    String joined = buildSearchableText(place);
+
+    if (!preferredPlace.isBlank()) {
+      if (containsKeyword(place, preferredPlace)) {
+        score += 6;
+      } else if (matchesPreferredPlace(place, preferredPlace)) {
+        score += 4;
+      }
+    }
+
+    if (pet.getPetActivity() == Pet.PetActivity.HIGH && containsAny(joined, ACTIVE_OUTDOOR_KEYWORDS)) {
+      score += 3;
+    }
+    if (pet.getPetActivity() == Pet.PetActivity.LOW && containsAny(joined, QUIET_INDOOR_KEYWORDS)) {
+      score += 3;
+    }
+    if (pet.getPetSize() == Pet.PetSize.LARGE && containsAny(joined, ACTIVE_OUTDOOR_KEYWORDS)) {
+      score += 2;
+    }
+    if (pet.getPetSize() == Pet.PetSize.SMALL && containsAny(joined, SMALL_FRIENDLY_KEYWORDS)) {
+      score += 2;
+    }
+
+    String personality = RecommendationTextUtils.normalizeTrimLower(pet.getPersonality());
+    if (!personality.isBlank()) {
+      if (containsAny(personality, "예민", "조용", "겁") && containsAny(joined, QUIET_INDOOR_KEYWORDS)) {
+        score += 2;
+      }
+      if (containsAny(personality, "사교", "활발") && containsAny(joined, "카페", "공원", "넓음", "산책로")) {
+        score += 1;
+      }
+    }
+
+    return score;
   }
 
   /**
@@ -438,13 +481,7 @@ public class CandidatePlaceService {
    * @return 키워드가 포함된 경우 true, 그렇지 않은 경우 false
    */
   private boolean containsKeyword(Place place, String keyword) {
-    String joined = List.of(
-                    RecommendationTextUtils.normalizeTrimLower(place.getCategory()),
-                    RecommendationTextUtils.normalizeTrimLower(place.getTitle()),
-                    RecommendationTextUtils.normalizeTrimLower(place.getDescription()),
-                    RecommendationTextUtils.normalizeTrimLower(place.getTags())
-            ).stream()
-            .collect(Collectors.joining(" "));
+    String joined = buildSearchableText(place);
     return joined.contains(keyword);
   }
 
@@ -453,14 +490,65 @@ public class CandidatePlaceService {
    * @param walkLevel 걷기 수준
    * @return 최대 거리 (km)
    */
-  private double  resolveMaxDistanceKm(String walkLevel) {
-    if ("dangerous".equals(walkLevel)) {
-      return DANGEROUS_MAX_DISTANCE_KM;
+  private double  resolveMaxDistanceKm(String walkLevel, Pet pet) {
+    double weatherLimit = "dangerous".equals(walkLevel)
+            ? DANGEROUS_MAX_DISTANCE_KM
+            : "caution".equals(walkLevel)
+            ? CAUTION_MAX_DISTANCE_KM
+            : GOOD_MAX_DISTANCE_KM;
+
+    if (pet == null) {
+      return weatherLimit;
     }
-    if ("caution".equals(walkLevel)) {
-      return CAUTION_MAX_DISTANCE_KM;
+
+    Integer activityRadius = pet.getActivityRadius();
+    if (activityRadius != null && activityRadius > 0) {
+      return Math.min(weatherLimit, activityRadius);
     }
-    return GOOD_MAX_DISTANCE_KM;
+
+    double petLimit = switch (pet.getPetActivity()) {
+      case LOW -> 4.0;
+      case NORMAL -> 7.0;
+      case HIGH -> 10.0;
+    };
+    return Math.min(weatherLimit, petLimit);
+  }
+
+  private String buildSearchableText(Place place) {
+    return List.of(
+                    RecommendationTextUtils.normalizeTrimLower(place.getCategory()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getTitle()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getDescription()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getOverview()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getTags()),
+                    RecommendationTextUtils.normalizeTrimLower(place.getBlogPositiveTags())
+            ).stream()
+            .collect(Collectors.joining(" "));
+  }
+
+  private boolean matchesPreferredPlace(Place place, String preferredPlace) {
+    String joined = buildSearchableText(place);
+    if (preferredPlace.contains("실내카페")) {
+      return "DINING".equalsIgnoreCase(place.getCategory())
+              && containsAny(joined, QUIET_INDOOR_KEYWORDS);
+    }
+    if (preferredPlace.contains("공원")) {
+      return "PLACE".equalsIgnoreCase(place.getCategory())
+              && containsAny(joined, ACTIVE_OUTDOOR_KEYWORDS);
+    }
+    if (preferredPlace.contains("야외")) {
+      return containsAny(joined, ACTIVE_OUTDOOR_KEYWORDS);
+    }
+    return false;
+  }
+
+  private boolean containsAny(String text, String... keywords) {
+    for (String keyword : keywords) {
+      if (text.contains(keyword)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

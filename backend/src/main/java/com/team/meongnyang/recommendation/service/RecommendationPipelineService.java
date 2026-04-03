@@ -121,7 +121,7 @@ public class RecommendationPipelineService {
                         batchExecutionId,
                         latitude,
                         longitude);
-                throw new IllegalStateException("user coordinates are not initialized");
+                throw new CoordinateInvalidException(latitude, longitude);
             }
             WeatherGridPoint gridPoint = weatherGridConverter.convertToGrid(latitude, longitude);
             log.info("[날씨 조회] 격자 변환 완료 userId={}, petId={}, batchExecutionId={}, nx={}, ny={}",
@@ -131,6 +131,15 @@ public class RecommendationPipelineService {
                     gridPoint.getNx(),
                     gridPoint.getNy());
             WeatherContext weatherContext = weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy());
+            if (isWeatherContextUnavailable(weatherContext)) {
+                log.error("[에러] 날씨 정보 조회 실패 userId={}, petId={}, batchExecutionId={}, walkLevel={}, precipitationType={}",
+                        user.getUserId(),
+                        pet.getPetId(),
+                        batchExecutionId,
+                        weatherContext == null ? null : weatherContext.getWalkLevel(),
+                        weatherContext == null ? null : weatherContext.getPrecipitationType());
+                return errorRecommendation(user, pet, weatherContext);
+            }
 
             List<Place> candidates = candidatePlaceService.getInitialCandidates(
                     user,
@@ -232,6 +241,18 @@ public class RecommendationPipelineService {
                         batchExecutionId,
                         "context",
                         topPlace == null ? null : topPlace.getId());
+                aiLogService.save(
+                        user,
+                        pet,
+                        prompt,
+                        recommendedPlaces,
+                        topPlace == null ? null : topPlace.getId(),
+                        evidenceContext.getContextSnapshot(),
+                        contextCachedResponse,
+                        false,
+                        true,
+                        0L
+                );
                 return cacheAndRecordResult(
                         user,
                         topPlace,
@@ -333,6 +354,8 @@ public class RecommendationPipelineService {
                             fallbackUsed ? null : promptCacheKey
                     )
             );
+        } catch (CoordinateInvalidException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[에러] 추천 실패 userId={}, petId={}, batchExecutionId={}, reason={}",
                     user == null ? null : user.getUserId(),
@@ -445,13 +468,17 @@ public class RecommendationPipelineService {
      * 추천 처리 중 예외 발생 시 반환하는 오류 응답을 생성한다.
      */
     private RecommendationNotificationResult errorRecommendation(User user, Pet pet) {
+        return errorRecommendation(user, pet, null);
+    }
+
+    private RecommendationNotificationResult errorRecommendation(User user, Pet pet, WeatherContext weatherContext) {
         return RecommendationNotificationResult.builder()
                 .userId(user.getUserId())
                 .petId(pet.getPetId())
                 .petName(pet.getPetName())
                 .weatherType("ERROR")
-                .weatherWalkLevel("ERROR")
-                .weatherSummary("")
+                .weatherWalkLevel(weatherContext == null ? "ERROR" : weatherContext.getWalkLevel())
+                .weatherSummary(buildWeatherSummary(weatherContext))
                 .place(null)
                 .message(RECOMMENDATION_ERROR_MESSAGE)
                 .fallbackUsed(false)
@@ -469,6 +496,10 @@ public class RecommendationPipelineService {
     private String resolveWeatherType(WeatherContext weatherContext) {
         if (weatherContext == null) {
             return "SUNNY";
+        }
+        if ("ERROR".equalsIgnoreCase(weatherContext.getWalkLevel())
+                || "ERROR".equalsIgnoreCase(weatherContext.getPrecipitationType())) {
+            return "ERROR";
         }
         if (weatherContext.isRaining()) {
             return "RAIN";
@@ -570,10 +601,25 @@ public class RecommendationPipelineService {
                 .map(scoredPlace -> {
                     Place place = scoredPlace.getPlace();
                     String title = place == null ? "null" : place.getTitle();
+                    String boosts = summarizeAdjustments(scoredPlace.getAppliedBoosts(), "boost");
+                    String penalties = summarizeAdjustments(scoredPlace.getAppliedPenalties(), "penalty");
                     return title + "|" + scoredPlace.getTotalScore() + "|" +
+                            boosts + "|" + penalties + "|" +
                             RecommendationTextUtils.abbreviate(scoredPlace.getSummary(), 80);
                 })
                 .collect(Collectors.joining(", ", "[", "]"));
+    }
+
+    private String summarizeAdjustments(List<String> adjustments, String label) {
+        if (adjustments == null || adjustments.isEmpty()) {
+            return label + "=none";
+        }
+
+        String summarized = adjustments.stream()
+                .limit(3)
+                .map(adjustment -> RecommendationTextUtils.abbreviate(adjustment, 28))
+                .collect(Collectors.joining(";"));
+        return label + "=" + summarized;
     }
 
     /**
@@ -621,5 +667,13 @@ public class RecommendationPipelineService {
         }
         return latitude >= -90.0d && latitude <= 90.0d
                 && longitude >= -180.0d && longitude <= 180.0d;
+    }
+
+    private boolean isWeatherContextUnavailable(WeatherContext weatherContext) {
+        if (weatherContext == null) {
+            return true;
+        }
+        return "ERROR".equalsIgnoreCase(weatherContext.getWalkLevel())
+                || "ERROR".equalsIgnoreCase(weatherContext.getPrecipitationType());
     }
 }

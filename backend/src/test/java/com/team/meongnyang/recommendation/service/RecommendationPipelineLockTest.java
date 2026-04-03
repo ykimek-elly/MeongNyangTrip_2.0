@@ -45,10 +45,10 @@ class RecommendationPipelineLockTest {
     private static final double USER_LNG = 126.9780;
     private static final String GEMINI_RESPONSE = """
             [추천설명]
-            Alpha Cafe는 현재 조건과 반려동물 특성을 고려했을 때 가장 무난한 선택입니다.
+            Alpha Cafe는 산책 동선을 무리 없이 이어가기 좋고 반려견과 함께 머물 여유가 있다.
 
             [알림요약]
-            Alpha Cafe가 오늘 방문하기 좋습니다.
+            Alpha Cafe는 바람 부담이 적어 짧은 외출 동선에 맞다.
             """;
 
     @Mock
@@ -86,7 +86,7 @@ class RecommendationPipelineLockTest {
     private RecommendationPipelineService recommendationPipelineService;
 
     @Test
-    @DisplayName("현재 사용자 추천이 정상 종료되면 요청 락을 해제한다")
+    @DisplayName("현재 사용자 추천이 성공하면 요청 락을 해제한다")
     void recommendForCurrentUser_releasesLockAfterSuccess() {
         User user = fixtureUser();
         Pet pet = fixturePet(user);
@@ -106,6 +106,7 @@ class RecommendationPipelineLockTest {
                 .petProfileSection("반려동물 정보")
                 .weatherSection("날씨 정보")
                 .recommendationDecisionSummary("추천 판단 요약")
+                .explanationFocusSection("설명 필수 근거")
                 .topPlaceEvidenceSection("상위 장소 근거")
                 .supplementalGuidelineSection("추가 지침")
                 .contextSnapshot("컨텍스트 스냅샷")
@@ -156,6 +157,102 @@ class RecommendationPipelineLockTest {
 
         assertThat(result.isError()).isTrue();
         verify(recommendationDedupService, never()).releaseUserRequestLock(any());
+    }
+
+    @Test
+    @DisplayName("날씨 조회가 fallback ERROR면 추천을 중단하고 에러 응답을 반환한다")
+    void recommendForNotification_returnsErrorWhenWeatherUnavailable() {
+        User user = fixtureUser();
+        Pet pet = fixturePet(user);
+        WeatherGridPoint gridPoint = new WeatherGridPoint(60, 121);
+        WeatherContext errorWeather = WeatherContext.builder()
+                .temperature(0.0)
+                .humidity(0)
+                .precipitationType("ERROR")
+                .rainfall(0.0)
+                .windSpeed(0.0)
+                .raining(false)
+                .cold(false)
+                .hot(false)
+                .windy(false)
+                .walkLevel("ERROR")
+                .build();
+
+        when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
+        when(weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(errorWeather);
+
+        RecommendationNotificationResult result =
+                recommendationPipelineService.recommendForNotification(user, pet, "batch-1");
+
+        assertThat(result.isError()).isTrue();
+        assertThat(result.getWeatherType()).isEqualTo("ERROR");
+        assertThat(result.getWeatherWalkLevel()).isEqualTo("ERROR");
+        verify(candidatePlaceService, never()).getInitialCandidates(any(), any(), any(), any(Double.class), any(Double.class));
+    }
+
+    @Test
+    @DisplayName("context cache hit도 AI 로그를 cacheHit=true로 남긴다")
+    void recommendForNotification_logsWhenContextCacheHits() {
+        User user = fixtureUser();
+        Pet pet = fixturePet(user);
+        WeatherGridPoint gridPoint = new WeatherGridPoint(60, 121);
+        WeatherContext weatherContext = fixtureWeatherContext();
+        List<Place> candidates = List.of(fixturePlace(100L, "Alpha Cafe"));
+        List<ScoredPlace> rankedPlaces = List.of(
+                ScoredPlace.builder()
+                        .place(fixturePlace(100L, "Alpha Cafe"))
+                        .totalScore(97.3)
+                        .summary("summary one")
+                        .reason("reason one")
+                        .build()
+        );
+        RecommendationEvidenceContext evidenceContext = RecommendationEvidenceContext.builder()
+                .userProfileSection("사용자 정보")
+                .petProfileSection("반려동물 정보")
+                .weatherSection("날씨 정보")
+                .recommendationDecisionSummary("추천 판단 요약")
+                .explanationFocusSection("설명 필수 근거")
+                .topPlaceEvidenceSection("상위 장소 근거")
+                .supplementalGuidelineSection("추가 지침")
+                .contextSnapshot("컨텍스트 스냅샷")
+                .build();
+
+        when(weatherGridConverter.convertToGrid(USER_LAT, USER_LNG)).thenReturn(gridPoint);
+        when(weatherCacheService.getOrLoadWeather(gridPoint.getNx(), gridPoint.getNy())).thenReturn(weatherContext);
+        when(candidatePlaceService.getInitialCandidates(user, pet, weatherContext, USER_LAT, USER_LNG)).thenReturn(candidates);
+        when(recommendationDedupService.getLastRecommendedPlaceId(user.getUserId())).thenReturn(null);
+        when(recommendationContextKeyFactory.buildResultKey(user, pet, weatherContext, candidates, null))
+                .thenReturn(RECOMMENDATION_CACHE_KEY);
+        when(recommendationResultCacheService.get(RECOMMENDATION_CACHE_KEY)).thenReturn(null);
+        when(aiLogService.getRecentRecommendedPlacePenalties(user.getUserId())).thenReturn(Map.of());
+        when(placeScoringService.scorePlaces(candidates, user, pet, weatherContext, USER_LAT, USER_LNG, Map.of()))
+                .thenReturn(rankedPlaces);
+        when(recommendationEvidenceContextService.buildContext(user, pet, weatherContext, rankedPlaces))
+                .thenReturn(evidenceContext);
+        when(recommendationPromptService.buildRecommendationPrompt(evidenceContext)).thenReturn(PROMPT);
+        when(geminiContextFingerprintService.buildFingerprint(weatherContext, pet, rankedPlaces))
+                .thenReturn("context-fingerprint");
+        when(geminiCacheService.generateContextKey("context-fingerprint")).thenReturn(CONTEXT_CACHE_KEY);
+        when(geminiCacheService.get(CONTEXT_CACHE_KEY)).thenReturn(GEMINI_RESPONSE);
+
+        RecommendationNotificationResult result =
+                recommendationPipelineService.recommendForNotification(user, pet, "batch-1");
+
+        assertThat(result.isError()).isFalse();
+        assertThat(result.isCacheHit()).isTrue();
+        verify(aiLogService).save(
+                eq(user),
+                eq(pet),
+                eq(PROMPT),
+                eq("Alpha Cafe(97.3)"),
+                eq(100L),
+                eq("컨텍스트 스냅샷"),
+                eq(GEMINI_RESPONSE),
+                eq(false),
+                eq(true),
+                eq(0L)
+        );
+        verify(geminiRecommendationService, never()).generateRecommendation(any());
     }
 
     private User fixtureUser() {

@@ -16,14 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 추천 결과 설명 생성을 위한 근거 컨텍스트를 구성하는 서비스
- * 사용자, 반려동물, 날씨, 장소 점수 정보를 기반으로 AI 입력용 문맥 데이터를 생성한다.
+ * 추천 결과 설명 생성에 필요한 근거 컨텍스트를 구성한다.
  */
 @Service
 @Slf4j
@@ -36,9 +37,6 @@ public class RecommendationEvidenceContextService {
   private static final int MAX_OVERVIEW_LENGTH = 100;
   private static final int MAX_SNAPSHOT_LENGTH = 1200;
 
-  /**
-   * 추천에 필요한 전체 컨텍스트를 생성한다.
-   */
   public RecommendationEvidenceContext buildContext(
           User user,
           Pet pet,
@@ -49,6 +47,7 @@ public class RecommendationEvidenceContextService {
     String petProfileSection = buildPetProfileSection(pet);
     String weatherSection = buildWeatherSection(weather);
     String recommendationDecisionSummary = buildRecommendationDecisionSummary(weather, rankedPlaces);
+    String explanationFocusSection = buildExplanationFocusSection(pet, weather, rankedPlaces);
     String topPlaceEvidenceSection = buildTopPlaceEvidenceSection(rankedPlaces);
     String supplementalGuidelineSection = buildSupplementalGuidelineSection();
 
@@ -66,6 +65,9 @@ public class RecommendationEvidenceContextService {
             [추천 판단 요약]
             %s
 
+            [설명 필수 근거]
+            %s
+
             [상위 장소 근거]
             %s
 
@@ -76,6 +78,7 @@ public class RecommendationEvidenceContextService {
                     petProfileSection,
                     weatherSection,
                     recommendationDecisionSummary,
+                    explanationFocusSection,
                     topPlaceEvidenceSection,
                     supplementalGuidelineSection
             ),
@@ -87,15 +90,13 @@ public class RecommendationEvidenceContextService {
             .petProfileSection(petProfileSection)
             .weatherSection(weatherSection)
             .recommendationDecisionSummary(recommendationDecisionSummary)
+            .explanationFocusSection(explanationFocusSection)
             .topPlaceEvidenceSection(topPlaceEvidenceSection)
             .supplementalGuidelineSection(supplementalGuidelineSection)
             .contextSnapshot(contextSnapshot)
             .build();
   }
 
-  /**
-   * 사용자 정보를 기반으로 컨텍스트를 구성한다.
-   */
   private String buildUserProfileSection(User user) {
     if (user == null) {
       return "- 사용자 정보 없음";
@@ -103,16 +104,13 @@ public class RecommendationEvidenceContextService {
 
     return """
             - 닉네임: %s
-            - 알림 활성화: %s
+            - 알림 수신: %s
             """.formatted(
-            RecommendationTextUtils.defaultIfBlank(user.getNickname(), "알 수 없음"),
+            RecommendationTextUtils.defaultIfBlank(user.getNickname(), "정보 없음"),
             user.isNotificationEnabled() ? "예" : "아니오"
     ).trim();
   }
 
-  /**
-   * 반려동물 정보를 기반으로 컨텍스트를 구성한다.
-   */
   private String buildPetProfileSection(Pet pet) {
     if (pet == null) {
       return "- 반려동물 정보 없음";
@@ -127,19 +125,16 @@ public class RecommendationEvidenceContextService {
             - 성향: %s
             - 선호 장소: %s
             """.formatted(
-            RecommendationTextUtils.defaultIfBlank(pet.getPetName(), "알 수 없음"),
-            RecommendationTextUtils.defaultIfBlank(pet.getPetBreed(), "알 수 없음"),
-            pet.getPetSize() == null ? "알 수 없음" : pet.getPetSize().name(),
-            pet.getPetAge() == null ? "알 수 없음" : pet.getPetAge(),
-            pet.getPetActivity() == null ? "알 수 없음" : pet.getPetActivity().name(),
-            RecommendationTextUtils.defaultIfBlank(pet.getPersonality(), "알 수 없음"),
-            RecommendationTextUtils.defaultIfBlank(pet.getPreferredPlace(), "알 수 없음")
+            RecommendationTextUtils.defaultIfBlank(pet.getPetName(), "정보 없음"),
+            RecommendationTextUtils.defaultIfBlank(pet.getPetBreed(), "정보 없음"),
+            pet.getPetSize() == null ? "정보 없음" : pet.getPetSize().name(),
+            pet.getPetAge() == null ? "정보 없음" : pet.getPetAge(),
+            pet.getPetActivity() == null ? "정보 없음" : pet.getPetActivity().name(),
+            RecommendationTextUtils.defaultIfBlank(pet.getPersonality(), "정보 없음"),
+            RecommendationTextUtils.defaultIfBlank(pet.getPreferredPlace(), "정보 없음")
     ).trim();
   }
 
-  /**
-   * 날씨 정보를 기반으로 컨텍스트를 구성한다.
-   */
   private String buildWeatherSection(WeatherContext weather) {
     if (weather == null) {
       return "- 날씨 정보 없음";
@@ -164,7 +159,7 @@ public class RecommendationEvidenceContextService {
             : String.join(", ", constraints);
 
     return """
-            - 산책 가능 레벨: %s
+            - 산책 가능 등급: %s
             - 기온: %.1f도
             - 습도: %d%%
             - 강수 형태: %s
@@ -172,36 +167,113 @@ public class RecommendationEvidenceContextService {
             - 풍속: %.1fm/s
             - 주요 제약: %s
             """.formatted(
-            RecommendationTextUtils.defaultIfBlank(weather.getWalkLevel(), "알 수 없음"),
+            RecommendationTextUtils.defaultIfBlank(weather.getWalkLevel(), "정보 없음"),
             weather.getTemperature(),
             weather.getHumidity(),
-            RecommendationTextUtils.defaultIfBlank(weather.getPrecipitationType(), "알 수 없음"),
+            RecommendationTextUtils.defaultIfBlank(weather.getPrecipitationType(), "정보 없음"),
             weather.getRainfall(),
             weather.getWindSpeed(),
             constraintSummary
     ).trim();
   }
 
-  /**
-   * 추천 결정 요약 정보를 생성한다.
-   */
   private String buildRecommendationDecisionSummary(WeatherContext weather, List<ScoredPlace> rankedPlaces) {
     String weatherPriority = describeWeatherDecision(weather);
     String scorePriority = rankedPlaces == null || rankedPlaces.isEmpty()
-            ? "순위 정보 없음"
+            ? "상위 점수 정보 없음"
             : topScoreFocus(rankedPlaces.get(0));
 
     return """
-            - 추천 순위는 서버에서 이미 계산됨
+            - 추천 순위는 서비스에서 이미 계산됨
             - 날씨 우선 판단: %s
             - 상위 점수 축: %s
-            - 1순위가 왜 가장 적합한지와 2, 3순위의 차이를 설명해야 함
+            - 1위가 왜 맞는지와 2, 3위와의 차이를 설명해야 함
             """.formatted(weatherPriority, scorePriority).trim();
   }
 
-  /**
-   * 상위 추천 장소에 대한 근거 정보를 구성한다.
-   */
+  private String buildExplanationFocusSection(Pet pet, WeatherContext weather, List<ScoredPlace> rankedPlaces) {
+    if (rankedPlaces == null || rankedPlaces.isEmpty()) {
+      return "- 설명용 근거 없음";
+    }
+
+    ScoredPlace topPlace = rankedPlaces.get(0);
+    List<ScoreDetail> details = topPlace.getScoreDetails() == null ? List.of() : topPlace.getScoreDetails();
+    List<ScoreDetail> positiveDetails = details.stream()
+            .filter(detail -> detail.getScore() > 0.0)
+            .filter(detail -> detail.getScore() >= Math.max(1.0, detail.getMaxScore() * 0.35))
+            .sorted(Comparator
+                    .comparingDouble((ScoreDetail detail) -> detail.getScore() / Math.max(detail.getMaxScore(), 1.0))
+                    .reversed()
+                    .thenComparing(ScoreDetail::getScore, Comparator.reverseOrder()))
+            .toList();
+
+    List<String> weatherEvidence = positiveDetails.stream()
+            .filter(this::isWeatherDetail)
+            .map(detail -> toBoostNarrative(detail, topPlace.getPlace(), pet, weather))
+            .filter(text -> !text.isBlank())
+            .distinct()
+            .toList();
+
+    List<String> petEvidence = positiveDetails.stream()
+            .filter(this::isPetDetail)
+            .map(detail -> toBoostNarrative(detail, topPlace.getPlace(), pet, weather))
+            .filter(text -> !text.isBlank())
+            .distinct()
+            .toList();
+
+    List<String> generalEvidence = positiveDetails.stream()
+            .filter(detail -> !isWeatherDetail(detail) && !isPetDetail(detail))
+            .map(detail -> toBoostNarrative(detail, topPlace.getPlace(), pet, weather))
+            .filter(text -> !text.isBlank())
+            .distinct()
+            .toList();
+
+    Set<String> selectedEvidence = new LinkedHashSet<>();
+    if (!weatherEvidence.isEmpty()) {
+      selectedEvidence.add(weatherEvidence.get(0));
+    }
+    if (!petEvidence.isEmpty()) {
+      selectedEvidence.add(petEvidence.get(0));
+    }
+    generalEvidence.forEach(selectedEvidence::add);
+    weatherEvidence.stream().skip(1).forEach(selectedEvidence::add);
+    petEvidence.stream().skip(1).forEach(selectedEvidence::add);
+
+    if (selectedEvidence.size() < 2) {
+      extractTopStrengths(topPlace).stream()
+              .map(this::normalizeFallbackStrength)
+              .filter(text -> !text.isBlank())
+              .forEach(selectedEvidence::add);
+    }
+
+    List<String> mandatoryEvidence = selectedEvidence.stream()
+            .limit(Math.max(2, Math.min(4, selectedEvidence.size())))
+            .toList();
+
+    List<String> cautionNarratives = topPlace.getAppliedPenalties() == null
+            ? List.of()
+            : topPlace.getAppliedPenalties().stream()
+            .map(this::toPenaltyNarrative)
+            .filter(text -> !text.isBlank())
+            .distinct()
+            .limit(2)
+            .toList();
+
+    List<String> lines = new ArrayList<>();
+    lines.add("- 1위 장소: " + RecommendationTextUtils.defaultIfBlank(topPlace.getPlace().getTitle(), "장소 정보 없음"));
+    mandatoryEvidence.forEach(evidence -> lines.add("- 반드시 설명에 포함할 근거: " + evidence));
+    if (!cautionNarratives.isEmpty()) {
+      cautionNarratives.forEach(caution -> lines.add("- 참고할 감점 맥락: " + caution));
+    }
+
+    String comparisonHint = buildComparisonHint(rankedPlaces);
+    if (!comparisonHint.isBlank()) {
+      lines.add("- 비교 포인트: " + comparisonHint);
+    }
+
+    return String.join("\n", lines);
+  }
+
   private String buildTopPlaceEvidenceSection(List<ScoredPlace> rankedPlaces) {
     if (rankedPlaces == null || rankedPlaces.isEmpty()) {
       return "- 정렬된 추천 장소 없음";
@@ -215,13 +287,13 @@ public class RecommendationEvidenceContextService {
       List<String> strengths = extractTopStrengths(scoredPlace);
       List<String> cautions = extractCautions(scoredPlace);
 
-      sb.append(rank).append("위 ").append(RecommendationTextUtils.defaultIfBlank(place.getTitle(), "장소 정보 없음")).append("\n")
-              .append("   - 카테고리: ").append(RecommendationTextUtils.defaultIfBlank(place.getCategory(), "알 수 없음")).append("\n")
+      sb.append(rank).append("위. ").append(RecommendationTextUtils.defaultIfBlank(place.getTitle(), "장소 정보 없음")).append("\n")
+              .append("   - 카테고리: ").append(RecommendationTextUtils.defaultIfBlank(place.getCategory(), "정보 없음")).append("\n")
               .append("   - 총점: ").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getTotalScore())).append("\n")
-              .append("   - 점수 구성: 개인화=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getPersonalFitScore()))
+              .append("   - 점수 구성: 개인=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getPersonalFitScore()))
               .append(", 날씨=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getWeatherFitScore()))
               .append(", 환경=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getEnvironmentFitScore()))
-              .append(", 이동성=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getMobilityFitScore()))
+              .append(", 이동=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getMobilityFitScore()))
               .append(", 보너스=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getBonusScore()))
               .append(", 감점=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getPenaltyScore())).append("\n")
               .append("   - 메타데이터: ").append(buildMetadataLine(place)).append("\n")
@@ -239,11 +311,12 @@ public class RecommendationEvidenceContextService {
     return sb.toString().trim();
   }
 
-  /**
-   * 추가 가이드라인 정보를 구성한다.
-   */
   private String buildSupplementalGuidelineSection() {
-    return "- 추가 지침 없음";
+    return """
+            - 설명은 1위 장소의 필수 근거를 먼저 사용
+            - boost 항목은 점수명이 아니라 실제 이용 상황 문장으로 풀어 쓸 것
+            - '좋습니다', '추천드립니다', '적합합니다' 같은 단순 권유 표현은 사용하지 말 것
+            """.trim();
   }
 
   private List<String> extractTopStrengths(ScoredPlace scoredPlace) {
@@ -322,7 +395,7 @@ public class RecommendationEvidenceContextService {
       parts.add("태그=" + RecommendationTextUtils.abbreviate(place.getTags(), 80));
     }
     if (place.getOverview() != null && !place.getOverview().isBlank()) {
-      parts.add("한줄 소개=" + RecommendationTextUtils.abbreviate(
+      parts.add("설명=" + RecommendationTextUtils.abbreviate(
               RecommendationTextUtils.singleLine(place.getOverview()),
               MAX_OVERVIEW_LENGTH
       ));
@@ -332,7 +405,7 @@ public class RecommendationEvidenceContextService {
 
   private String formatPositiveDetail(ScoreDetail detail) {
     String section = RecommendationTextUtils.defaultIfBlank(detail.getSection(), "항목");
-    String item = RecommendationTextUtils.defaultIfBlank(detail.getItem(), "세부값");
+    String item = RecommendationTextUtils.defaultIfBlank(detail.getItem(), "세부 항목");
     String reason = RecommendationTextUtils.defaultIfBlank(detail.getReason(), "");
 
     return reason.isBlank()
@@ -348,8 +421,119 @@ public class RecommendationEvidenceContextService {
 
     return RecommendationTextUtils.defaultIfBlank(detail.getSection(), "항목")
             + "/"
-            + RecommendationTextUtils.defaultIfBlank(detail.getItem(), "세부값")
+            + RecommendationTextUtils.defaultIfBlank(detail.getItem(), "세부 항목")
             + " 확인 필요";
+  }
+
+  private boolean isWeatherDetail(ScoreDetail detail) {
+    String section = RecommendationTextUtils.defaultIfBlank(detail.getSection(), "");
+    return section.contains("날씨");
+  }
+
+  private boolean isPetDetail(ScoreDetail detail) {
+    String section = RecommendationTextUtils.defaultIfBlank(detail.getSection(), "");
+    return section.contains("반려동물") || section.contains("펫");
+  }
+
+  private String toBoostNarrative(ScoreDetail detail, Place place, Pet pet, WeatherContext weather) {
+    String item = RecommendationTextUtils.defaultIfBlank(detail.getItem(), "");
+    String placeTitle = place == null ? "이 장소" : RecommendationTextUtils.defaultIfBlank(place.getTitle(), "이 장소");
+
+    return switch (item) {
+      case "산책등급" -> weather != null && (weather.isRaining() || weather.isWindy() || weather.isCold() || weather.isHot())
+              ? "현재 날씨 변수 안에서도 이동 동선을 조절하기 쉬워 외출 부담을 덜어줌"
+              : "산책하기 편한 흐름이라 야외 공간과 동선을 활용하기 쉬움";
+      case "강수" -> weather != null && weather.isRaining()
+              ? "비나 눈 영향을 덜 받는 구조라 이동 동선이 비교적 안정적임"
+              : "강수 부담이 거의 없어 야외 체류 시간을 확보하기 쉬움";
+      case "기온" -> weather != null && weather.isHot()
+              ? "더위를 피할 여지가 있어 체온 부담을 줄이기 쉬움"
+              : weather != null && weather.isCold()
+              ? "추위를 피할 여지가 있어 체감 온도 부담을 낮추기 쉬움"
+              : "기온 부담이 크지 않아 머무는 흐름이 한결 안정적임";
+      case "바람" -> weather != null && weather.isWindy()
+              ? "바람을 직접 덜 맞는 구조라 야외 활동 피로가 덜함"
+              : "바람 영향이 크지 않아 야외 활동 동선이 한결 편함";
+      case "품종" -> pet != null
+              ? RecommendationTextUtils.defaultIfBlank(pet.getPetBreed(), "반려동물") + "의 일반적인 성향과 장소 유형이 무리 없이 맞물림"
+              : "반려동물 특성과 장소 유형이 크게 어긋나지 않음";
+      case "성향" -> "반려동물 성향과 장소 분위기가 맞물려 자극이 과하지 않음";
+      case "활동량" -> "반려동물 활동량에 맞는 동선과 체류 리듬을 만들기 쉬움";
+      case "크기" -> "반려동물 체형을 고려했을 때 공간 밀도와 이동 여유가 무난한 편임";
+      case "나이" -> "반려동물 나이대에 맞춰 활동 강도나 휴식 동선을 조절하기 쉬움";
+      case "대표견 선호 장소" -> "평소 선호하는 장소 유형과 결이 맞아 낯선 환경 부담을 줄이기 쉬움";
+      case "동반 친화성", "실내 동반 가능성" -> placeTitle + "은 반려동물과 함께 들어가고 머무를 동선 판단이 비교적 명확함";
+      case "안전/쾌적성" -> "혼잡이나 자극 요소를 덜 받는 편이라 머무는 동안 안정감을 기대할 수 있음";
+      case "기본 시설", "이용 편의" -> "반려동물과 함께 이용할 때 필요한 기본 편의 요소가 있어 이동이 덜 번거로움";
+      case "정책 명확성", "제약 수준" -> "동반 정책이 비교적 분명해 현장 혼선 가능성이 낮음";
+      case "거리", "좌표정보" -> "이동 거리가 과하지 않아 짧은 외출 일정으로 묶기 쉬움";
+      case "검증 여부" -> "검증 이력이 있어 기본 정보 신뢰도가 상대적으로 안정적임";
+      case "설명 품질", "태그 품질", "데이터 완성도" -> "장소 정보가 구체적이라 방문 전 판단 근거를 확보하기 쉬움";
+      case "품질 지표", "공개 평점", "리뷰 표본 신뢰도", "AI 보조 평점", "블로그 표본 신뢰도" -> "평점과 리뷰 표본이 받쳐줘 실제 이용 품질을 가늠하기 쉬움";
+      case "긍정 태그" -> "실제 방문 후기에 긍정 신호가 누적돼 체감 만족도를 기대할 근거가 있음";
+      case "태그 적합도", "카테고리 적합성", "카테고리 기본점" -> "장소 카테고리와 핵심 태그가 현재 외출 목적과 잘 맞물림";
+      default -> {
+        String reason = RecommendationTextUtils.defaultIfBlank(detail.getReason(), "");
+        if (!reason.isBlank()) {
+          yield RecommendationTextUtils.singleLine(reason);
+        }
+        yield RecommendationTextUtils.defaultIfBlank(detail.getSection(), "항목")
+                + "의 "
+                + RecommendationTextUtils.defaultIfBlank(item, "세부 항목")
+                + " 점수가 높게 반영됨";
+      }
+    };
+  }
+
+  private String toPenaltyNarrative(String penalty) {
+    if (penalty == null || penalty.isBlank()) {
+      return "";
+    }
+
+    String normalized = penalty.toLowerCase(Locale.ROOT);
+    if (normalized.contains("선호 장소")) {
+      return "선호 장소와 완전히 같지는 않지만 다른 강점이 이를 상쇄함";
+    }
+    if (normalized.contains("비")) {
+      return "강수 상황에서는 체류 방식에 약간의 제약이 생길 수 있음";
+    }
+    if (normalized.contains("강풍")) {
+      return "바람이 강해지면 야외 체류 피로가 늘 수 있음";
+    }
+    if (normalized.contains("중복")) {
+      return "최근 추천 이력 때문에 우선순위가 일부 조정되었음";
+    }
+    return RecommendationTextUtils.singleLine(penalty);
+  }
+
+  private String buildComparisonHint(List<ScoredPlace> rankedPlaces) {
+    if (rankedPlaces == null || rankedPlaces.size() <= 1) {
+      return "";
+    }
+
+    List<String> comparisons = new ArrayList<>();
+    for (int i = 1; i < Math.min(rankedPlaces.size(), MAX_PLACE_COUNT); i++) {
+      ScoredPlace candidate = rankedPlaces.get(i);
+      String name = candidate.getPlace() == null
+              ? "후보 장소"
+              : RecommendationTextUtils.defaultIfBlank(candidate.getPlace().getTitle(), "후보 장소");
+      List<String> cautions = extractCautions(candidate);
+      String clue = cautions.isEmpty()
+              ? RecommendationTextUtils.defaultIfBlank(candidate.getSummary(), "근거 부족")
+              : cautions.get(0);
+      comparisons.add(name + "은 " + RecommendationTextUtils.singleLine(clue));
+    }
+    return String.join(" / ", comparisons);
+  }
+
+  private String normalizeFallbackStrength(String strength) {
+    if (strength == null || strength.isBlank()) {
+      return "";
+    }
+    if (strength.contains("+")) {
+      return strength.replaceAll("\\s*\\+\\d+(\\.\\d+)?", "").trim() + " 점수가 높게 반영됨";
+    }
+    return RecommendationTextUtils.singleLine(strength);
   }
 
   private String describeWeatherDecision(WeatherContext weather) {
@@ -357,15 +541,15 @@ public class RecommendationEvidenceContextService {
       return "날씨 정보 없음";
     }
     if (weather.isRaining() || weather.isWindy()) {
-      return "날씨 노출이 적은 실내 또는 혼합형 장소를 우선 고려";
+      return "날씨 변수에 덜 흔들리는 실내 또는 보호된 동선이 있는 장소를 우선 고려";
     }
     if (weather.isHot()) {
-      return "더위 부담과 이동 피로가 적은 장소를 우선 고려";
+      return "더위를 피하거나 이동 피로가 덜한 장소를 우선 고려";
     }
     if (weather.isCold()) {
-      return "실내 쾌적성과 짧은 외출 동선을 우선 고려";
+      return "실내 체류와 짧은 이동 동선이 가능한 장소를 우선 고려";
     }
-    return "날씨 부담이 적어 반려동물 적합도와 장소 품질이 순위를 주도";
+    return "날씨 부담이 적어 반려동물 궁합이 좋은 장소가 순위를 주도";
   }
 
   private String topScoreFocus(ScoredPlace topPlace) {
@@ -373,7 +557,7 @@ public class RecommendationEvidenceContextService {
     focus.add(scoreFocusLabel("개인화 적합도", topPlace.getPersonalFitScore()));
     focus.add(scoreFocusLabel("날씨 적합도", topPlace.getWeatherFitScore()));
     focus.add(scoreFocusLabel("환경 점수", topPlace.getEnvironmentFitScore()));
-    focus.add(scoreFocusLabel("이동성 점수", topPlace.getMobilityFitScore()));
+    focus.add(scoreFocusLabel("이동 편의성", topPlace.getMobilityFitScore()));
 
     return focus.stream()
             .sorted(Comparator.comparingDouble(this::parseScore).reversed())

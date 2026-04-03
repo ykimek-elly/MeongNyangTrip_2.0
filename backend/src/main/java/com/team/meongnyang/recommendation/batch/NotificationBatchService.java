@@ -8,6 +8,7 @@ import com.team.meongnyang.recommendation.log.RecommendationBatchTraceContext;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
 import com.team.meongnyang.recommendation.notification.service.NotificationService;
+import com.team.meongnyang.recommendation.service.CoordinateInvalidException;
 import com.team.meongnyang.recommendation.service.RecommendationPipelineService;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
@@ -187,6 +188,18 @@ public class NotificationBatchService {
         return;
       }
 
+      if (!isCoordinateInitialized(target.getLatitude(), target.getLongitude())) {
+        summary.fail(NotificationBatchFailureReason.COORDINATE_INVALID);
+        log.warn("[추천 배치] 대상 스킵 batchExecutionId={}, userId={}, petId={}, reason={}, latitude={}, longitude={}",
+                batchExecutionId,
+                target.getUserId(),
+                pet.getPetId(),
+                NotificationBatchFailureReason.COORDINATE_INVALID,
+                target.getLatitude(),
+                target.getLongitude());
+        return;
+      }
+
       log.info("[추천 배치] 대상 처리 시작 batchExecutionId={}, userId={}, petId={}, latitude={}, longitude={}",
               batchExecutionId,
               target.getUserId(),
@@ -309,6 +322,10 @@ public class NotificationBatchService {
    * 일반 예외 발생 시 실패 원인을 판별한다.
    */
   private NotificationBatchFailureReason resolveExceptionFailureReason(Exception e) {
+    if (e instanceof CoordinateInvalidException) {
+      return NotificationBatchFailureReason.COORDINATE_INVALID;
+    }
+
     String message = e.getMessage();
     String exceptionType = e.getClass().getName();
 
@@ -324,6 +341,14 @@ public class NotificationBatchService {
     }
 
     return NotificationBatchFailureReason.UNKNOWN_ERROR;
+  }
+
+  private boolean isCoordinateInitialized(double latitude, double longitude) {
+    if (Double.compare(latitude, 0.0d) == 0 && Double.compare(longitude, 0.0d) == 0) {
+      return false;
+    }
+    return latitude >= -90.0d && latitude <= 90.0d
+            && longitude >= -180.0d && longitude <= 180.0d;
   }
 
   /**

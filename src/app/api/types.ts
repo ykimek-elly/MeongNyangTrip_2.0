@@ -58,6 +58,8 @@ export interface AuthResponseDto {
   role?: 'USER' | 'ADMIN';
   region?: string;
   activityRadius?: 5 | 15 | 30;
+  phoneNumber?: string;
+  notificationEnabled?: boolean;
 }
 
 /**

@@ -62,7 +62,8 @@ public class AuthService {
                 saved.getUserId(), saved.getEmail(),
                 saved.getNickname(), saved.getProfileImage(),
                 saved.getRole().name(),
-                saved.getRegion(), saved.getActivityRadius());
+                saved.getRegion(), saved.getActivityRadius(),
+                saved.getPhoneNumber(), saved.isNotificationEnabled());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -81,7 +82,8 @@ public class AuthService {
                 user.getUserId(), user.getEmail(),
                 user.getNickname(), user.getProfileImage(),
                 user.getRole().name(),
-                user.getRegion(), user.getActivityRadius());
+                user.getRegion(), user.getActivityRadius(),
+                user.getPhoneNumber(), user.isNotificationEnabled());
     }
 
     /** 아이디(이메일) 찾기 */

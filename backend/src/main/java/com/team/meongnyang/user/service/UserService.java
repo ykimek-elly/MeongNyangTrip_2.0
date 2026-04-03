@@ -78,6 +78,13 @@ public class UserService {
         user.updatePhoneNumber(phoneNumber);
     }
 
+    /** 알림 설정 업데이트 */
+    @Transactional
+    public void updateNotificationEnabled(String email, boolean enabled) {
+        User user = getByEmail(email);
+        user.updateNotificationEnabled(enabled);
+    }
+
     private User getByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));

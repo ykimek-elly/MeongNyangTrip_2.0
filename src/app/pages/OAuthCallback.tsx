@@ -42,6 +42,10 @@ export function OAuthCallback() {
       const isNewUser = isNewUserStr === 'true';
       const payload = JSON.parse(atob(token.split('.')[1]));
       const isAdmin = payload.role === 'ADMIN' || payload.role === 'ROLE_ADMIN';
+      
+      const phoneNumber = params.phoneNumber || '';
+      const notificationEnabled = params.notificationEnabled === 'true';
+
       login(
         nickname || '사용자', 
         email || '', 
@@ -50,7 +54,9 @@ export function OAuthCallback() {
         isAdmin, 
         true, 
         region || undefined, 
-        activityRadius ? Number(activityRadius) : undefined
+        activityRadius ? Number(activityRadius) : undefined,
+        phoneNumber,
+        notificationEnabled
       );
 
       if (isNewUser) {

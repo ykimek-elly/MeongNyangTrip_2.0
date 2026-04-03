@@ -48,7 +48,7 @@ public class AuthService {
         User saved = userRepository.save(user);
         signupExportService.export(saved);
 
-        String accessToken  = jwtUtil.generateToken(saved.getEmail());
+        String accessToken  = jwtUtil.generateToken(saved.getEmail(), saved.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(saved.getEmail());
         refreshTokenService.save(saved.getEmail(), refreshToken);
 
@@ -66,7 +66,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        String accessToken  = jwtUtil.generateToken(user.getEmail());
+        String accessToken  = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         refreshTokenService.save(user.getEmail(), refreshToken);
 

@@ -54,7 +54,7 @@ public class AuthController {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         // Refresh Token Rotation: 기존 토큰 삭제 후 새로 발급
-        String newAccessToken  = jwtUtil.generateToken(email);
+        String newAccessToken  = jwtUtil.generateToken(email, user.getRole().name());
         String newRefreshToken = jwtUtil.generateRefreshToken(email);
         refreshTokenService.delete(email);
         refreshTokenService.save(email, newRefreshToken);

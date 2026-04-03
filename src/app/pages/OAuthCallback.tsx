@@ -28,7 +28,9 @@ export function OAuthCallback() {
       }
 
       const isNewUser = searchParams.get('isNewUser') === 'true';
-      login(nickname || '사용자', email || '', userId ? Number(userId) : undefined, profileImage || '');
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const isAdmin = payload.role === 'ADMIN';
+      login(nickname || '사용자', email || '', userId ? Number(userId) : undefined, profileImage || '', isAdmin);
 
       if (isNewUser) {
         navigate('/onboarding', { replace: true });

@@ -1,0 +1,18 @@
+{
+  "userId": 1,
+  "email": "meongnyang@example.com",
+  "nickname": "행복한집사",
+  "role": "USER",
+  "status": "ACTIVE",
+  "provider": "KAKAO",
+  "providerId": "1234567890",
+  "profileImage": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80",
+  "phoneNumber": "010-1234-5678",
+  "notificationEnabled": true,
+  "latitude": 37.5172,
+  "longitude": 127.0473,
+  "activityRadius": 15,
+  "region": "서울 강남구",
+  "regDate": "2026-04-03T10:00:00",
+  "updatedAt": "2026-04-03T14:00:00"
+}

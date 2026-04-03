@@ -39,12 +39,17 @@ public class AuthService {
         if (userRepository.existsByNickname(request.getNickname())) {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()
+                && userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "이미 사용 중인 휴대폰 번호입니다.");
+        }
 
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
                 .phoneNumber(request.getPhoneNumber())
+                .notificationEnabled(request.getNotificationEnabled() != null ? request.getNotificationEnabled() : true)
                 .build();
 
         log.info("[AuthService] signup before save email={}, nickname={}, latitude={}, longitude={}",
@@ -68,7 +73,8 @@ public class AuthService {
         return new AuthResponse(accessToken, refreshToken,
                 saved.getUserId(), saved.getEmail(),
                 saved.getNickname(), saved.getProfileImage(),
-                saved.getRole().name());
+                saved.getRole().name(),
+                saved.getRegion(), saved.getActivityRadius());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -86,7 +92,8 @@ public class AuthService {
         return new AuthResponse(accessToken, refreshToken,
                 user.getUserId(), user.getEmail(),
                 user.getNickname(), user.getProfileImage(),
-                user.getRole().name());
+                user.getRole().name(),
+                user.getRegion(), user.getActivityRadius());
     }
 
     /** 아이디(이메일) 찾기 */

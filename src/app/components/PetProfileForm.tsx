@@ -1,42 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, PawPrint, Check, Star, MapPin, Bell, BellOff, Zap, Ghost, AlertCircle, Trees, Building2, Tent } from 'lucide-react';
+import { X, PawPrint, Check, Star, Bell, BellOff, Zap, Ghost, AlertCircle, Trees, Building2, Tent } from 'lucide-react';
 import type { PetInfo } from '../store/useAppStore';
-
-// ── 시도 → 시군구 데이터 ──────────────────────────────────────────────
-const SIDO_LIST = [
-  '서울', '경기', '인천', '강원',
-  '충북', '충남', '대전', '세종',
-  '전북', '전남', '광주', '경북',
-  '경남', '대구', '부산', '울산', '제주',
-];
-
-const SIDO_DISTRICTS: Record<string, string[]> = {
-  '서울': ['강남구','강동구','강북구','강서구','관악구','광진구','구로구','금천구','노원구','도봉구','동대문구','동작구','마포구','서대문구','서초구','성동구','성북구','송파구','양천구','영등포구','용산구','은평구','종로구','중구','중랑구'],
-  '경기': ['가평군','고양시','과천시','광명시','광주시','구리시','군포시','김포시','남양주시','동두천시','부천시','성남시','수원시','시흥시','안산시','안성시','안양시','양주시','양평군','여주시','연천군','오산시','용인시','의왕시','의정부시','이천시','파주시','평택시','포천시','하남시','화성시'],
-  '인천': ['강화군','계양구','남동구','동구','미추홀구','부평구','서구','연수구','옹진군','중구'],
-  '강원': ['강릉시','고성군','동해시','삼척시','속초시','양구군','양양군','영월군','원주시','인제군','정선군','철원군','춘천시','태백시','평창군','홍천군','화천군','횡성군'],
-  '충북': ['괴산군','단양군','보은군','영동군','옥천군','음성군','제천시','증평군','진천군','청주시','충주시'],
-  '충남': ['계룡시','공주시','금산군','논산시','당진시','보령시','부여군','서산시','서천군','아산시','예산군','천안시','청양군','태안군','홍성군'],
-  '대전': ['대덕구','동구','서구','유성구','중구'],
-  '세종': ['세종시'],
-  '전북': ['고창군','군산시','김제시','남원시','무주군','부안군','순창군','완주군','익산시','임실군','장수군','전주시','정읍시','진안군'],
-  '전남': ['강진군','고흥군','곡성군','광양시','구례군','나주시','담양군','목포시','무안군','보성군','순천시','신안군','여수시','영광군','영암군','완도군','장성군','장흥군','진도군','함평군','해남군','화순군'],
-  '광주': ['광산구','남구','동구','북구','서구'],
-  '경북': ['경산시','경주시','고령군','구미시','군위군','김천시','문경시','봉화군','상주시','성주군','안동시','영덕군','영양군','영주시','영천시','예천군','울릉군','울진군','의성군','청도군','청송군','칠곡군','포항시'],
-  '경남': ['거제시','거창군','고성군','김해시','남해군','밀양시','사천시','산청군','양산시','의령군','진주시','창녕군','창원시','통영시','하동군','함안군','함양군','합천군'],
-  '대구': ['남구','달서구','달성군','동구','북구','서구','수성구','중구'],
-  '부산': ['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구'],
-  '울산': ['남구','동구','북구','울주군','중구'],
-  '제주': ['서귀포시','제주시'],
-};
-
-// ── 활동 반경 ────────────────────────────────────────────────────────
-const RADIUS_STEPS: { value: 5 | 15 | 30; label: string; desc: string }[] = [
-  { value: 5,  label: '5km',   desc: '가까운 거리' },
-  { value: 15, label: '15km',  desc: '중간 거리' },
-  { value: 30, label: '먼거리', desc: '넓은 범위' },
-];
 
 // ── 성향 ─────────────────────────────────────────────────────────────
 const PERSONALITIES = [
@@ -87,16 +52,8 @@ const BREEDS: Record<string, string[]> = {
   '고양이': ['코리안숏헤어', '페르시안', '스코티시폴드', '러시안블루', '브리티시숏헤어', '먼치킨', '랙돌', '벵갈', '기타'],
 };
 
-// 저장된 region 문자열("서울 강남구")을 시도/시군구로 분리
-function parseRegion(region?: string) {
-  if (!region) return { sido: '', district: '' };
-  const parts = region.trim().split(' ');
-  return { sido: parts[0] || '', district: parts[1] || '' };
-}
-
 export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose }: PetProfileFormProps) {
   const isEdit = !!initialData;
-  const initRegion = parseRegion(initialData?.region);
 
   const [name, setName]       = useState(initialData?.name || '');
   const [type, setType]       = useState<'강아지' | '고양이'>(initialData?.type || '강아지');
@@ -118,9 +75,6 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
   const [setAsRepresentative, setSetAsRepresentative] = useState(false);
 
   // step 3 state
-  const [sido, setSido]                   = useState(initRegion.sido);
-  const [district, setDistrict]           = useState(initRegion.district);
-  const [activityRadius, setActivityRadius] = useState<5 | 15 | 30>(initialData?.activityRadius ?? 15);
   const [personality, setPersonality]     = useState(initialData?.personality || '');
   const [atmospheres, setAtmospheres]     = useState<string[]>(
     initialData?.preferredPlace ? initialData.preferredPlace.split(',').map(s => s.trim()).filter(Boolean) : []
@@ -131,12 +85,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
 
   const canProceed      = name.trim() && type && breed && (breed !== '기타' || customBreed.trim());
   const canStep2Submit  = canProceed && !!age;
-  const canSubmit       = canStep2Submit && !!sido;
-
-  const handleSidoChange = (newSido: string) => {
-    setSido(newSido);
-    setDistrict(''); // 시도 변경 시 시군구 초기화
-  };
+  const canSubmit       = canStep2Submit;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -150,16 +99,11 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
       age: parseInt(age),
       weight: weight ? parseFloat(weight) : undefined,
       isRepresentative: setAsRepresentative,
-      region: sido + (district ? ` ${district}` : ''),
-      activityRadius,
       personality: personality || undefined,
       preferredPlace: atmospheres.length > 0 ? atmospheres.join(',') : undefined,
       notifyEnabled,
     });
   };
-
-  // 활동 반경 바: 누적 채움 (선택된 인덱스 이하는 모두 primary 색)
-  const selectedRadiusIdx = RADIUS_STEPS.findIndex(s => s.value === activityRadius);
 
   return (
     <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center">
@@ -433,99 +377,6 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                 >
                   ← 상세 정보로 돌아가기
                 </button>
-
-                {/* ① 활동 지역 */}
-                <div>
-                  <label className="text-sm font-bold text-gray-700 mb-2.5 flex items-center gap-1.5">
-                    <MapPin size={14} className="text-primary" /> 활동 지역 *
-                  </label>
-
-                  {/* 좌우 2단 목록 */}
-                  <div className="flex gap-2 h-44 rounded-2xl overflow-hidden border-2 border-gray-100">
-                    {/* 시·도 목록 */}
-                    <ul className="w-1/3 overflow-y-auto border-r border-gray-100 bg-gray-50">
-                      {SIDO_LIST.map(s => (
-                        <li key={s}>
-                          <button
-                            type="button"
-                            onClick={() => handleSidoChange(s)}
-                            className={`w-full text-left px-3 py-2.5 text-sm transition-spring ${
-                              sido === s
-                                ? 'bg-primary text-white font-bold'
-                                : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200'
-                            }`}
-                          >
-                            {s}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* 시·군·구 목록 */}
-                    <ul className="flex-1 overflow-y-auto bg-white">
-                      {!sido ? (
-                        <li className="flex items-center justify-center h-full text-xs text-gray-300">
-                          시·도를 먼저 선택하세요
-                        </li>
-                      ) : (
-                        (SIDO_DISTRICTS[sido] || []).map(d => (
-                          <li key={d}>
-                            <button
-                              type="button"
-                              onClick={() => setDistrict(prev => prev === d ? '' : d)}
-                              className={`w-full text-left px-3 py-2.5 text-sm transition-spring flex items-center justify-between ${
-                                district === d
-                                  ? 'text-primary font-bold bg-primary/5'
-                                  : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
-                              }`}
-                            >
-                              {d}
-                              {district === d && <Check size={14} className="text-primary shrink-0" />}
-                            </button>
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </div>
-
-                  {sido && (
-                    <p className="text-xs text-primary font-medium mt-1.5 ml-1">
-                      📍 {sido}{district ? ` ${district}` : ''}
-                    </p>
-                  )}
-                </div>
-
-                {/* ② 활동 반경 — 누적 세그먼트 바 */}
-                <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">활동 반경</label>
-                  <p className="text-xs text-gray-400 mb-2.5">등록 지역 기준으로 장소를 추천해드려요</p>
-                  <div className="flex rounded-2xl overflow-hidden border-2 border-gray-100 h-14">
-                    {RADIUS_STEPS.map((rs, idx) => {
-                      const filled = idx <= selectedRadiusIdx;
-                      return (
-                        <button
-                          key={rs.value}
-                          onClick={() => setActivityRadius(rs.value)}
-                          className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-spring active:opacity-80 ${
-                            filled ? 'bg-primary' : 'bg-white'
-                          } ${idx > 0 ? 'border-l-2 border-gray-100' : ''}`}
-                        >
-                          <span className={`text-xs font-bold ${filled ? 'text-white' : 'text-gray-600'}`}>
-                            {rs.label}
-                          </span>
-                          <span className={`text-[9px] ${filled ? 'text-white/80' : 'text-gray-400'}`}>
-                            {rs.desc}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* 진행 힌트 */}
-                  <div className="flex justify-between mt-1.5 px-1">
-                    <span className="text-[9px] text-gray-400">집 근처</span>
-                    <span className="text-[9px] text-gray-400">광역 탐색</span>
-                  </div>
-                </div>
 
                 {/* ③ 우리 아이 성향 */}
                 <div>

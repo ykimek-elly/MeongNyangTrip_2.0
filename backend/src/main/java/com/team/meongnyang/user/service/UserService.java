@@ -56,6 +56,19 @@ public class UserService {
         user.markAsDeleted();
     }
 
+    /**
+     * 활동 지역 좌표 + 반경 저장.
+     * 미선택 시 기본값: 서울 강남구 (37.5172, 127.0473), 반경 15km
+     */
+    @Transactional
+    public void saveLocation(String email, Double latitude, Double longitude, Integer activityRadius, String region) {
+        User user = getByEmail(email);
+        double lat = (latitude != null) ? latitude : 37.5172;
+        double lng = (longitude != null) ? longitude : 127.0473;
+        int radius = (activityRadius != null) ? activityRadius : 15;
+        user.updateLocation(lat, lng, radius, region);
+    }
+
     private User getByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));

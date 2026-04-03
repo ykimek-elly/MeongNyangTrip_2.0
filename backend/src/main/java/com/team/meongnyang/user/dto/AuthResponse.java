@@ -13,4 +13,6 @@ public class AuthResponse {
     private String nickname;
     private String profileImage;
     private String role;            // "USER" | "ADMIN"
+    private String region;
+    private Integer activityRadius;
 }

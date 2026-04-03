@@ -9,6 +9,7 @@ import lombok.*;
  * 프롬프트, 추천 결과, 응답 내용, 성능 정보 등을 저장하여 추적 및 분석에 활용된다.
  */
 @Entity
+@Table(name = "ai_response_logs")
 @Getter @Setter
 @Builder
 @NoArgsConstructor
@@ -21,7 +22,7 @@ public class AiResponseLog extends BaseEntity {
 
   private Long userId;
 
-  private Long dogId;
+  private Long petId;
 
   private String batchExecutionId;
 

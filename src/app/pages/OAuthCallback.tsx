@@ -20,6 +20,8 @@ export function OAuthCallback() {
     const email        = searchParams.get('email');
     const userId       = searchParams.get('userId');
     const profileImage = searchParams.get('profileImage');
+    const region       = searchParams.get('region');
+    const activityRadius = searchParams.get('activityRadius');
 
     if (token) {
       localStorage.setItem('accessToken', token);
@@ -29,8 +31,17 @@ export function OAuthCallback() {
 
       const isNewUser = searchParams.get('isNewUser') === 'true';
       const payload = JSON.parse(atob(token.split('.')[1]));
-      const isAdmin = payload.role === 'ADMIN';
-      login(nickname || '사용자', email || '', userId ? Number(userId) : undefined, profileImage || '', isAdmin);
+      const isAdmin = payload.role === 'ADMIN' || payload.role === 'ROLE_ADMIN';
+      login(
+        nickname || '사용자', 
+        email || '', 
+        userId ? Number(userId) : undefined, 
+        profileImage || '', 
+        isAdmin, 
+        true, 
+        region || undefined, 
+        activityRadius ? Number(activityRadius) : undefined
+      );
 
       if (isNewUser) {
         navigate('/onboarding', { replace: true });

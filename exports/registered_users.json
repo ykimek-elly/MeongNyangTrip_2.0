@@ -26,4 +26,25 @@
   "phoneNumber" : "",
   "notificationEnabled" : true,
   "signedUpAt" : "2026-04-03T14:38:49"
+}, {
+  "userId" : 601,
+  "email" : "qwe@test.com",
+  "nickname" : "www",
+  "phoneNumber" : "",
+  "notificationEnabled" : true,
+  "signedUpAt" : "2026-04-03T15:55:34"
+}, {
+  "userId" : 606,
+  "email" : "codex_phone_test_1775234064@test.com",
+  "nickname" : "codex3809",
+  "phoneNumber" : "",
+  "notificationEnabled" : true,
+  "signedUpAt" : "2026-04-03T16:34:24"
+}, {
+  "userId" : 607,
+  "email" : "codex_phone_patch_1775234090@test.com",
+  "nickname" : "codex5725",
+  "phoneNumber" : "",
+  "notificationEnabled" : true,
+  "signedUpAt" : "2026-04-03T16:34:50"
 } ]

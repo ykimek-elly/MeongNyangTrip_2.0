@@ -68,7 +68,7 @@ public class User extends BaseEntity {
     private String profileImage;
 
     /** 알림 발송에 사용하는 전화번호다. */
-    @Column(length = 20)
+    @Column(name = "phone_number",length = 20)
     private String phoneNumber;
 
     /** 알림 수신 동의 여부다. */

@@ -36,25 +36,20 @@ public class CandidatePlaceService {
   private static final int BASE_FETCH_LIMIT = 120;
   /** 최종 후보 목록의 최대 크기 */
   private static final int RESULT_LIMIT = 20;
-  /** Walk Level == Good 일때 최대 거리 */
-  private static final double GOOD_MAX_DISTANCE_KM = 12.0;
-  /** Walk Level == Caution 일때 최대 거리 */
-  private static final double CAUTION_MAX_DISTANCE_KM = 8.0;
-  /** Walk Level == Dangerous 일때 최대 거리 */
-  private static final double DANGEROUS_MAX_DISTANCE_KM = 5.0;
   private static final String[] QUIET_INDOOR_KEYWORDS = {"실내", "카페", "조용", "휴식", "아늑", "편안", "라운지"};
   private static final String[] ACTIVE_OUTDOOR_KEYWORDS = {"공원", "산책로", "야외", "운동", "넓음", "잔디", "트레킹"};
   private static final String[] SMALL_FRIENDLY_KEYWORDS = {"실내", "카페", "아늑", "조용", "휴식"};
 
-  // todo : 반경 설정 값 반영
   private final PlaceRepository placeRepository;
   private final DistanceCalculator distanceCalculator;
+  private final ActivityRadiusPolicy activityRadiusPolicy;
 
   /**
    * 사용자 위치와 현재 날씨를 기준으로 추천 가능한 1차 후보 장소 목록을 만든다.
    *
-   * <p>검증된 장소, 좌표 유효성, 추천 가능 카테고리, 거리 제한, 날씨 정책을 순서대로 적용하고,
+   * <p>검증된 장소, 좌표 유효성, 추천 가능 카테고리, 날씨 정책을 순서대로 적용하고,
    * 필요한 경우 날씨 조건을 완화하거나 핵심 조건만 남긴 fallback 후보를 반환한다.
+   * 반경 조회는 사용자 activityRadius를 기준으로 수행하고, 후보가 없으면 확장 반경 단계로 재조회한다.
    *
    * @param user 추천 대상 사용자 정보
    * @param pet 후보 우선순위에 반영할 반려동물 정보
@@ -73,50 +68,45 @@ public class CandidatePlaceService {
     // 1. 입력값 유효성 검사
     validateInput(weather, lat, lng);
 
-    // 2. walkLevel을 정규화한 뒤 산책 등급별 최대 반경을 계산하고 미터 단위로 변환
-    String walkLevel = RecommendationTextUtils.normalizeTrimLower(weather.getWalkLevel()); // WalkLevel
-    double maxDistanceKm = resolveMaxDistanceKm(walkLevel, pet); // 최대거리 기준
-    int radiusMeters = toMeters(maxDistanceKm); // 미터로 변환
+    // 2. 사용자 activityRadius를 정규화하고 fallback 확장 반경 단계를 계산
+    ActivityRadiusPolicy.SearchRadiusPlan radiusPlan = activityRadiusPolicy.resolve(user);
+    double maxDistanceKm = radiusPlan.appliedRadiusKm();
 
     // 3. 사용자 주변 반경 내 장소를 최대 BASE_FETCH_LIMIT개까지 조회
-    // 최대 120개
-    List<Place> nearbyPlaces = fetchNearbyPlaces(lat, lng, radiusMeters);
-    // 비어있으면 빈 리스트 반환
+    List<Place> nearbyPlaces = fetchNearbyPlaces(lat, lng, radiusPlan, user, pet, weather);
     if (nearbyPlaces.isEmpty()) {
-      log.warn("[장소 후보] 반경 내 후보 없음 userId={}, petId={}, batchExecutionId={}, radiusMeters={}, walkLevel={}",
+      log.warn("[장소 후보] 반경 내 후보 없음 userId={}, petId={}, batchExecutionId={}, userActivityRadius={}, appliedRadiusKm={}, walkLevel={}",
               user == null ? null : user.getUserId(),
               pet == null ? null : pet.getPetId(),
               RecommendationLogContext.batchExecutionId(),
-              radiusMeters,
+              radiusPlan.requestedRadiusKm(),
+              radiusPlan.appliedRadiusKm(),
               weather.getWalkLevel());
       return List.of();
     }
 
-
-    // 4. 운영 여부, 좌표 유효성, 추천 카테고리, 거리 제한, 날씨 조건을 기준으로 1차 필터 적용
-        // 선호 장소 일치 후보를 먼저 배치하여 약한 우선순위를 부여
-
-    // 4-1. 날씨 조건을 포함한 엄격 필터 적용
+    // 4. 운영 여부, 좌표 유효성, 추천 카테고리, 날씨 조건을 기준으로 1차 필터 적용
     List<Place> strictCandidates = applyPrimaryFilters(nearbyPlaces, pet, weather, lat, lng, false);
-    // 엄격 필터 결과가 있으면 대표견 선호 장소를 약하게 우선 반영한 뒤 RESULT_LIMIT개까지 반환
     if (!strictCandidates.isEmpty()) {
-      log.info("[장소 후보] 기본 조건 적용 userId={}, petId={}, batchExecutionId={}, count={}",
+      log.info("[장소 후보] 기본 조건 적용 userId={}, petId={}, batchExecutionId={}, userActivityRadius={}, appliedRadiusKm={}, count={}",
               user == null ? null : user.getUserId(),
               pet == null ? null : pet.getPetId(),
               RecommendationLogContext.batchExecutionId(),
+              radiusPlan.requestedRadiusKm(),
+              radiusPlan.appliedRadiusKm(),
               strictCandidates.size());
       return limitAndPrioritize(strictCandidates, pet);
     }
 
     // 4-2 날씨 조건 완화 필터 적용
     List<Place> relaxedCandidates = applyPrimaryFilters(nearbyPlaces, pet, weather, lat, lng, true);
-      // 완화 필터를 거쳐 반환된 후보가 있다면 펫의 선호 장소가 있는지 확인 후
-      // 최대 RESULT_LIMIT 개를 반환합니다
     if (!relaxedCandidates.isEmpty()) {
-      log.warn("[장소 후보] 날씨 조건 완화 userId={}, petId={}, batchExecutionId={}, count={}",
+      log.warn("[장소 후보] 날씨 조건 완화 userId={}, petId={}, batchExecutionId={}, userActivityRadius={}, appliedRadiusKm={}, count={}",
               user == null ? null : user.getUserId(),
               pet == null ? null : pet.getPetId(),
               RecommendationLogContext.batchExecutionId(),
+              radiusPlan.requestedRadiusKm(),
+              radiusPlan.appliedRadiusKm(),
               relaxedCandidates.size());
       return limitAndPrioritize(relaxedCandidates, pet);
     }
@@ -124,19 +114,23 @@ public class CandidatePlaceService {
     // 4-3 엄격+완화 필터 반환이 없으면 fallback 필터 적용
     List<Place> fallbackCandidates = applyCoreFallbackFilters(nearbyPlaces, lat, lng, maxDistanceKm);
     if (!fallbackCandidates.isEmpty()) {
-      log.warn("[장소 후보] 핵심 조건 fallback 적용 userId={}, petId={}, batchExecutionId={}, count={}",
+      log.warn("[장소 후보] 핵심 조건 fallback 적용 userId={}, petId={}, batchExecutionId={}, userActivityRadius={}, appliedRadiusKm={}, count={}",
               user == null ? null : user.getUserId(),
               pet == null ? null : pet.getPetId(),
               RecommendationLogContext.batchExecutionId(),
+              radiusPlan.requestedRadiusKm(),
+              radiusPlan.appliedRadiusKm(),
               fallbackCandidates.size());
       return limitAndPrioritize(fallbackCandidates, pet);
     }
 
     // 4-4 최종 후보가 없으면 빈 리스트 반환
-    log.warn("[장소 후보] 최종 후보 없음 userId={}, petId={}, batchExecutionId={}, walkLevel={}",
+    log.warn("[장소 후보] 최종 후보 없음 userId={}, petId={}, batchExecutionId={}, userActivityRadius={}, appliedRadiusKm={}, walkLevel={}",
             user == null ? null : user.getUserId(),
             pet == null ? null : pet.getPetId(),
             RecommendationLogContext.batchExecutionId(),
+            radiusPlan.requestedRadiusKm(),
+            radiusPlan.appliedRadiusKm(),
             weather.getWalkLevel());
     return List.of();
   }
@@ -157,15 +151,46 @@ public class CandidatePlaceService {
   }
 
   /**
-   * 장소를 주변에서 가져옴
+   * 사용자 activityRadius 기반 반경 정책으로 주변 장소를 가져온다.
    * @param lat 좌표
    * @param lng 좌표
-   * @param radiusMeters 반경(m)
+   * @param radiusPlan 반경 정책 결과
+   * @param user 사용자 정보
+   * @param pet 반려동물 정보
+   * @param weather 날씨 정보
    * @return 주변 장소 목록
    */
-  private List<Place> fetchNearbyPlaces(double lat, double lng, int radiusMeters) {
-    // radiusMeters (m) 안 최대 BASE_FETCH_LIMIT 개 반환
-    return placeRepository.findNearby(lat, lng, radiusMeters, BASE_FETCH_LIMIT);
+  private List<Place> fetchNearbyPlaces(
+          double lat,
+          double lng,
+          ActivityRadiusPolicy.SearchRadiusPlan radiusPlan,
+          User user,
+          Pet pet,
+          WeatherContext weather
+  ) {
+    List<Place> nearbyPlaces = List.of();
+
+    for (Integer radiusKm : radiusPlan.fallbackRadiusStepsKm()) {
+      int radiusMeters = activityRadiusPolicy.toMeters(radiusKm);
+      nearbyPlaces = placeRepository.findNearby(lat, lng, radiusMeters, BASE_FETCH_LIMIT);
+
+      log.info("[장소 후보] 반경 조회 userId={}, petId={}, batchExecutionId={}, userActivityRadius={}, appliedRadiusKm={}, queryRadiusKm={}, queryRadiusMeters={}, count={}, walkLevel={}",
+              user == null ? null : user.getUserId(),
+              pet == null ? null : pet.getPetId(),
+              RecommendationLogContext.batchExecutionId(),
+              radiusPlan.requestedRadiusKm(),
+              radiusPlan.appliedRadiusKm(),
+              radiusKm,
+              radiusMeters,
+              nearbyPlaces.size(),
+              weather.getWalkLevel());
+
+      if (!nearbyPlaces.isEmpty()) {
+        return nearbyPlaces;
+      }
+    }
+
+    return nearbyPlaces;
   }
 
   /**
@@ -201,7 +226,6 @@ public class CandidatePlaceService {
       if (!isRecommendableCategory(place)) {
         continue;
       }
-      // 거리 제한
       // 날씨 조건에 맞는지 확인
       if (!matchesWeatherPolicy(place, weather, relaxWeather)) {
         continue;
@@ -485,35 +509,6 @@ public class CandidatePlaceService {
     return joined.contains(keyword);
   }
 
-  /**
-   * 걷기 수준에 따른 최대 거리 계산
-   * @param walkLevel 걷기 수준
-   * @return 최대 거리 (km)
-   */
-  private double  resolveMaxDistanceKm(String walkLevel, Pet pet) {
-    double weatherLimit = "dangerous".equals(walkLevel)
-            ? DANGEROUS_MAX_DISTANCE_KM
-            : "caution".equals(walkLevel)
-            ? CAUTION_MAX_DISTANCE_KM
-            : GOOD_MAX_DISTANCE_KM;
-
-    if (pet == null) {
-      return weatherLimit;
-    }
-
-    Integer activityRadius = pet.getActivityRadius();
-    if (activityRadius != null && activityRadius > 0) {
-      return Math.min(weatherLimit, activityRadius);
-    }
-
-    double petLimit = switch (pet.getPetActivity()) {
-      case LOW -> 4.0;
-      case NORMAL -> 7.0;
-      case HIGH -> 10.0;
-    };
-    return Math.min(weatherLimit, petLimit);
-  }
-
   private String buildSearchableText(Place place) {
     return List.of(
                     RecommendationTextUtils.normalizeTrimLower(place.getCategory()),
@@ -551,17 +546,7 @@ public class CandidatePlaceService {
     return false;
   }
 
-  /**
-   * 거리(km)를 미터(m)로 변환
-   * @param distanceKm 거리(km)
-   * @return 거리(m)
-   */
-  private int toMeters(double distanceKm) {
-    return (int) Math.round(distanceKm * 1000);
-  }
-
   private boolean isCoordinateValue(double lat, double lng) {
     return lat >= -90.0 && lat <= 90.0 && lng >= -180.0 && lng <= 180.0;
   }
-
 }

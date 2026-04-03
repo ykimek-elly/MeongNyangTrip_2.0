@@ -78,6 +78,40 @@ public class UserService {
         user.updatePhoneNumber(phoneNumber);
     }
 
+    /** 온보딩 입력을 한 트랜잭션에서 함께 저장한다. */
+    @Transactional
+    public void saveOnboarding(
+            String email,
+            String nickname,
+            String phoneNumber,
+            Double latitude,
+            Double longitude,
+            Integer activityRadius,
+            String region
+    ) {
+        User user = getByEmail(email);
+
+        if (nickname != null) {
+            String newNickname = nickname.trim();
+            if (!newNickname.isBlank() && !user.getNickname().equals(newNickname)
+                    && userRepository.existsByNickname(newNickname)) {
+                throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+            }
+            if (!newNickname.isBlank()) {
+                user.updateNickname(newNickname);
+            }
+        }
+
+        if (phoneNumber != null) {
+            user.updatePhoneNumber(phoneNumber);
+        }
+
+        double lat = (latitude != null) ? latitude : 37.5172;
+        double lng = (longitude != null) ? longitude : 127.0473;
+        int radius = (activityRadius != null) ? activityRadius : 15;
+        user.updateLocation(lat, lng, radius, region);
+    }
+
     /** 알림 설정 업데이트 */
     @Transactional
     public void updateNotificationEnabled(String email, boolean enabled) {

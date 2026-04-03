@@ -73,6 +73,25 @@ public class UserController {
     }
 
     /**
+     * PATCH /api/v1/users/onboarding 온보딩에서 닉네임/전화번호/위치를 한 번에 저장한다.
+     */
+    @PatchMapping("/onboarding")
+    public ResponseEntity<Void> saveOnboarding(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody OnboardingRequest request) {
+        userService.saveOnboarding(
+                userDetails.getUsername(),
+                request.getNickname(),
+                request.getPhone(),
+                request.getLatitude(),
+                request.getLongitude(),
+                request.getActivityRadius(),
+                request.getRegion()
+        );
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * PATCH /api/v1/users/notifications — 알림 설정 업데이트.
      */
     @PatchMapping("/notifications")
@@ -96,6 +115,17 @@ public class UserController {
     @NoArgsConstructor
     static class PhoneRequest {
         private String phone;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    static class OnboardingRequest {
+        private String nickname;
+        private String phone;
+        private Double latitude;
+        private Double longitude;
+        private Integer activityRadius;
+        private String region;
     }
 
     @Getter

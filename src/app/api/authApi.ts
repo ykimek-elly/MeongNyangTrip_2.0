@@ -70,6 +70,24 @@ export const authApi = {
     await api.patch(`${USER_BASE}/location`, { latitude, longitude, activityRadius, region });
   },
 
+  saveOnboarding: async (
+    nickname: string | undefined,
+    phone: string | undefined,
+    latitude?: number,
+    longitude?: number,
+    activityRadius?: number,
+    region?: string
+  ): Promise<void> => {
+    await api.patch(`${USER_BASE}/onboarding`, {
+      nickname,
+      phone,
+      latitude,
+      longitude,
+      activityRadius,
+      region,
+    });
+  },
+
   /** POST /api/v1/auth/find-id */
   findId: async (name: string, phone: string): Promise<string> => {
     const { data } = await api.post<{ status: number; data: { email: string } }>(

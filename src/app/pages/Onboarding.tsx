@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, type PetInfo } from '../store/useAppStore';
 import { PawPrint, Heart, MapPin, Sparkles, Bell, Phone, Dog, Cat, User } from 'lucide-react';
@@ -23,6 +23,8 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
 
   const [phase, setPhase] = useState<Phase>('welcome');
   const [showPetForm, setShowPetForm] = useState(false);
+  const [isSavingOnboarding, setIsSavingOnboarding] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   // 휴대폰 중복확인
   const [phone, setPhone] = useState('');
@@ -101,71 +103,59 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
     setPhase('complete');
   };
 
-  /** DB 저장 + 온보딩 완료 처리 — complete 단계 진입 시 자동 실행 */
-  const saveOnboardingData = async () => {
+  /** DB 저장 + 온보딩 완료 처리 ? complete 단계 진입 시 자동 실행 */
+  const persistOnboardingData = async () => {
+    if (isSavingOnboarding) return false;
+
+    setIsSavingOnboarding(true);
+    setSaveError('');
+
     let finalNickname = nickname.trim();
     if (!finalNickname) {
       finalNickname = `멍냥이_${Math.floor(Math.random() * 9000) + 1000}`;
     }
-    if (finalNickname !== (username || '')) {
-      try {
-        await authApi.updateProfile(finalNickname);
-        updateProfile({ username: finalNickname });
-      } catch (err: any) {
-        console.error('닉네임 저장 실패:', err);
+
+    try {
+      const regionText = sido && district ? `${sido} ${district}` : sido || '';
+      await authApi.saveOnboarding(
+        finalNickname,
+        isPhoneChecked && isPhoneValid ? phoneDigits : undefined,
+        selectedCoords?.lat ?? DEFAULT_LAT,
+        selectedCoords?.lng ?? DEFAULT_LNG,
+        activityRadius,
+        regionText
+      );
+
+      updateProfile({ username: finalNickname });
+      setUserRegion(sido, district, activityRadius);
+      completeOnboarding();
+      return true;
+    } catch (err: any) {
+      const serverMsg = err.response?.data?.message || '저장에 실패했습니다. 잠시 후 다시 시도해주세요.';
+      console.error('온보딩 저장 실패:', err);
+      setSaveError(serverMsg);
+      if (err.response?.status === 409) {
+        setNicknameError(serverMsg);
       }
+      return false;
+    } finally {
+      setIsSavingOnboarding(false);
     }
-    if (isPhoneChecked && isPhoneValid) {
-      authApi.savePhone(phoneDigits).catch(() => {});
-    }
-    const regionText = sido && district ? `${sido} ${district}` : sido || '';
-    authApi.saveLocation(
-      selectedCoords?.lat ?? DEFAULT_LAT,
-      selectedCoords?.lng ?? DEFAULT_LNG,
-      activityRadius,
-      regionText
-    ).catch(() => {});
-    setUserRegion(sido, district, activityRadius);
-    completeOnboarding();
   };
 
   /** complete 단계 진입 시 자동 DB 저장 */
   useEffect(() => {
     if (phase === 'complete') {
-      saveOnboardingData();
+      void persistOnboardingData();
     }
   }, [phase]);
 
-  /** "나중에 반려동물 등록" — welcome 단계에서 바로 저장 후 이동 */
+  /** "나중에 반려동물 등록" ? welcome 단계에서 바로 저장 후 이동 */
   const handleSkipPet = async (destination: string) => {
-    let finalNickname = nickname.trim();
-    if (!finalNickname) {
-      finalNickname = `멍냥이_${Math.floor(Math.random() * 9000) + 1000}`;
+    const saved = await persistOnboardingData();
+    if (saved) {
+      onNavigate(destination);
     }
-    if (finalNickname !== (username || '')) {
-      try {
-        await authApi.updateProfile(finalNickname);
-        updateProfile({ username: finalNickname });
-      } catch (err: any) {
-        console.error('닉네임 저장 실패:', err);
-        const serverMsg = err.response?.data?.message || '이미 사용 중인 닉네임입니다.';
-        setNicknameError(serverMsg);
-        return;
-      }
-    }
-    if (isPhoneChecked && isPhoneValid) {
-      authApi.savePhone(phoneDigits).catch(() => {});
-    }
-    const regionText = sido && district ? `${sido} ${district}` : sido || '';
-    authApi.saveLocation(
-      selectedCoords?.lat ?? DEFAULT_LAT,
-      selectedCoords?.lng ?? DEFAULT_LNG,
-      activityRadius,
-      regionText
-    ).catch(() => {});
-    setUserRegion(sido, district, activityRadius);
-    completeOnboarding();
-    onNavigate(destination);
   };
 
   return (
@@ -275,6 +265,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                         setPhone(formatPhone(e.target.value));
                         setIsPhoneChecked(false);
                         setPhoneError('');
+                        setSaveError('');
                       }}
                       disabled={isPhoneChecked}
                       placeholder="010-0000-0000"
@@ -299,7 +290,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
 
                 {phoneError && <p className="text-xs text-destructive mt-1.5 ml-1">{phoneError}</p>}
                 {isPhoneChecked && (
-                  <p className="text-xs text-green-600 font-bold mt-1.5 ml-1">✓ 사용 가능한 번호예요</p>
+                  <p className="text-xs text-green-600 font-bold mt-1.5 ml-1">? 사용 가능한 번호예요</p>
                 )}
 
                 {/* 카톡 알림 동의 */}
@@ -334,7 +325,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 <div className="flex gap-2">
                   <select
                     value={sido}
-                    onChange={e => { setSido(e.target.value); setDistrict(''); }}
+                    onChange={e => { setSido(e.target.value); setDistrict(''); setSaveError(''); }}
                     className="flex-1 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none focus:border-primary transition-spring"
                   >
                     <option value="">시·도 선택</option>
@@ -342,7 +333,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                   </select>
                   <select
                     value={district}
-                    onChange={e => setDistrict(e.target.value)}
+                    onChange={e => { setDistrict(e.target.value); setSaveError(''); }}
                     disabled={!sido}
                     className="flex-1 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none focus:border-primary transition-spring disabled:bg-gray-50 disabled:text-gray-300"
                   >
@@ -368,7 +359,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                         <button
                           key={rs.value}
                           type="button"
-                          onClick={() => setActivityRadius(rs.value)}
+                          onClick={() => { setActivityRadius(rs.value); setSaveError(''); }}
                           className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-spring active:opacity-80 ${
                             filled ? 'bg-primary' : 'bg-white'
                           } ${idx > 0 ? 'border-l-2 border-gray-100' : ''}`}
@@ -387,11 +378,14 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
               </motion.div>
 
               <div className="space-y-3">
+                {saveError && (
+                  <p className="text-sm text-destructive text-center">{saveError}</p>
+                )}
                 <button
-                  onClick={() => canProceed && setShowPetForm(true)}
-                  disabled={!canProceed}
+                  onClick={() => canProceed && !isSavingOnboarding && setShowPetForm(true)}
+                  disabled={!canProceed || isSavingOnboarding}
                   className={`w-full py-4 font-bold rounded-2xl shadow-md flex items-center justify-center gap-2 transition-spring ${
-                    canProceed
+                    canProceed && !isSavingOnboarding
                       ? 'bg-primary text-white hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98]'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
                   }`}
@@ -400,10 +394,10 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                   반려동물 등록하기
                 </button>
                 <button
-                  onClick={() => canProceed && handleSkipPet('home')}
-                  disabled={!canProceed}
+                  onClick={() => canProceed && !isSavingOnboarding && void handleSkipPet('home')}
+                  disabled={!canProceed || isSavingOnboarding}
                   className={`w-full py-3 text-sm transition-spring ${
-                    canProceed
+                    canProceed && !isSavingOnboarding
                       ? 'text-gray-400 hover:text-gray-600'
                       : 'text-gray-300 cursor-not-allowed'
                   }`}
@@ -508,3 +502,4 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
     </div>
   );
 }
+

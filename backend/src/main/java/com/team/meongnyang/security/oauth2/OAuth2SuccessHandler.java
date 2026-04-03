@@ -36,7 +36,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String email        = user.getEmail() != null ? user.getEmail() : "";
         String profileImage = user.getProfileImage() != null ? user.getProfileImage() : "";
 
-        String accessToken  = jwtUtil.generateToken(email);
+        String accessToken  = jwtUtil.generateToken(email, user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(email);
         refreshTokenService.save(email, refreshToken);
 

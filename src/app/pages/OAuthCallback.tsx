@@ -30,12 +30,14 @@ export function OAuthCallback() {
       }
 
       const isNewUser = searchParams.get('isNewUser') === 'true';
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const isAdmin = payload.role === 'ADMIN' || payload.role === 'ROLE_ADMIN';
       login(
         nickname || '사용자', 
         email || '', 
         userId ? Number(userId) : undefined, 
         profileImage || '', 
-        false, 
+        isAdmin, 
         true, 
         region || undefined, 
         activityRadius ? Number(activityRadius) : undefined

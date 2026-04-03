@@ -25,9 +25,10 @@ public class JwtUtil {
     }
 
     /** Access Token 발급 (기존 generateToken과 동일, 이름 명확화) */
-    public String generateToken(String email) {
+    public String generateToken(String email, String role) {
         return Jwts.builder()
                 .subject(email)
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key)

@@ -46,7 +46,7 @@
 
 ### ② `pets` 테이블
 - `is_representative` (BOOLEAN): 한 명의 사용자가 가진 여러 마리 중 **대표 반려동물** 여부 (기본값: false)
-- `notify_enabled` (BOOLEAN): 개별 반려동물별 알림 수신 여부 (기본값: true)
+- ~~`notify_enabled`~~ → 삭제됨 (`users.notification_enabled`로 통합, 개별 반려동물 알림 설정 불필요)
 
 ---
 

@@ -12,11 +12,18 @@ const api = axios.create({
   },
 });
 
-/** Request Interceptor: 모든 요청에 Access Token 자동 첨부 */
+/** 토큰 첨부 제외 경로 — 인증 불필요 public 엔드포인트 */
+const PUBLIC_PATHS = ['/auth/login', '/auth/signup', '/auth/refresh', '/auth/find-id', '/auth/reset-password', '/auth/check-phone', '/auth/sms'];
+
+/** Request Interceptor: 모든 요청에 Access Token 자동 첨부 (public 경로 제외) */
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const url = config.url ?? '';
+  const isPublic = PUBLIC_PATHS.some(path => url.includes(path));
+  if (!isPublic) {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });

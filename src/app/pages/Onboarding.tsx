@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, type PetInfo } from '../store/useAppStore';
 import { PawPrint, Heart, MapPin, Sparkles, Bell, Phone, Dog, Cat, User } from 'lucide-react';
@@ -101,12 +101,47 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
     setPhase('complete');
   };
 
-  const handleComplete = async (destination: string) => {
+  /** DB 저장 + 온보딩 완료 처리 — complete 단계 진입 시 자동 실행 */
+  const saveOnboardingData = async () => {
     let finalNickname = nickname.trim();
     if (!finalNickname) {
       finalNickname = `멍냥이_${Math.floor(Math.random() * 9000) + 1000}`;
     }
+    if (finalNickname !== (username || '')) {
+      try {
+        await authApi.updateProfile(finalNickname);
+        updateProfile({ username: finalNickname });
+      } catch (err: any) {
+        console.error('닉네임 저장 실패:', err);
+      }
+    }
+    if (isPhoneChecked && isPhoneValid) {
+      authApi.savePhone(phoneDigits).catch(() => {});
+    }
+    const regionText = sido && district ? `${sido} ${district}` : sido || '';
+    authApi.saveLocation(
+      selectedCoords?.lat ?? DEFAULT_LAT,
+      selectedCoords?.lng ?? DEFAULT_LNG,
+      activityRadius,
+      regionText
+    ).catch(() => {});
+    setUserRegion(sido, district, activityRadius);
+    completeOnboarding();
+  };
 
+  /** complete 단계 진입 시 자동 DB 저장 */
+  useEffect(() => {
+    if (phase === 'complete') {
+      saveOnboardingData();
+    }
+  }, [phase]);
+
+  /** "나중에 반려동물 등록" — welcome 단계에서 바로 저장 후 이동 */
+  const handleSkipPet = async (destination: string) => {
+    let finalNickname = nickname.trim();
+    if (!finalNickname) {
+      finalNickname = `멍냥이_${Math.floor(Math.random() * 9000) + 1000}`;
+    }
     if (finalNickname !== (username || '')) {
       try {
         await authApi.updateProfile(finalNickname);
@@ -115,10 +150,9 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
         console.error('닉네임 저장 실패:', err);
         const serverMsg = err.response?.data?.message || '이미 사용 중인 닉네임입니다.';
         setNicknameError(serverMsg);
-        return; // API 실패 시 더 이상 진행하지 않음
+        return;
       }
     }
-
     if (isPhoneChecked && isPhoneValid) {
       authApi.savePhone(phoneDigits).catch(() => {});
     }
@@ -366,7 +400,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                   반려동물 등록하기
                 </button>
                 <button
-                  onClick={() => canProceed && handleComplete('home')}
+                  onClick={() => canProceed && handleSkipPet('home')}
                   disabled={!canProceed}
                   className={`w-full py-3 text-sm transition-spring ${
                     canProceed
@@ -440,7 +474,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
               >
                 {pet && (
                   <button
-                    onClick={() => handleComplete('ai-walk-guide')}
+                    onClick={() => onNavigate('ai-walk-guide')}
                     className="w-full py-3.5 bg-amber-500 text-white font-bold rounded-2xl shadow-md hover:bg-amber-600 active:scale-[0.97] transition-spring flex items-center justify-center gap-2"
                   >
                     <Sparkles size={18} />
@@ -448,7 +482,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                   </button>
                 )}
                 <button
-                  onClick={() => handleComplete('home')}
+                  onClick={() => onNavigate('home')}
                   className={`w-full py-3.5 rounded-2xl font-bold transition-spring active:scale-[0.98] ${
                     pet ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-primary text-white shadow-md hover:bg-primary/90'
                   }`}

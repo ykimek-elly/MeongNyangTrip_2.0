@@ -1,6 +1,7 @@
 package com.team.meongnyang.recommendation.service;
 
 import com.team.meongnyang.recommendation.cache.DailyRecommendationCacheService;
+import com.team.meongnyang.recommendation.dto.RecommendationLookupResponse;
 import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import com.team.meongnyang.recommendation.notification.dto.RecommendationNotificationResult;
 import com.team.meongnyang.user.entity.User;
@@ -21,9 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class RecommendationQueryService {
 
+    private static final String DEFAULT_NOTIFICATION_SUMMARY = "오늘 조건에 맞는 산책 장소를 안내해드릴게요.";
+
     private final RecommendationUserReader recommendationUserReader;
     private final RecommendationPipelineService recommendationPipelineService;
     private final DailyRecommendationCacheService dailyRecommendationCacheService;
+    private final RecommendationAiResponseParser aiResponseParser;
 
     /**
      * 현재 사용자에게 보여줄 추천 결과를 반환한다.
@@ -31,11 +35,11 @@ public class RecommendationQueryService {
      * @param email 사용자 이메일
      * @return 추천 결과
      */
-    public RecommendationNotificationResult getRecommendationForCurrentUser(String email) {
+    public RecommendationLookupResponse getRecommendationForCurrentUser(String email) {
         User user = recommendationUserReader.getCurrentUserByEmail(email);
 
         if (!dailyRecommendationCacheService.isSentToday(user.getUserId(), user.getLastNotificationSentAt())) {
-            return recommendationPipelineService.recommendForCurrentUser(email);
+            return toLookupResponse(recommendationPipelineService.recommendForCurrentUser(email));
         }
 
         RecommendationNotificationResult cachedResult = dailyRecommendationCacheService.getTodayResult(user.getUserId());
@@ -45,12 +49,62 @@ public class RecommendationQueryService {
                     cachedResult.getPetId(),
                     RecommendationLogContext.batchExecutionId(),
                     cachedResult.getPlace() == null ? null : cachedResult.getPlace().getId());
-            return cachedResult;
+            return toLookupResponse(cachedResult);
         }
 
         log.warn("[캐시] 일일 추천 누락으로 실시간 추천 전환 userId={}, batchExecutionId={}",
                 user.getUserId(),
                 RecommendationLogContext.batchExecutionId());
-        return recommendationPipelineService.recommendForCurrentUser(email);
+        return toLookupResponse(recommendationPipelineService.recommendForCurrentUser(email));
+    }
+
+    private RecommendationLookupResponse toLookupResponse(RecommendationNotificationResult result) {
+        String notificationSummary = resolveNotificationSummary(result);
+        String recommendationDescription = resolveRecommendationDescription(result, notificationSummary);
+
+        return RecommendationLookupResponse.builder()
+                .userId(result.getUserId())
+                .petId(result.getPetId())
+                .petName(result.getPetName())
+                .weatherType(result.getWeatherType())
+                .weatherWalkLevel(result.getWeatherWalkLevel())
+                .weatherSummary(result.getWeatherSummary())
+                .place(result.getPlace())
+                .notificationSummary(notificationSummary)
+                .recommendationDescription(recommendationDescription)
+                .fallbackUsed(result.isFallbackUsed())
+                .cacheHit(result.isCacheHit())
+                .error(result.isError())
+                .errorCode(result.getErrorCode())
+                .build();
+    }
+
+    private String resolveNotificationSummary(RecommendationNotificationResult result) {
+        if (result.getMessage() != null && !result.getMessage().isBlank()) {
+            return result.getMessage();
+        }
+
+        String parsedSummary = aiResponseParser.extractNotificationSummary(result.getAiResponse());
+        if (parsedSummary != null && !parsedSummary.isBlank()) {
+            return parsedSummary;
+        }
+
+        return DEFAULT_NOTIFICATION_SUMMARY;
+    }
+
+    private String resolveRecommendationDescription(
+            RecommendationNotificationResult result,
+            String notificationSummary
+    ) {
+        if (result.getRecommendationDescription() != null && !result.getRecommendationDescription().isBlank()) {
+            return result.getRecommendationDescription();
+        }
+
+        String parsedDescription = aiResponseParser.extractRecommendationDescription(result.getAiResponse());
+        if (parsedDescription != null && !parsedDescription.isBlank()) {
+            return parsedDescription;
+        }
+
+        return aiResponseParser.defaultDescription(notificationSummary);
     }
 }

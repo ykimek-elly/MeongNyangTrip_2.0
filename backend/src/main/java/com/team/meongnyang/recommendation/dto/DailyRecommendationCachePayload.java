@@ -29,6 +29,7 @@ public class DailyRecommendationCachePayload {
   private String weatherWalkLevel;
   private String weatherSummary;
   private String notificationMessage;
+  private String recommendationDescription;
   private boolean fallbackUsed;
   private boolean geminiCacheHit;
   private String geminiCacheKey;
@@ -55,6 +56,7 @@ public class DailyRecommendationCachePayload {
             .weatherWalkLevel(result.getWeatherWalkLevel())
             .weatherSummary(result.getWeatherSummary())
             .notificationMessage(result.getMessage())
+            .recommendationDescription(result.getRecommendationDescription())
             .fallbackUsed(result.isFallbackUsed())
             .geminiCacheHit(result.isCacheHit())
             .geminiCacheKey(result.getGeminiCacheKey())
@@ -79,6 +81,7 @@ public class DailyRecommendationCachePayload {
             .weatherSummary(weatherSummary)
             .place(restoredPlace)
             .message(notificationMessage)
+            .recommendationDescription(recommendationDescription)
             .fallbackUsed(fallbackUsed)
             .cacheHit(geminiCacheHit)
             .aiResponse(geminiResponse)

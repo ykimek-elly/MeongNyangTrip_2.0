@@ -24,6 +24,7 @@ public class RecommendationNotificationResult {
   private String weatherSummary;
   private Place place;
   private String message;
+  private String recommendationDescription;
   private boolean fallbackUsed;
   private boolean cacheHit;
   private boolean error;

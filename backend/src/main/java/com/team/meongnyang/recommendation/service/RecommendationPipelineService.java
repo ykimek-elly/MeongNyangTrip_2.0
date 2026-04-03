@@ -65,6 +65,7 @@ public class RecommendationPipelineService {
     private final RecommendationContextKeyFactory recommendationContextKeyFactory;
     private final RecommendationResultCacheService recommendationResultCacheService;
     private final RecommendationDedupService recommendationDedupService;
+    private final RecommendationAiResponseParser aiResponseParser;
 
     /**
      * 현재 로그인한 사용자 기준으로 추천을 생성한다.
@@ -402,6 +403,7 @@ public class RecommendationPipelineService {
                 .weatherSummary(buildWeatherSummary(weatherContext))
                 .place(null)
                 .message(message)
+                .recommendationDescription(message)
                 .fallbackUsed(false)
                 .cacheHit(false)
                 .error(false)
@@ -422,9 +424,13 @@ public class RecommendationPipelineService {
             boolean fallbackUsed,
             String cacheKey
     ) {
-        String notificationSummary = extractNotificationSummary(aiResponse);
+        String notificationSummary = aiResponseParser.extractNotificationSummary(aiResponse);
         if (notificationSummary == null || notificationSummary.isBlank()) {
             notificationSummary = DEFAULT_NOTIFICATION_SUMMARY;
+        }
+        String recommendationDescription = aiResponseParser.extractRecommendationDescription(aiResponse);
+        if (recommendationDescription == null || recommendationDescription.isBlank()) {
+            recommendationDescription = aiResponseParser.defaultDescription(notificationSummary);
         }
 
         return RecommendationNotificationResult.builder()
@@ -436,6 +442,7 @@ public class RecommendationPipelineService {
                 .weatherSummary(buildWeatherSummary(weatherContext))
                 .place(topPlace)
                 .message(notificationSummary)
+                .recommendationDescription(recommendationDescription)
                 .fallbackUsed(fallbackUsed)
                 .cacheHit(cacheHit)
                 .error(false)
@@ -457,6 +464,7 @@ public class RecommendationPipelineService {
                 .weatherSummary("")
                 .place(null)
                 .message(DUPLICATE_REQUEST_MESSAGE)
+                .recommendationDescription(DUPLICATE_REQUEST_MESSAGE)
                 .fallbackUsed(false)
                 .cacheHit(false)
                 .error(true)
@@ -481,6 +489,7 @@ public class RecommendationPipelineService {
                 .weatherSummary(buildWeatherSummary(weatherContext))
                 .place(null)
                 .message(RECOMMENDATION_ERROR_MESSAGE)
+                .recommendationDescription(RECOMMENDATION_ERROR_MESSAGE)
                 .fallbackUsed(false)
                 .cacheHit(false)
                 .error(true)

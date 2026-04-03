@@ -200,6 +200,40 @@ function DetailWrapper() {
   return <WrappedDetail id={Number(id)} />;
 }
 
+/** 비로그인 전용 라우트 — 로그인 상태에서 login/signup 접근 시 안내 화면 표시 */
+function GuestRoute({ Component }: { Component: React.ComponentType<any> }) {
+  const { isLoggedIn, username, logout } = useAppStore();
+  const navigate = useNavigate();
+
+  if (!isLoggedIn) return withNavigation(Component)({});
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-6 px-6 text-center">
+      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+        <Leaf className="text-primary" size={28} />
+      </div>
+      <div>
+        <p className="text-base font-bold text-gray-800 mb-1">{username}님, 이미 로그인 상태예요</p>
+        <p className="text-sm text-gray-500">계속하려면 먼저 로그아웃해 주세요</p>
+      </div>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <button
+          className="w-full py-3 rounded-2xl bg-primary text-white font-semibold text-sm"
+          onClick={() => navigate('/', { replace: true })}
+        >
+          홈으로 돌아가기
+        </button>
+        <button
+          className="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-sm"
+          onClick={() => { logout(); navigate('/login', { replace: true }); }}
+        >
+          로그아웃 후 계속하기
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** 관리자 전용 라우트 — isAdmin 아닐 경우 /admin/login으로 리다이렉트 */
 function AdminRoute() {
   const { isAdmin } = useAppStore();
@@ -239,8 +273,8 @@ export const router = createBrowserRouter([
       { path: "map", Component: MapWrapper },
       { path: "lounge", Component: withNavigation(Lounge) },
       { path: "mypage", Component: withNavigation(MyPage) },
-      { path: "login", Component: withNavigation(Login) },
-      { path: "signup", Component: withNavigation(Signup) },
+      { path: "login", element: <GuestRoute Component={Login} /> },
+      { path: "signup", element: <GuestRoute Component={Signup} /> },
       { path: "find-id", Component: withNavigation(FindId) },
       { path: "find-password", Component: withNavigation(FindPassword) },
       { path: "onboarding", Component: withNavigation(Onboarding) },

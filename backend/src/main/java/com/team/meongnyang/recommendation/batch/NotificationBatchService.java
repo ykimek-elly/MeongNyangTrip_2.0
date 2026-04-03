@@ -34,15 +34,15 @@ import java.util.stream.Collectors;
 /**
  * 추천 알림 배치를 실행하는 서비스
  *
- * <p>알림 수신 동의한 활성 사용자 목록을 조회하고
+ * 알림 수신 동의한 활성 사용자 목록을 조회하고
  * 사용자별 대표 반려동물 기준으로 추천 파이프라인을 호출한 뒤
- * 추천 결과를 카카오 알림 메시지로 전송한다.</p>
+ * 추천 결과를 카카오 알림 메시지로 전송한다.
  *
- * <p>배치 성공 시 lastNotificationSentAt 을 갱신하고,
- * daily recommendation cache를 저장한다.</p>
+ * 배치 성공 시 lastNotificationSentAt 을 갱신하고,
+ * daily recommendation cache를 저장한다.
  *
- * <p>병렬 처리를 위해 Virtual Thread 기반 Executor를 사용하고,
- * 동시 실행 수는 Semaphore로 제한한다.</p>
+ * 병렬 처리를 위해 Virtual Thread 기반 Executor를 사용하고,
+ * 동시 실행 수는 Semaphore로 제한한다.
  */
 @Slf4j
 @Service
@@ -61,15 +61,14 @@ public class NotificationBatchService {
   /**
    * 전체 추천 알림 배치를 실행한다.
    *
-   * <p>배치 실행 ID를 생성하고 대상 사용자를 조회한 뒤
-   * Virtual Thread 기반 병렬 처리로 사용자별 추천/알림을 수행한다.</p>
+   * 배치 실행 ID를 생성하고 대상 사용자를 조회한 뒤
+   * Virtual Thread 기반 병렬 처리로 사용자별 추천/알림을 수행한다.
    */
   public void runDailyNotificationBatch() {
     String batchExecutionId = UUID.randomUUID().toString();
     long startTime = System.currentTimeMillis();
-    log.info("[NotificationBatch] start batchExecutionId={}", batchExecutionId);
-
     List<User> targets = getNotificationTargets();
+    log.info("[추천 배치] 시작 batchExecutionId={}, targetCount={}", batchExecutionId, targets.size());
     Map<Long, Pet> representativePetMap = loadRepresentativePets(targets);
     BatchExecutionSummary summary = new BatchExecutionSummary();
 
@@ -100,7 +99,7 @@ public class NotificationBatchService {
             future.get();
           } catch (Exception e) {
             summary.fail(NotificationBatchFailureReason.UNKNOWN_ERROR);
-            log.error("[NotificationBatch] future error batchExecutionId={}, reason={}, error={}",
+            log.error("[에러] 추천 배치 작업 실패 batchExecutionId={}, reason={}, error={}",
                     batchExecutionId,
                     NotificationBatchFailureReason.UNKNOWN_ERROR,
                     e.getMessage(),
@@ -111,14 +110,12 @@ public class NotificationBatchService {
     }
 
     long endTime = System.currentTimeMillis();
-    log.info("[NotificationBatch] finished batchExecutionId={}, total={}, success={}, fail={}, elapsedMs={}",
+    log.info("[추천 배치] 종료 batchExecutionId={}, total={}, success={}, fail={}, elapsedMs={}, failureReasons={}",
             batchExecutionId,
             targets.size(),
             summary.getSuccessCount(),
             summary.getFailureCount(),
-            endTime - startTime);
-    log.info("[NotificationBatch] failure summary batchExecutionId={}, reasons={}",
-            batchExecutionId,
+            endTime - startTime,
             summary.formatFailureReasons());
   }
 
@@ -137,7 +134,7 @@ public class NotificationBatchService {
   /**
    * 배치 대상 사용자들의 대표 반려동물을 한 번에 조회해 Map 형태로 반환한다.
    *
-   * <p>userId를 key로 사용해 이후 추천 처리 시 빠르게 참조한다.</p>
+   * userId를 key로 사용해 이후 추천 처리 시 빠르게 참조한다.
    */
   private Map<Long, Pet> loadRepresentativePets(List<User> targets) {
     if (targets.isEmpty()) {
@@ -160,7 +157,7 @@ public class NotificationBatchService {
   /**
    * 단일 사용자에 대해 추천 생성, 메시지 생성, 알림 전송까지 처리한다.
    *
-   * <p>전송 실패 건은 reason 기준으로 집계한다.</p>
+   * 전송 실패 건은 reason 기준으로 집계한다.
    */
   private void processTarget(
           String batchExecutionId,
@@ -172,19 +169,30 @@ public class NotificationBatchService {
                  RecommendationBatchTraceContext.open(batchExecutionId, target.getUserId(), pet == null ? null : pet.getPetId())) {
       if (pet == null) {
         summary.fail(NotificationBatchFailureReason.PET_NOT_FOUND);
-        log.warn("[NotificationBatch] batch failed userId={}, reason={}",
+        log.warn("[추천 배치] 대상 제외 batchExecutionId={}, userId={}, petId={}, reason={}",
+                batchExecutionId,
                 target.getUserId(),
+                null,
                 NotificationBatchFailureReason.PET_NOT_FOUND);
         return;
       }
 
       if (isAlreadySentToday(target.getUserId())) {
         summary.fail(NotificationBatchFailureReason.ALREADY_SENT_TODAY);
-        log.warn("[NotificationBatch] skipped userId={}, reason={}",
+        log.warn("[추천 배치] 대상 제외 batchExecutionId={}, userId={}, petId={}, reason={}",
+                batchExecutionId,
                 target.getUserId(),
+                pet.getPetId(),
                 NotificationBatchFailureReason.ALREADY_SENT_TODAY);
         return;
       }
+
+      log.info("[추천 배치] 대상 처리 시작 batchExecutionId={}, userId={}, petId={}, latitude={}, longitude={}",
+              batchExecutionId,
+              target.getUserId(),
+              pet.getPetId(),
+              target.getLatitude(),
+              target.getLongitude());
 
       RecommendationNotificationResult recommendationResult =
               recommendationPipelineService.recommendForNotification(target, pet, batchExecutionId);
@@ -193,7 +201,8 @@ public class NotificationBatchService {
       if (topPlace == null) {
         NotificationBatchFailureReason failureReason = resolveNoCandidateReason(recommendationResult);
         summary.fail(failureReason);
-        log.warn("[NotificationBatch] batch failed userId={}, petId={}, reason={}",
+        log.warn("[추천 배치] 추천 결과 없음 batchExecutionId={}, userId={}, petId={}, reason={}",
+                batchExecutionId,
                 target.getUserId(),
                 pet.getPetId(),
                 failureReason);
@@ -214,7 +223,8 @@ public class NotificationBatchService {
         dailyRecommendationCacheService.saveToday(target.getUserId(), recommendationResult, batchExecutionId);
 
         summary.success();
-        log.info("[NotificationBatch] success userId={}, petId={}, placeId={}, code={}",
+        log.info("[알림 전송] 발송 완료 batchExecutionId={}, userId={}, petId={}, placeId={}, statusCode={}",
+                batchExecutionId,
                 target.getUserId(),
                 pet.getPetId(),
                 topPlace.getId(),
@@ -224,7 +234,8 @@ public class NotificationBatchService {
 
       NotificationBatchFailureReason failureReason = resolveNotificationFailureReason(notificationResponse);
       summary.fail(failureReason);
-      log.warn("[NotificationBatch] batch failed userId={}, petId={}, placeId={}, reason={}, code={}, message={}",
+      log.warn("[알림 전송] 발송 실패 batchExecutionId={}, userId={}, petId={}, placeId={}, reason={}, statusCode={}, statusName={}",
+              batchExecutionId,
               target.getUserId(),
               pet.getPetId(),
               topPlace.getId(),
@@ -234,22 +245,29 @@ public class NotificationBatchService {
     } catch (BusinessException e) {
       NotificationBatchFailureReason failureReason = resolveBusinessFailureReason(e);
       summary.fail(failureReason);
-      log.error("[NotificationBatch] target error userId={}, reason={}, error={}",
+      log.error("[에러] 추천 배치 대상 실패 batchExecutionId={}, userId={}, petId={}, reason={}, error={}",
+              batchExecutionId,
               target.getUserId(),
+              pet == null ? null : pet.getPetId(),
               failureReason,
               e.getMessage(),
               e);
     } catch (Exception e) {
       NotificationBatchFailureReason failureReason = resolveExceptionFailureReason(e);
       summary.fail(failureReason);
-      log.error("[NotificationBatch] target error userId={}, reason={}, error={}",
+      log.error("[에러] 추천 배치 대상 실패 batchExecutionId={}, userId={}, petId={}, reason={}, error={}",
+              batchExecutionId,
               target.getUserId(),
+              pet == null ? null : pet.getPetId(),
               failureReason,
               e.getMessage(),
               e);
     }
   }
 
+  /**
+   * 추천 결과가 없을 때 실패 원인을 판별한다.
+   */
   private NotificationBatchFailureReason resolveNoCandidateReason(RecommendationNotificationResult recommendationResult) {
     if (recommendationResult != null
             && "ERROR".equalsIgnoreCase(recommendationResult.getWeatherWalkLevel())) {
@@ -258,6 +276,9 @@ public class NotificationBatchService {
     return NotificationBatchFailureReason.NO_CANDIDATE;
   }
 
+  /**
+   * 알림 전송 실패 원인을 판별한다.
+   */
   private NotificationBatchFailureReason resolveNotificationFailureReason(NotificationResponse notificationResponse) {
     if (notificationResponse == null) {
       return NotificationBatchFailureReason.NOTIFICATION_SEND_FAIL;
@@ -270,6 +291,9 @@ public class NotificationBatchService {
     return NotificationBatchFailureReason.NOTIFICATION_SEND_FAIL;
   }
 
+  /**
+   * 비즈니스 예외 발생 시 실패 원인을 판별한다.
+   */
   private NotificationBatchFailureReason resolveBusinessFailureReason(BusinessException e) {
     ErrorCode errorCode = e.getErrorCode();
     if (errorCode == ErrorCode.USER_NOT_FOUND) {
@@ -281,6 +305,9 @@ public class NotificationBatchService {
     return NotificationBatchFailureReason.UNKNOWN_ERROR;
   }
 
+  /**
+   * 일반 예외 발생 시 실패 원인을 판별한다.
+   */
   private NotificationBatchFailureReason resolveExceptionFailureReason(Exception e) {
     String message = e.getMessage();
     String exceptionType = e.getClass().getName();
@@ -299,6 +326,9 @@ public class NotificationBatchService {
     return NotificationBatchFailureReason.UNKNOWN_ERROR;
   }
 
+  /**
+   * 해당 사용자가 오늘 이미 알림을 받았는지 확인한다.
+   */
   private boolean isAlreadySentToday(Long userId) {
     return userRepository.findById(userId)
             .map(User::getLastNotificationSentAt)
@@ -306,6 +336,10 @@ public class NotificationBatchService {
             .orElse(false);
   }
 
+  /**
+   * 배치 실행 결과를 집계하는 내부 클래스
+   * 성공/실패 건수와 실패 사유별 통계를 관리한다.
+   */
   private static class BatchExecutionSummary {
     private final LongAdder successCount = new LongAdder();
     private final LongAdder failureCount = new LongAdder();

@@ -11,7 +11,7 @@ import java.time.ZoneId;
 /**
  * 캐시 종류별 TTL 정책을 한 곳에서 관리한다.
  *
- * <p>운영 단계에서는 데이터 특성에 따라 TTL이 달라져야 하므로
+ * 운영 단계에서는 데이터 특성에 따라 TTL이 달라져야 하므로
  * Weather, Recommendation, Gemini, 알림 sent marker의 수명을 이 클래스에서 계산한다.
  */
 @Component

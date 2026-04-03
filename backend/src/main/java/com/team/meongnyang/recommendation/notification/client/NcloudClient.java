@@ -1,12 +1,12 @@
 package com.team.meongnyang.recommendation.notification.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team.meongnyang.recommendation.notification.config.NcloudSensProperties;
 import com.team.meongnyang.recommendation.notification.dto.NotificationDeliveryResult;
 import com.team.meongnyang.recommendation.notification.dto.NotificationDeliveryListResponse;
 import com.team.meongnyang.recommendation.notification.dto.NotificationRequest;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -47,7 +47,8 @@ public class NcloudClient {
 
     public NotificationResponse send(NotificationRequest request) {
         if (!isConfigurationReady()) {
-            log.warn("[카카오 알림] Ncloud SENS 설정이 완전하지 않아 발송을 중단합니다.");
+            log.warn("[알림 전송] SENS 설정 누락 batchExecutionId={}",
+                    RecommendationLogContext.batchExecutionId());
             return NotificationResponse.failure("CONFIG_ERROR", "Ncloud SENS 설정값이 누락되었습니다.");
         }
 
@@ -56,12 +57,6 @@ public class NcloudClient {
         String requestUrl = ncloudSensProperties.getMessageUrl();
 
         try {
-            log.info("[카카오 알림톡] SENS 설정값 확인 baseUrl={}, serviceId={}, requestPath={}, requestUrl={}",
-                    ncloudSensProperties.getBaseUrl(),
-                    ncloudSensProperties.getServiceId(),
-                    requestPath,
-                    requestUrl);
-            logRequestJson(request, requestUrl);
             HttpEntity<NotificationRequest> httpEntity = buildHttpEntity(request, timestamp);
             ResponseEntity<NotificationResponse> responseEntity = restTemplate.exchange(
                     requestUrl,
@@ -72,7 +67,10 @@ public class NcloudClient {
 
             NotificationResponse responseBody = responseEntity.getBody();
             if (responseBody == null) {
-                log.error("[카카오 알림] 응답 본문이 비어 있습니다. path={}, status={}", requestPath, responseEntity.getStatusCode());
+                log.error("[에러] 알림 API 응답 없음 batchExecutionId={}, path={}, status={}",
+                        RecommendationLogContext.batchExecutionId(),
+                        requestPath,
+                        responseEntity.getStatusCode());
                 return NotificationResponse.failure(String.valueOf(responseEntity.getStatusCode().value()), "응답 본문이 비어 있습니다.");
             }
 
@@ -84,20 +82,32 @@ public class NcloudClient {
                     .statusName(responseBody.getStatusName())
                     .build();
         } catch (HttpStatusCodeException e) {
-            log.error("[카카오 알림] 외부 API 호출 실패 status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            log.error("[에러] 알림 API 호출 실패 batchExecutionId={}, path={}, status={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e.getStatusCode(),
+                    e);
             return NotificationResponse.failure(String.valueOf(e.getStatusCode().value()), "알림톡 API 호출에 실패했습니다.");
         } catch (RestClientException e) {
-            log.error("[카카오 알림] 외부 API 호출 중 클라이언트 오류가 발생했습니다. path={}", requestPath, e);
+            log.error("[에러] 알림 API 클라이언트 오류 batchExecutionId={}, path={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e);
             return NotificationResponse.failure("CLIENT_ERROR", "알림톡 API 클라이언트 오류");
         } catch (Exception e) {
-            log.error("[카카오 알림] 알림톡 요청 처리 중 예외가 발생했습니다. path={}", requestPath, e);
+            log.error("[에러] 알림 API 처리 실패 batchExecutionId={}, path={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e);
             return NotificationResponse.failure("UNKNOWN_ERROR", "알림톡 요청 처리 중 오류");
         }
     }
 
     public NotificationDeliveryResult getDeliveryResult(String messageId) {
         if (!isConfigurationReady()) {
-            log.warn("[카카오 알림톡] Ncloud SENS 설정이 완전하지 않아 결과 조회를 중단합니다.");
+            log.warn("[알림 전송] 결과 조회 중단 batchExecutionId={}, reason={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    "SENS 설정 누락");
             return NotificationDeliveryResult.failure("CONFIG_ERROR", "Ncloud SENS 설정값이 누락되었습니다.");
         }
 
@@ -144,13 +154,23 @@ public class NcloudClient {
                     .messageStatusDesc(responseBody.getMessageStatusDesc())
                     .build();
         } catch (HttpStatusCodeException e) {
-            log.error("[카카오 알림톡] 결과 조회 실패 status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            log.error("[에러] 알림 결과 조회 실패 batchExecutionId={}, path={}, status={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e.getStatusCode(),
+                    e);
             return NotificationDeliveryResult.failure(String.valueOf(e.getStatusCode().value()), e.getResponseBodyAsString());
         } catch (RestClientException e) {
-            log.error("[카카오 알림톡] 결과 조회 중 클라이언트 오류가 발생했습니다. path={}", requestPath, e);
+            log.error("[에러] 알림 결과 조회 클라이언트 오류 batchExecutionId={}, path={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e);
             return NotificationDeliveryResult.failure("CLIENT_ERROR", "결과 조회 중 클라이언트 오류");
         } catch (Exception e) {
-            log.error("[카카오 알림톡] 결과 조회 중 예외가 발생했습니다. path={}", requestPath, e);
+            log.error("[에러] 알림 결과 조회 실패 batchExecutionId={}, path={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e);
             return NotificationDeliveryResult.failure("UNKNOWN_ERROR", "결과 조회 중 예외");
         }
     }
@@ -170,7 +190,9 @@ public class NcloudClient {
 
     public String findMessageIdByRequestId(String requestId) {
         if (!isConfigurationReady()) {
-            log.warn("[카카오 알림톡] Ncloud SENS 설정이 완전하지 않아 목록 조회를 중단합니다.");
+            log.warn("[알림 전송] 목록 조회 중단 batchExecutionId={}, reason={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    "SENS 설정 누락");
             return null;
         }
 
@@ -189,27 +211,40 @@ public class NcloudClient {
 
             NotificationDeliveryListResponse responseBody = responseEntity.getBody();
             if (responseBody == null) {
-                log.warn("[카카오 알림톡] 목록 조회 응답 본문이 비어 있습니다. requestId={}", requestId);
+                log.warn("[알림 전송] 메시지 목록 비어 있음 batchExecutionId={}, requestId={}",
+                        RecommendationLogContext.batchExecutionId(),
+                        requestId);
                 return null;
             }
 
             List<NotificationDeliveryListResponse.DeliveryMessage> messages = responseBody.getMessages();
             if (messages == null || messages.isEmpty()) {
-                log.warn("[카카오 알림톡] requestId에 해당하는 메시지 목록이 없습니다. requestId={}", requestId);
+                log.warn("[알림 전송] 메시지 목록 없음 batchExecutionId={}, requestId={}",
+                        RecommendationLogContext.batchExecutionId(),
+                        requestId);
                 return null;
             }
 
             String messageId = messages.get(0).getMessageId();
-            log.info("[카카오 알림톡] requestId={}에 대한 messageId={}를 조회했습니다.", requestId, messageId);
             return messageId;
         } catch (HttpStatusCodeException e) {
-            log.error("[카카오 알림톡] 목록 조회 실패 status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            log.error("[에러] 알림 목록 조회 실패 batchExecutionId={}, path={}, status={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e.getStatusCode(),
+                    e);
             return null;
         } catch (RestClientException e) {
-            log.error("[카카오 알림톡] 목록 조회 중 클라이언트 오류가 발생했습니다. path={}", requestPath, e);
+            log.error("[에러] 알림 목록 조회 클라이언트 오류 batchExecutionId={}, path={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e);
             return null;
         } catch (Exception e) {
-            log.error("[카카오 알림톡] 목록 조회 중 예외가 발생했습니다. path={}", requestPath, e);
+            log.error("[에러] 알림 목록 조회 실패 batchExecutionId={}, path={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    requestPath,
+                    e);
             return null;
         }
     }
@@ -248,17 +283,6 @@ public class NcloudClient {
                 && StringUtils.hasText(ncloudSensProperties.getServiceId())
                 && StringUtils.hasText(ncloudSensProperties.getAccessKey())
                 && StringUtils.hasText(ncloudSensProperties.getSecretKey());
-    }
-
-    private void logRequestJson(NotificationRequest request, String requestUrl) {
-        try {
-            String requestJson = objectMapper.writeValueAsString(request);
-            String prettyRequestJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            log.info("[카카오 알림톡] 요청 JSON url={}, body={}", requestUrl, requestJson);
-            log.info("[카카오 알림톡] 요청 JSON 예시\n{}", prettyRequestJson);
-        } catch (JsonProcessingException e) {
-            log.warn("[카카오 알림톡] 요청 JSON 직렬화 로그 생성에 실패했습니다. url={}", requestUrl, e);
-        }
     }
 
     public String createSignature(String method, String urlPath, String timestamp, String accessKey, String secretKey) {

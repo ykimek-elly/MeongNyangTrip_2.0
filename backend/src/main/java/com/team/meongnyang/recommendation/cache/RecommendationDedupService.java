@@ -30,9 +30,19 @@ public class RecommendationDedupService {
                 "1",
                 recommendationCachePolicy.recommendationRequestLockTtl()
         );
-        boolean success = Boolean.TRUE.equals(acquired);
-        log.info("[RecommendationDedup] request lock userId={}, acquired={}", userId, success);
-        return success;
+        return Boolean.TRUE.equals(acquired);
+    }
+
+    /**
+     * 사용자 추천 요청 락을 해제한다.
+     */
+    public void releaseUserRequestLock(Long userId) {
+        if (userId == null) {
+            return;
+        }
+
+        String key = "recommendation:lock:" + userId;
+        redisTemplate.delete(key);
     }
 
     /**
@@ -69,7 +79,6 @@ public class RecommendationDedupService {
         redisTemplate.opsForList().leftPush(historyKey(userId), placeId);
         redisTemplate.opsForList().trim(historyKey(userId), 0, RECENT_HISTORY_LIMIT - 1);
         redisTemplate.expire(historyKey(userId), recommendationCachePolicy.recommendationHistoryTtl());
-        log.info("[RecommendationDedup] history record userId={}, placeId={}", userId, placeId);
     }
 
     private String lastPlaceKey(Long userId) {

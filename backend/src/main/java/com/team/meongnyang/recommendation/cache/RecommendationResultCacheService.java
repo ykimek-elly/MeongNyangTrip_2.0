@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 /**
  * 최종 추천 결과 캐시를 담당한다.
  *
- * <p>Weather, 후보 장소, 반려동물 특성, 최근 추천 이력을 조합한 키를 받아
+ * Weather, 후보 장소, 반려동물 특성, 최근 추천 이력을 조합한 키를 받아
  * 짧은 시간 동안 같은 결과를 재사용한다.
  */
 @Service
@@ -32,16 +32,12 @@ public class RecommendationResultCacheService {
     public RecommendationNotificationResult get(String key) {
         Object cached = redisTemplate.opsForValue().get(key);
         if (cached == null) {
-            log.info("[RecommendationResultCache] CACHE MISS key={}", key);
             return null;
         }
 
         RecommendationResultCachePayload payload =
                 objectMapper.convertValue(cached, RecommendationResultCachePayload.class);
         RecommendationNotificationResult result = payload.toNotificationResult();
-        log.info("[RecommendationResultCache] CACHE HIT key={}, placeId={}",
-                key,
-                result.getPlace() == null ? null : result.getPlace().getId());
         return result;
     }
 
@@ -58,8 +54,5 @@ public class RecommendationResultCacheService {
                 payload,
                 recommendationCachePolicy.recommendationResultTtl()
         );
-        log.info("[RecommendationResultCache] CACHE SAVE key={}, ttlMinutes={}",
-                key,
-                recommendationCachePolicy.recommendationResultTtl().toMinutes());
     }
 }

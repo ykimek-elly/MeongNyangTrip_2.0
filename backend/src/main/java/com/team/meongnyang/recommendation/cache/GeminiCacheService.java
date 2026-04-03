@@ -1,7 +1,6 @@
 package com.team.meongnyang.recommendation.cache;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -14,11 +13,10 @@ import java.time.Duration;
 /**
  * Gemini 응답 캐시를 담당한다.
  *
- * <p>최종 프롬프트 기준 캐시와 정규화된 컨텍스트 기준 캐시를 함께 제공한다.
+ * 최종 프롬프트 기준 캐시와 정규화된 컨텍스트 기준 캐시를 함께 제공한다.
  */
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class GeminiCacheService {
 
     @Value("${redis.gemini-cache-ttl}")
@@ -37,9 +35,7 @@ public class GeminiCacheService {
      * @return Redis 키
      */
     public String generateKey(String prompt) {
-        String key = geminiCacheKeyPrefix + ":" + sha256(prompt);
-        log.info("[GeminiCache] 프롬프트 키 생성 key={}", key);
-        return key;
+        return geminiCacheKeyPrefix + ":" + sha256(prompt);
     }
 
     /**
@@ -49,9 +45,7 @@ public class GeminiCacheService {
      * @return Redis 키
      */
     public String generateContextKey(String fingerprint) {
-        String key = geminiCacheKeyPrefix + ":context:" + sha256(fingerprint);
-        log.info("[GeminiCache] 컨텍스트 키 생성 key={}", key);
-        return key;
+        return geminiCacheKeyPrefix + ":context:" + sha256(fingerprint);
     }
 
     /**
@@ -63,10 +57,8 @@ public class GeminiCacheService {
     public String get(String key) {
         Object cached = redisTemplate.opsForValue().get(key);
         if (cached instanceof String value) {
-            log.info("[GeminiCache] CACHE HIT key={}", key);
             return value;
         }
-        log.info("[GeminiCache] CACHE MISS key={}", key);
         return null;
     }
 
@@ -78,7 +70,6 @@ public class GeminiCacheService {
      */
     public void save(String key, String response) {
         redisTemplate.opsForValue().set(key, response, geminiCacheTtl);
-        log.info("[GeminiCache] CACHE SAVE key={}, ttlMinutes={}", key, geminiCacheTtl.toMinutes());
     }
 
     /**
@@ -89,9 +80,6 @@ public class GeminiCacheService {
      */
     public void saveContext(String key, String response) {
         redisTemplate.opsForValue().set(key, response, recommendationCachePolicy.geminiContextCacheTtl());
-        log.info("[GeminiCache] CONTEXT CACHE SAVE key={}, ttlMinutes={}",
-                key,
-                recommendationCachePolicy.geminiContextCacheTtl().toMinutes());
     }
 
     /**

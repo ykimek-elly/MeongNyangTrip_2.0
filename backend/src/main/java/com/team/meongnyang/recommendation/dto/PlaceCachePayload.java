@@ -7,6 +7,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 장소(Place) 엔티티를 캐시에 저장하기 위한 데이터 객체
+ * 엔티티를 그대로 저장하지 않고 필요한 필드만 직렬화하여 캐시 효율성을 높인다.
+ */
 @Getter
 @Builder
 @NoArgsConstructor
@@ -46,6 +50,9 @@ public class PlaceCachePayload {
   private String operatingHours;
   private String operationPolicy;
 
+  /**
+   * Place 엔티티를 캐시용 데이터 객체로 변환한다.
+   */
   public static PlaceCachePayload from(Place place) {
     if (place == null) {
       return null;
@@ -87,6 +94,9 @@ public class PlaceCachePayload {
             .build();
   }
 
+  /**
+   * 캐시 데이터를 Place 엔티티로 복원한다.
+   */
   public Place toPlace() {
     return Place.builder()
             .id(id)

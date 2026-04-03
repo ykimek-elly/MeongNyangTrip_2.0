@@ -2,6 +2,7 @@ package com.team.meongnyang.recommendation.service;
 
 import com.team.meongnyang.place.entity.Place;
 import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import com.team.meongnyang.place.repository.PlaceRepository;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
@@ -19,7 +20,7 @@ import java.util.stream.Collectors;
 /**
  * 추천 가능한 장소 후보를 1차로 수집하고 위험한 조건을 먼저 걸러내는 후보 추출 계층이다.
  *
- * <p>파이프라인 흐름에서 날씨 조회 직후 호출되며,
+ * 파이프라인 흐름에서 날씨 조회 직후 호출되며,
  * 사용자 좌표와 날씨, 반려동물 선호를 기준으로 추천에 사용할 후보 장소 집합을 만든다.
  * 여기서 반환한 결과는 이후 {@link PlaceScoringService}의 점수 계산 입력으로 사용된다.
  */
@@ -78,7 +79,12 @@ public class CandidatePlaceService {
     List<Place> nearbyPlaces = fetchNearbyPlaces(lat, lng, radiusMeters);
     // 비어있으면 빈 리스트 반환
     if (nearbyPlaces.isEmpty()) {
-      log.info("[장소 필터] 반경 내 후보 장소가 없습니다. 반경(m)={}", radiusMeters);
+      log.warn("[장소 후보] 반경 내 후보 없음 userId={}, petId={}, batchExecutionId={}, radiusMeters={}, walkLevel={}",
+              user == null ? null : user.getUserId(),
+              pet == null ? null : pet.getPetId(),
+              RecommendationLogContext.batchExecutionId(),
+              radiusMeters,
+              weather.getWalkLevel());
       return List.of();
     }
 
@@ -90,7 +96,11 @@ public class CandidatePlaceService {
     List<Place> strictCandidates = applyPrimaryFilters(nearbyPlaces, pet, weather, lat, lng, false);
     // 엄격 필터 결과가 있으면 대표견 선호 장소를 약하게 우선 반영한 뒤 RESULT_LIMIT개까지 반환
     if (!strictCandidates.isEmpty()) {
-      log.info("[장소 필터] 엄격 필터를 적용했습니다. 후보 수={}", strictCandidates.size());
+      log.info("[장소 후보] 기본 조건 적용 userId={}, petId={}, batchExecutionId={}, count={}",
+              user == null ? null : user.getUserId(),
+              pet == null ? null : pet.getPetId(),
+              RecommendationLogContext.batchExecutionId(),
+              strictCandidates.size());
       return limitAndPrioritize(strictCandidates, pet);
     }
 
@@ -99,20 +109,30 @@ public class CandidatePlaceService {
       // 완화 필터를 거쳐 반환된 후보가 있다면 펫의 선호 장소가 있는지 확인 후
       // 최대 RESULT_LIMIT 개를 반환합니다
     if (!relaxedCandidates.isEmpty()) {
-      log.info("[장소 필터] 엄격 필터 결과가 없어 날씨 조건을 완화한 후보를 반환합니다.");
+      log.warn("[장소 후보] 날씨 조건 완화 userId={}, petId={}, batchExecutionId={}, count={}",
+              user == null ? null : user.getUserId(),
+              pet == null ? null : pet.getPetId(),
+              RecommendationLogContext.batchExecutionId(),
+              relaxedCandidates.size());
       return limitAndPrioritize(relaxedCandidates, pet);
     }
 
     // 4-3 엄격+완화 필터 반환이 없으면 fallback 필터 적용
     List<Place> fallbackCandidates = applyCoreFallbackFilters(nearbyPlaces, lat, lng, maxDistanceKm);
     if (!fallbackCandidates.isEmpty()) {
-      log.info("[장소 필터] 날씨 필터 fallback을 적용했습니다. 후보 수={}", fallbackCandidates.size());
+      log.warn("[장소 후보] 핵심 조건 fallback 적용 userId={}, petId={}, batchExecutionId={}, count={}",
+              user == null ? null : user.getUserId(),
+              pet == null ? null : pet.getPetId(),
+              RecommendationLogContext.batchExecutionId(),
+              fallbackCandidates.size());
       return limitAndPrioritize(fallbackCandidates, pet);
     }
 
     // 4-4 최종 후보가 없으면 빈 리스트 반환
-    log.info("[장소 필터] 최종 후보가 없습니다. userId={}, 산책 등급={}",
+    log.warn("[장소 후보] 최종 후보 없음 userId={}, petId={}, batchExecutionId={}, walkLevel={}",
             user == null ? null : user.getUserId(),
+            pet == null ? null : pet.getPetId(),
+            RecommendationLogContext.batchExecutionId(),
             weather.getWalkLevel());
     return List.of();
   }
@@ -191,7 +211,6 @@ public class CandidatePlaceService {
       result.add(place);
     }
 
-    log.info("[장소 필터] 1차 필터 결과입니다. 날씨 완화 적용={}, 후보 수={}", relaxWeather, result.size());
     return result;
   }
 
@@ -266,7 +285,10 @@ public class CandidatePlaceService {
     prioritized.addAll(preferredMatches);
     prioritized.addAll(normalMatches);
 
-    log.info("[장소 필터] 대표견 선호 장소 약한 우선순위를 적용했습니다. 선호 일치={}, 일반={}",
+    log.info("[장소 후보] 선호 장소 우선순위 적용 userId={}, petId={}, batchExecutionId={}, preferredCount={}, normalCount={}",
+            RecommendationLogContext.userId(),
+            RecommendationLogContext.petId(),
+            RecommendationLogContext.batchExecutionId(),
             preferredMatches.size(),
             normalMatches.size());
     return prioritized;

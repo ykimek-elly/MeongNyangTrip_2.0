@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.weather.service;
 import com.team.meongnyang.recommendation.weather.dto.WeatherApiResponse;
 import com.team.meongnyang.recommendation.weather.dto.WeatherContext;
 import com.team.meongnyang.recommendation.weather.dto.WeatherItem;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -70,7 +71,12 @@ public class WeatherService {
   public WeatherContext getWeather(int nx, int ny) {
 
     if (weatherApiKey == null || weatherApiKey.isBlank()) {
-      log.warn("[WEATHER API] WEATHER_API_KEY가 설정되지 않았습니다. fallback weather 사용");
+      log.warn("[날씨 조회] API 키 없음 fallback 사용 nx={}, ny={}, userId={}, petId={}, batchExecutionId={}",
+              nx,
+              ny,
+              RecommendationLogContext.userId(),
+              RecommendationLogContext.petId(),
+              RecommendationLogContext.batchExecutionId());
       return fallbackWeather();
     }
 
@@ -84,9 +90,12 @@ public class WeatherService {
 
         Map<String, String> weatherMap = weatherMap(items);
         WeatherContext weatherContext = buildWeatherContext(weatherMap);
-        log.info("[날씨 서비스] 날씨 요약 정보 nx={}, ny={}, temp={}, humidity={}, precipitationType={}, walkLevel={}, attempt={}",
+        log.info("[날씨 조회] 조회 완료 nx={}, ny={}, userId={}, petId={}, batchExecutionId={}, temp={}, humidity={}, precipitationType={}, walkLevel={}, attempt={}",
                 nx,
                 ny,
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
                 weatherContext.getTemperature(),
                 weatherContext.getHumidity(),
                 weatherContext.getPrecipitationType(),
@@ -94,15 +103,25 @@ public class WeatherService {
                 attempt);
         return weatherContext;
       } catch (Exception e) {
-        log.warn("[날씨 API 재시도] nx={}, ny={}, attempt={}, maxAttempts={}, error={}",
+        log.warn("[날씨 조회] 재시도 nx={}, ny={}, userId={}, petId={}, batchExecutionId={}, attempt={}, maxAttempts={}, reason={}",
                 nx,
                 ny,
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
                 attempt,
                 weatherMaxAttempts,
                 e.getMessage());
 
         if (attempt >= Math.max(weatherMaxAttempts, 1)) {
-          log.error("[WEATHER API ERROR] nx={}, ny={}, msg={}", nx, ny, e.getMessage(), e);
+          log.error("[에러] 날씨 조회 실패 nx={}, ny={}, userId={}, petId={}, batchExecutionId={}, reason={}",
+                  nx,
+                  ny,
+                  RecommendationLogContext.userId(),
+                  RecommendationLogContext.petId(),
+                  RecommendationLogContext.batchExecutionId(),
+                  e.getMessage(),
+                  e);
           return fallbackWeather();
         }
 
@@ -126,7 +145,10 @@ public class WeatherService {
             .windy(false)
             .walkLevel("ERROR")
             .build();
-    log.warn("[날씨 서비스] fallback 날씨 반환 walkLevel={}, precipitationType={}",
+    log.warn("[날씨 조회] fallback 반환 userId={}, petId={}, batchExecutionId={}, walkLevel={}, precipitationType={}",
+            RecommendationLogContext.userId(),
+            RecommendationLogContext.petId(),
+            RecommendationLogContext.batchExecutionId(),
             weatherContext.getWalkLevel(),
             weatherContext.getPrecipitationType());
     return weatherContext;

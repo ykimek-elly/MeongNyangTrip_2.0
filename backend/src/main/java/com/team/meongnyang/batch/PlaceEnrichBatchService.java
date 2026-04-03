@@ -197,7 +197,7 @@ public class PlaceEnrichBatchService {
             results.add(row);
 
             log.info("[샘플검증] id={} '{}' → 네이버:{} 카카오:{} → {}", place.getId(), place.getTitle(),
-                    naver.isActive() ? "✅" : "❌",
+                      naver.isActive() ? "✅" : "❌",
                     kakaoValid ? "✅" : "❌",
                     !keep ? "❌ REJECT" : "✅ KEEP");
 

@@ -28,6 +28,7 @@ public class PetResponseDto {
     private String region;
     private Integer activityRadius;
     private Boolean isRepresentative;
+    private Boolean notifyEnabled;
 
     public static PetResponseDto from(Pet pet) {
         return PetResponseDto.builder()
@@ -45,6 +46,7 @@ public class PetResponseDto {
                 .region(pet.getRegion())
                 .activityRadius(pet.getActivityRadius())
                 .isRepresentative(pet.getIsRepresentative())
+                .notifyEnabled(pet.getNotifyEnabled())
                 .build();
     }
 }

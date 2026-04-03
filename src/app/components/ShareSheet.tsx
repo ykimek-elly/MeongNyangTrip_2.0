@@ -15,7 +15,7 @@ interface ShareSheetProps {
 }
 
 export function ShareSheet({ isOpen, onClose, postId, postImage, postUser }: ShareSheetProps) {
-  const { friends, suggestedFriends, addFriend, sharePost } = useFriendStore();
+  const { friends, suggestedFriends, addFriend, sharePost, fetchFriends, fetchSuggestedFriends } = useFriendStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [showAddFriend, setShowAddFriend] = useState(false);
@@ -32,8 +32,10 @@ export function ShareSheet({ isOpen, onClose, postId, postImage, postUser }: Sha
       setShared(false);
       setShowAddFriend(false);
       setLinkCopied(false);
+      fetchFriends();
+      fetchSuggestedFriends();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchFriends, fetchSuggestedFriends]);
 
   const filteredFriends = friends.filter(
     (f) =>

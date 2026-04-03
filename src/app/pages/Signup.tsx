@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { authApi } from '../api/authApi';
@@ -12,13 +12,16 @@ export function Signup({ onNavigate }: SignupProps) {
   const login = useAppStore(state => state.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [nickname, setNickname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const isValid = email.trim() && password.length >= 6 && nickname.trim() && agreeTerms;
+  const passwordMismatch = passwordConfirm.length > 0 && password !== passwordConfirm;
+  const isValid = email.trim() && password.length >= 6 && password === passwordConfirm && nickname.trim() && agreeTerms;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +48,6 @@ export function Signup({ onNavigate }: SignupProps) {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* 헤더 */}
       <header className="px-5 py-4 flex items-center bg-white sticky top-0 z-10">
         <button onClick={() => onNavigate('login')} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full">
           <ArrowLeft size={24} />
@@ -65,7 +67,7 @@ export function Signup({ onNavigate }: SignupProps) {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">간편 가입하기</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
-              30초면 완료! 가입 후 반려동물 등록까지<br />한 번에 진행할 수 있어요.
+              가입 후 반려동물 등록까지<br />한 번에 진행할 수 있어요.
             </p>
           </div>
 
@@ -144,6 +146,35 @@ export function Signup({ onNavigate }: SignupProps) {
             </div>
 
             <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">비밀번호 확인</label>
+              <div className="relative">
+                <input
+                  type={showPasswordConfirm ? 'text' : 'password'}
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  placeholder="비밀번호를 다시 입력해주세요"
+                  autoComplete="new-password"
+                  className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl focus:bg-white outline-none transition-spring text-sm pr-12 ${
+                    passwordMismatch ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-primary'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPasswordConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {passwordMismatch && (
+                <p className="text-xs text-destructive mt-1 ml-1">비밀번호가 일치하지 않아요</p>
+              )}
+              {passwordConfirm.length > 0 && !passwordMismatch && (
+                <p className="text-xs text-green-500 mt-1 ml-1">비밀번호가 일치해요</p>
+              )}
+            </div>
+
+            <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">닉네임</label>
               <input
                 type="text"
@@ -156,7 +187,7 @@ export function Signup({ onNavigate }: SignupProps) {
             </div>
 
             {/* 약관 동의 */}
-            <label className="flex items-start gap-3 cursor-pointer mt-2 p-3 bg-gray-50 rounded-2xl">
+            <label className="flex items-start gap-3 cursor-pointer p-3 bg-gray-50 rounded-2xl mt-2">
               <input
                 type="checkbox"
                 checked={agreeTerms}
@@ -164,7 +195,7 @@ export function Signup({ onNavigate }: SignupProps) {
                 className="w-5 h-5 mt-0.5 rounded border-gray-300 text-primary accent-[var(--primary)] shrink-0"
               />
               <span className="text-xs text-gray-600 leading-relaxed">
-                <span className="font-bold text-gray-800">이용약관</span> 및 <span className="font-bold text-gray-800">개인정보처리방침</span>에 동의합니다
+                <span className="font-bold text-gray-800">이용약관</span> 및 <span className="font-bold text-gray-800">개인정보처리방침</span>에 동의합니다 <span className="text-destructive">(필수)</span>
               </span>
             </label>
 

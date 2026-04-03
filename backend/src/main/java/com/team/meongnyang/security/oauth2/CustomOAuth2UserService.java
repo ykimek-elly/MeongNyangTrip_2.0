@@ -80,6 +80,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                                     .build());
                         }));
 
+        // 탈퇴 회원이 소셜 재로그인 시 → 계정 재활성화 + 온보딩 재진행
+        if (user.getStatus() == User.Status.DELETED) {
+            user.reactivate();
+            userRepository.save(user);
+            isNew[0] = true;
+        }
+
         return new OAuth2UserPrincipal(user, attributes, isNew[0]);
     }
 

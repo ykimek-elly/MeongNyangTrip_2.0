@@ -38,8 +38,8 @@ export const setupMockApi = () => {
   api.interceptors.request.use((config) => {
     const url = config.url ?? '';
 
-    // ── 장소 목록 ──────────────────────────────────────────────
-    // /admin/* 요청은 mock 하지 않고 실서버로 통과
+    // ── 장소 목록 (MOCK 해제 - 실제 DB 연동) ───────────────────
+    /*
     if (!url.includes('/admin') && (url.includes('/places') || url.includes('/public-places'))) {
       console.warn(`[Mock API] Intercepted request to ${url}. Returning Mock Data instantly.`);
       config.adapter = async () => ({
@@ -47,8 +47,10 @@ export const setupMockApi = () => {
         status: 200, statusText: 'OK', headers: {}, config,
       });
     }
+    */
 
-    // ── 찜하기 토글 POST /wishlists/:placeId ──────────────────
+    // ── 찜하기 토글 POST /wishlists/:placeId (MOCK 해제) ──────
+    /*
     else if (config.method === 'post' && /\/wishlists\/\d+$/.test(url)) {
       const placeId = Number(url.split('/').pop());
       const wishlisted = mockWishlistSet.has(placeId);
@@ -76,8 +78,10 @@ export const setupMockApi = () => {
         status: 200, statusText: 'OK', headers: {}, config,
       });
     }
+    */
 
-    // ── 신규 장소 AI 분석 미리보기 (mock) ────────────────────────
+    // ── 신규 장소 AI 분석 미리보기 (MOCK 해제) ─────────────────
+    /*
     else if (config.method === 'post' && url.includes('/admin/places/analyze')) {
       const body = typeof config.data === 'string' ? JSON.parse(config.data) : (config.data ?? {});
       const hasPhone    = !!body.phone;
@@ -123,16 +127,27 @@ export const setupMockApi = () => {
         status: 200, statusText: 'OK', headers: {}, config,
       });
     }
+    */
 
-    // ── SMS 인증번호 발송 POST /auth/sms/send ─────────────────
-    else if (config.method === 'post' && url.includes('/auth/sms/send')) {
+    // ── 휴대폰 중복확인 GET /auth/check-phone (MOCK 해제 - 실제 DB 연동)
+    /*
+    if (config.method === 'get' && url.includes('/auth/check-phone')) {
+      config.adapter = async () => ({
+        data: { status: 200, message: 'SUCCESS (MOCK)', data: { available: true } },
+        status: 200, statusText: 'OK', headers: {}, config,
+      });
+    }
+    */
+
+    // ── SMS 인증번호 발송 POST /auth/sms/send (백엔드 미구현이므로 유지) ─────────────────
+    if (config.method === 'post' && url.includes('/auth/sms/send')) {
       config.adapter = async () => ({
         data: { status: 200, message: 'SUCCESS (MOCK)', data: null },
         status: 200, statusText: 'OK', headers: {}, config,
       });
     }
 
-    // ── SMS 인증번호 확인 POST /auth/sms/verify ───────────────
+    // ── SMS 인증번호 확인 POST /auth/sms/verify (백엔드 미구현이므로 유지) ───────────────
     else if (config.method === 'post' && url.includes('/auth/sms/verify')) {
       const body = typeof config.data === 'string' ? JSON.parse(config.data) : (config.data ?? {});
       const verified = body.code === '123456';
@@ -142,23 +157,28 @@ export const setupMockApi = () => {
       });
     }
 
-    // ── 아이디 찾기 POST /auth/find-id ────────────────────────
+    // ── 아이디 찾기 POST /auth/find-id (MOCK 해제 - 실제 DB 연동)
+    /*
     else if (config.method === 'post' && url.includes('/auth/find-id')) {
       config.adapter = async () => ({
         data: { status: 200, message: 'SUCCESS (MOCK)', data: { email: 'user***@example.com' } },
         status: 200, statusText: 'OK', headers: {}, config,
       });
     }
+    */
 
-    // ── 임시 비밀번호 발송 POST /auth/reset-password ──────────
+    // ── 임시 비밀번호 발송 POST /auth/reset-password (MOCK 해제 - 실제 DB 연동)
+    /*
     else if (config.method === 'post' && url.includes('/auth/reset-password')) {
       config.adapter = async () => ({
         data: { status: 200, message: 'SUCCESS (MOCK)', data: null },
         status: 200, statusText: 'OK', headers: {}, config,
       });
     }
+    */
 
-    // ── DM: 읽음 처리 PATCH /dms/:partnerId/read ──────────────
+    // ── DM: (MOCK 해제 - 실제 DB 연동) ─────────────────────────
+    /*
     else if (config.method === 'patch' && /\/dms\/.+\/read$/.test(url)) {
       const partnerId = decodeURIComponent(url.split('/dms/')[1].replace('/read', ''));
       const msgs = mockDmMessages[partnerId];
@@ -219,6 +239,7 @@ export const setupMockApi = () => {
         status: 200, statusText: 'OK', headers: {}, config,
       });
     }
+    */
 
     return config;
   });

@@ -9,6 +9,8 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 회원 엔티티다.
@@ -78,11 +80,27 @@ public class User extends BaseEntity {
     @Column
     private LocalDateTime lastNotificationSentAt;
 
+    /** 현재 위치 위도 (미설정 시 null) */
     @Column
-    private double latitude;
+    private Double latitude;
 
+    /** 현재 위치 경도 (미설정 시 null) */
     @Column
-    private double longitude;
+    private Double longitude;
+
+    /** 활동 반경 km (5 / 15 / 30, 기본값 15) */
+    @Column(name = "activity_radius")
+    @Builder.Default
+    private Integer activityRadius = 15;
+
+    /** 활동 지역 텍스트 (예: "서울 강남구") — 알림 발송 및 UI 표시용 */
+    @Column(name = "region", length = 50)
+    private String region;
+
+    /** 반려동물 목록 */
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Pet> pets = new ArrayList<>();
 
     /**
      * 현재 시각 기준으로 알림 발송 시각을 갱신한다.
@@ -131,5 +149,20 @@ public class User extends BaseEntity {
      */
     public void markAsDeleted() {
         this.status = Status.DELETED;
+    }
+
+    /**
+     * 탈퇴 회원이 소셜 재로그인 시 계정을 재활성화한다.
+     */
+    public void reactivate() {
+        this.status = Status.ACTIVE;
+    }
+
+    /** 활동 지역 좌표 + 반경 + 지역명 저장 */
+    public void updateLocation(Double latitude, Double longitude, Integer activityRadius, String region) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        if (activityRadius != null) this.activityRadius = activityRadius;
+        if (region != null && !region.isBlank()) this.region = region;
     }
 }

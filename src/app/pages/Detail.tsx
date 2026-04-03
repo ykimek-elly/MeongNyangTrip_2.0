@@ -215,9 +215,8 @@ export function Detail({ id, onNavigate }: DetailProps) {
         <div className="sticky top-0 z-40 bg-white border-b border-gray-100 flex">
           <button
             onClick={() => setActiveTab('info')}
-            className={`flex-1 py-3 text-[13px] font-bold transition-spring relative ${
-              activeTab === 'info' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className={`flex-1 py-3 text-[13px] font-bold transition-spring relative ${activeTab === 'info' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'
+              }`}
           >
             정보
             {activeTab === 'info' && (
@@ -226,15 +225,13 @@ export function Detail({ id, onNavigate }: DetailProps) {
           </button>
           <button
             onClick={() => setActiveTab('review')}
-            className={`flex-1 py-3 text-[13px] font-bold transition-spring relative ${
-              activeTab === 'review' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className={`flex-1 py-3 text-[13px] font-bold transition-spring relative ${activeTab === 'review' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'
+              }`}
           >
             리뷰
             {reviewCount > 0 && (
-              <span className={`ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
-                activeTab === 'review' ? 'bg-primary/15 text-primary' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <span className={`ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'review' ? 'bg-primary/15 text-primary' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {reviewCount}
               </span>
             )}
@@ -316,11 +313,11 @@ export function Detail({ id, onNavigate }: DetailProps) {
 
             {/* 운영 + 업체 정보 */}
             <div>
-              <h3 className="text-[13px] font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              {/* <h3 className="text-[13px] font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                 업체 정보
                 <div className="flex-1 h-px bg-gray-100" />
                 <span className="text-[10px] bg-green-50 text-green-600 border border-green-200 px-1.5 py-0.5 rounded-full font-medium normal-case tracking-normal">검증된 정보</span>
-              </h3>
+              </h3> */}
               <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="w-7 h-7 flex items-center justify-center bg-white border border-gray-200 rounded-lg shrink-0">
@@ -357,11 +354,11 @@ export function Detail({ id, onNavigate }: DetailProps) {
             {/* AI 분석 섹션 */}
             {hasAiContent && (
               <div>
-                <h3 className="text-[13px] font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                {/* <h3 className="text-[13px] font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                   AI 분석
                   <div className="flex-1 h-px bg-gray-100" />
                   <span className="text-[10px] bg-[#008BFF]/10 text-[#008BFF] border border-[#008BFF]/20 px-1.5 py-0.5 rounded-full font-medium normal-case tracking-normal">AI 생성</span>
-                </h3>
+                </h3> */}
 
                 <div className="space-y-3">
                   {/* AI 추천 별점 근거 */}
@@ -490,7 +487,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                   {place.overview && (
                     <div>
                       <p className="text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1"><FileText size={12} /> 장소 소개</p>
-                      <p className={`text-xs text-gray-600 leading-relaxed ${!showFullDesc ? 'line-clamp-3' : ''}`}>
+                      <p className={`text-xs text-gray-600 leading-relaxed ${!showFullDesc ? 'line-clamp-2' : ''}`}>
                         {place.overview}
                       </p>
                       {place.overview.length > 100 && (
@@ -606,11 +603,10 @@ export function Detail({ id, onNavigate }: DetailProps) {
               <button
                 onClick={handleSubmitReview}
                 disabled={!isLoggedIn || reviewRating === 0 || !reviewText.trim()}
-                className={`w-full mt-3 py-2.5 rounded-xl text-sm font-bold transition-spring ${
-                  isLoggedIn && reviewRating > 0 && reviewText.trim()
-                    ? 'bg-primary text-white hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.97]'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
+                className={`w-full mt-3 py-2.5 rounded-xl text-sm font-bold transition-spring ${isLoggedIn && reviewRating > 0 && reviewText.trim()
+                  ? 'bg-primary text-white hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.97]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
               >
                 리뷰 등록하기
               </button>
@@ -679,11 +675,10 @@ export function Detail({ id, onNavigate }: DetailProps) {
         <div className="flex gap-3">
           <button
             onClick={() => toggleWishlist(id)}
-            className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 flex items-center justify-center gap-1.5 transition-spring hover:scale-[1.02] active:scale-[0.97] ${
-              isWishlisted
-                ? 'bg-destructive/5 border-destructive text-destructive'
-                : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300'
-            }`}
+            className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 flex items-center justify-center gap-1.5 transition-spring hover:scale-[1.02] active:scale-[0.97] ${isWishlisted
+              ? 'bg-destructive/5 border-destructive text-destructive'
+              : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300'
+              }`}
           >
             <Heart size={16} className={isWishlisted ? 'fill-destructive text-destructive' : ''} />
             {isWishlisted ? '찜 완료' : '찜하기'}
@@ -724,7 +719,7 @@ export function Detail({ id, onNavigate }: DetailProps) {
                 AI 추천 가이드
               </h3>
               <button onClick={() => setShowAiPolicy(false)} className="text-gray-400 hover:text-gray-600 p-1">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             </div>
             <div className="space-y-3 text-xs text-gray-600 leading-relaxed">

@@ -19,6 +19,7 @@ const toPetRequest = (pet: PetInfo): PetRequest => ({
   preferredPlace: pet.preferredPlace,
   region: pet.region,
   activityRadius: pet.activityRadius,
+  notifyEnabled: pet.notifyEnabled,
 });
 
 /**
@@ -81,13 +82,17 @@ interface AppState {
   email: string;
   profileImage: string;
   isAdmin: boolean;        // 관리자 여부 (JWT role 기반, 로그인 시 세팅)
+  isSocial: boolean;       // 소셜 로그인 여부 (온보딩 분기용)
   pets: PetInfo[];                  // 다중 등록 (2026-03-13 확정)
   hasCompletedOnboarding: boolean;
   wishlist: number[];
   savedRoutes: SavedRoute[];
   userLocation: UserLocation;
+  userRegionSido: string;
+  userRegionDistrict: string;
+  userActivityRadius: 5 | 15 | 30;
 
-  login: (username: string, email?: string, userId?: number, profileImage?: string, isAdmin?: boolean) => void;
+  login: (username: string, email?: string, userId?: number, profileImage?: string, isAdmin?: boolean, isSocial?: boolean, region?: string, activityRadius?: number) => void;
   logout: () => void;
   updateProfile: (data: { username?: string; email?: string }) => void;
   completeOnboarding: () => void;
@@ -103,6 +108,7 @@ interface AppState {
   addSavedRoute: (route: SavedRoute) => void;
   removeSavedRoute: (id: string) => void;
   setUserLocation: (location: UserLocation) => void;
+  setUserRegion: (sido: string, district: string, radius: 5 | 15 | 30) => void;
 
   // 공공API 장소 목록 데이터
   places: PlaceDto[];
@@ -115,6 +121,7 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       isLoggedIn: false,
       isAdmin: false,
+      isSocial: false,
       userId: null,
       username: '게스트',
       email: '',
@@ -124,19 +131,28 @@ export const useAppStore = create<AppState>()(
       wishlist: [],
       savedRoutes: [],
       userLocation: { lat: null, lng: null, address: null },
+      userRegionSido: '',
+      userRegionDistrict: '',
+      userActivityRadius: 15,
       places: [],
       isLoadingPlaces: false,
 
       // TODO: [DB 연동] POST /api/auth/login → Step 4에서 JWT 토큰 기반으로 전환 (userId 자동 세팅)
-      login: (username, email, userId, profileImage, isAdmin) => {
-        set({
+      login: (username, email, userId, profileImage, isAdmin, isSocial, region, activityRadius) => {
+        const _sido = region ? region.split(' ')[0] : undefined;
+        const _district = region ? region.split(' ').slice(1).join(' ') : undefined;
+        set((state) => ({
           isLoggedIn: true,
           isAdmin: isAdmin ?? false,
+          isSocial: isSocial ?? false,
           username,
           email: email || '',
           userId: userId ?? null,
           profileImage: profileImage || '',
-        });
+          userRegionSido: _sido !== undefined ? _sido : state.userRegionSido,
+          userRegionDistrict: _district !== undefined ? _district : state.userRegionDistrict,
+          userActivityRadius: activityRadius !== undefined ? (activityRadius as 5|15|30) : state.userActivityRadius,
+        }));
         // 로그인 후 서버 찜 목록 동기화
         wishlistApi.getMyWishlists()
           .then((items) => set({ wishlist: items.map(i => i.placeId) }))
@@ -158,8 +174,9 @@ export const useAppStore = create<AppState>()(
                 personality: p.personality ?? undefined,
                 preferredPlace: p.preferredPlace ?? undefined,
                 region: p.region ?? undefined,
-                activityRadius: p.activityRadius ?? undefined,
+                activityRadius: (p.activityRadius ?? undefined) as 5 | 15 | 30 | undefined,
                 isRepresentative: p.isRepresentative,
+                notifyEnabled: p.notifyEnabled ?? true,
               }))
             }))
             .catch(() => {});
@@ -283,6 +300,7 @@ export const useAppStore = create<AppState>()(
       removeSavedRoute: (id) => set((state) => ({ savedRoutes: state.savedRoutes.filter(r => r.id !== id) })),
 
       setUserLocation: (location) => set({ userLocation: location }),
+      setUserRegion: (sido, district, radius) => set({ userRegionSido: sido, userRegionDistrict: district, userActivityRadius: radius }),
 
       // 공공API 장소 목록 연동
       fetchPlaces: async () => {

@@ -67,7 +67,7 @@ public class AiLogService {
 
     AiResponseLog aiResponseLog = AiResponseLog.builder()
             .userId(user.getUserId())
-            .dogId(pet.getPetId())
+            .petId(pet.getPetId())
             .batchExecutionId(batchExecutionId)
             .modelName("gemini-2.5-flash-lite")
             .prompt(prompt)

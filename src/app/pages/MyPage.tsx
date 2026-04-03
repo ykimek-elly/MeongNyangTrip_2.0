@@ -9,13 +9,19 @@ import type { PetInfo } from '../store/useAppStore';
 import { AnimatePresence } from 'motion/react';
 import { motion } from 'motion/react';
 import { checkInApi } from '../api/checkInApi';
+import { authApi } from '../api/authApi';
+import regionCoordinates from '../../../exports/region-coordinates.json';
+
+const SIDO_LIST = Object.keys(regionCoordinates) as (keyof typeof regionCoordinates)[];
+const DEFAULT_LAT = 37.5172;
+const DEFAULT_LNG = 127.0473;
 
 interface MyPageProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
 export function MyPage({ onNavigate }: MyPageProps) {
-  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet, isAdmin, username, places, fetchPlaces } = useAppStore();
+  const { wishlist, savedRoutes, removeSavedRoute, pets, addPet, updatePet, removePet, setRepresentativePet, isAdmin, username, places, fetchPlaces, userRegionSido, userRegionDistrict, userActivityRadius, setUserRegion } = useAppStore();
   const { posts } = useFeedStore();
   const { conversations, getUnreadTotal } = useDMStore();
 
@@ -23,6 +29,43 @@ export function MyPage({ onNavigate }: MyPageProps) {
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
   const [deleteTargetIndex, setDeleteTargetIndex] = React.useState<number | null>(null);
   const [petMood, setPetMood] = React.useState<'good' | 'normal' | 'bad' | null>(null);
+
+  // 활동 지역 & 반경 편집 (store 초기값 반영)
+  const [locationSido, setLocationSido] = React.useState(userRegionSido);
+  const [locationDistrict, setLocationDistrict] = React.useState(userRegionDistrict);
+  const [locationRadius, setLocationRadius] = React.useState<5 | 15 | 30>(userActivityRadius);
+  const [isSavingLocation, setIsSavingLocation] = React.useState(false);
+  const [locationSaved, setLocationSaved] = React.useState(false);
+
+  const locationDistricts = locationSido
+    ? Object.keys((regionCoordinates as Record<string, Record<string, { lat: number; lng: number }>>)[locationSido] ?? {})
+    : [];
+  const locationCoords = locationSido && locationDistrict
+    ? (regionCoordinates as Record<string, Record<string, { lat: number; lng: number }>>)[locationSido]?.[locationDistrict]
+    : null;
+
+  const handleSaveLocation = async () => {
+    setIsSavingLocation(true);
+    setLocationSaved(false);
+    try {
+      const regionText = locationSido && locationDistrict
+        ? `${locationSido} ${locationDistrict}`
+        : locationSido || '';
+      await authApi.saveLocation(
+        locationCoords?.lat ?? DEFAULT_LAT,
+        locationCoords?.lng ?? DEFAULT_LNG,
+        locationRadius,
+        regionText
+      );
+      setUserRegion(locationSido, locationDistrict, locationRadius);
+      setLocationSaved(true);
+      setTimeout(() => setLocationSaved(false), 2000);
+    } catch {
+      // 실패 시 조용히 처리
+    } finally {
+      setIsSavingLocation(false);
+    }
+  };
 const [totalVisits, setTotalVisits] = React.useState(0);
 
 React.useEffect(() => {
@@ -328,6 +371,86 @@ React.useEffect(() => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 활동 지역 & 반경 */}
+      <div className="px-6 mb-8">
+        <h6 className="font-bold text-gray-800 mb-4 ml-1 flex items-center gap-2">
+          <MapPin className="text-primary" size={18} />
+          활동 지역 & 반경
+        </h6>
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 space-y-4">
+          {/* 지역 드롭다운 */}
+          <div>
+            <p className="text-xs font-bold text-gray-600 mb-2">활동 지역 <span className="text-gray-400 font-normal">(미선택 시 서울 강남구 기본)</span></p>
+            <div className="flex gap-2">
+              <select
+                value={locationSido}
+                onChange={e => { setLocationSido(e.target.value); setLocationDistrict(''); setLocationSaved(false); }}
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none focus:border-primary transition-spring"
+              >
+                <option value="">시·도 선택</option>
+                {SIDO_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select
+                value={locationDistrict}
+                onChange={e => { setLocationDistrict(e.target.value); setLocationSaved(false); }}
+                disabled={!locationSido}
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none focus:border-primary transition-spring disabled:text-gray-300"
+              >
+                <option value="">시·군·구 선택</option>
+                {locationDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* 반경 세그먼트 바 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-gray-600">활동 반경</p>
+              <span className="text-[11px] text-gray-400">선택한 지역 기준으로 장소를 추천해드려요</span>
+            </div>
+            <div className="flex rounded-2xl overflow-hidden border-2 border-gray-100 h-12">
+              {([
+                { value: 5  as const, label: '5km',   desc: '가까운 거리' },
+                { value: 15 as const, label: '15km',  desc: '중간 거리' },
+                { value: 30 as const, label: '먼거리', desc: '넓은 범위' },
+              ]).map((rs, idx) => {
+                const filled = idx <= [5, 15, 30].indexOf(locationRadius);
+                return (
+                  <button
+                    key={rs.value}
+                    type="button"
+                    onClick={() => { setLocationRadius(rs.value); setLocationSaved(false); }}
+                    className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-spring active:opacity-80 ${
+                      filled ? 'bg-primary' : 'bg-white'
+                    } ${idx > 0 ? 'border-l-2 border-gray-100' : ''}`}
+                  >
+                    <span className={`text-xs font-bold ${filled ? 'text-white' : 'text-gray-600'}`}>{rs.label}</span>
+                    <span className={`text-[9px] ${filled ? 'text-white/80' : 'text-gray-400'}`}>{rs.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-between mt-1 px-1">
+              <span className="text-[9px] text-gray-400">집 근처</span>
+              <span className="text-[9px] text-gray-400">광역 탐색</span>
+            </div>
+          </div>
+
+          {/* 저장 버튼 */}
+          <button
+            onClick={handleSaveLocation}
+            disabled={isSavingLocation}
+            className={`w-full py-3 rounded-2xl text-sm font-bold transition-spring active:scale-[0.98] ${
+              locationSaved
+                ? 'bg-green-500 text-white'
+                : 'bg-primary text-white hover:bg-primary/90'
+            }`}
+          >
+            {isSavingLocation ? '저장 중...' : locationSaved ? '✓ 저장됐어요' : '저장하기'}
+          </button>
+        </div>
       </div>
 
       {/* Wishlist */}

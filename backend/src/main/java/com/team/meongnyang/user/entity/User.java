@@ -170,4 +170,9 @@ public class User extends BaseEntity {
     public void updatePhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
+
+    /** 알림 설정을 업데이트한다. */
+    public void updateNotificationEnabled(boolean enabled) {
+        this.notificationEnabled = enabled;
+    }
 }

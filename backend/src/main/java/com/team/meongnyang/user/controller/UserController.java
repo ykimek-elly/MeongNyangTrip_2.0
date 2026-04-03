@@ -68,7 +68,18 @@ public class UserController {
     public ResponseEntity<Void> updatePhone(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody PhoneRequest request) {
-        userService.updatePhoneNumber(userDetails.getUsername(), request.getPhoneNumber());
+        userService.updatePhoneNumber(userDetails.getUsername(), request.getPhone());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * PATCH /api/v1/users/notifications — 알림 설정 업데이트.
+     */
+    @PatchMapping("/notifications")
+    public ResponseEntity<Void> updateNotifications(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody NotificationRequest request) {
+        userService.updateNotificationEnabled(userDetails.getUsername(), request.isNotificationEnabled());
         return ResponseEntity.ok().build();
     }
 
@@ -84,6 +95,12 @@ public class UserController {
     @Getter
     @NoArgsConstructor
     static class PhoneRequest {
-        private String phoneNumber;
+        private String phone;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    static class NotificationRequest {
+        private boolean notificationEnabled;
     }
 }

@@ -89,8 +89,10 @@ interface AppState {
   userRegionSido: string;
   userRegionDistrict: string;
   userActivityRadius: 5 | 15 | 30;
+  phoneNumber: string;
+  notificationEnabled: boolean;
 
-  login: (username: string, email?: string, userId?: number, profileImage?: string, isAdmin?: boolean, isSocial?: boolean, region?: string, activityRadius?: number) => void;
+  login: (username: string, email?: string, userId?: number, profileImage?: string, isAdmin?: boolean, isSocial?: boolean, region?: string, activityRadius?: number, phoneNumber?: string, notificationEnabled?: boolean) => void;
   logout: () => void;
   updateProfile: (data: { username?: string; email?: string }) => void;
   completeOnboarding: () => void;
@@ -132,11 +134,13 @@ export const useAppStore = create<AppState>()(
       userRegionSido: '',
       userRegionDistrict: '',
       userActivityRadius: 15,
+      phoneNumber: '',
+      notificationEnabled: true,
       places: [],
       isLoadingPlaces: false,
 
       // TODO: [DB 연동] POST /api/auth/login → Step 4에서 JWT 토큰 기반으로 전환 (userId 자동 세팅)
-      login: (username, email, userId, profileImage, isAdmin, isSocial, region, activityRadius) => {
+      login: (username, email, userId, profileImage, isAdmin, isSocial, region, activityRadius, phoneNumber, notificationEnabled) => {
         const _sido = region ? region.split(' ')[0] : undefined;
         const _district = region ? region.split(' ').slice(1).join(' ') : undefined;
         set((state) => ({
@@ -150,6 +154,8 @@ export const useAppStore = create<AppState>()(
           userRegionSido: _sido !== undefined ? _sido : state.userRegionSido,
           userRegionDistrict: _district !== undefined ? _district : state.userRegionDistrict,
           userActivityRadius: activityRadius !== undefined ? (activityRadius as 5|15|30) : state.userActivityRadius,
+          phoneNumber: phoneNumber || state.phoneNumber,
+          notificationEnabled: notificationEnabled !== undefined ? notificationEnabled : state.notificationEnabled,
         }));
         // 로그인 후 서버 찜 목록 동기화
         wishlistApi.getMyWishlists()

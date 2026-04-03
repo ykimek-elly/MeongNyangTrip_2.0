@@ -32,7 +32,12 @@ export function Login({ onNavigate }: LoginProps) {
       const res = await authApi.login(email, password);
       localStorage.setItem('accessToken', res.token);
       localStorage.setItem('refreshToken', res.refreshToken);
-      login(res.nickname, res.email, res.userId, res.profileImage, res.role === 'ADMIN');
+      login(
+        res.nickname, res.email, res.userId, res.profileImage,
+        res.role === 'ADMIN', false,
+        res.region, res.activityRadius,
+        res.phoneNumber, res.notificationEnabled
+      );
       onNavigate('home');
     } catch {
       setError('이메일 또는 비밀번호가 올바르지 않습니다.');

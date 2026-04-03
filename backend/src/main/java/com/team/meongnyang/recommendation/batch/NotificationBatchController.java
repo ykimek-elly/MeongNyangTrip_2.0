@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/admin/batch/recommendation-notification")
+  @RequestMapping("/api/v1/admin/batch/recommendation-notification")
 public class NotificationBatchController {
 
   private final NotificationBatchService notificationBatchService;

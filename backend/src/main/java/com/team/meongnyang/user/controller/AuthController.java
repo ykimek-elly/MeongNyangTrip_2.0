@@ -63,8 +63,16 @@ public class AuthController {
                 newAccessToken, newRefreshToken,
                 user.getUserId(), user.getEmail(),
                 user.getNickname(), user.getProfileImage(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getRegion(), user.getActivityRadius()
         ));
+    }
+
+    /** 휴대폰 번호 중복 확인 — true: 사용 가능, false: 중복 */
+    @GetMapping("/check-phone")
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkPhone(@RequestParam String phone) {
+        boolean available = !userRepository.existsByPhoneNumber(phone);
+        return ResponseEntity.ok(ApiResponse.success("OK", Map.of("available", available)));
     }
 
     /** 아이디 찾기 */

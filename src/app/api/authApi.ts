@@ -12,9 +12,15 @@ export const authApi = {
   },
 
   /** POST /api/v1/auth/signup → 회원가입 + Access Token + Refresh Token 발급 */
-  signup: async (email: string, password: string, nickname: string): Promise<AuthResponseDto> => {
-    const { data } = await api.post<AuthResponseDto>(`${AUTH_BASE}/signup`, { email, password, nickname });
+  signup: async (email: string, password: string, nickname: string, phoneNumber?: string, notificationEnabled?: boolean): Promise<AuthResponseDto> => {
+    const { data } = await api.post<AuthResponseDto>(`${AUTH_BASE}/signup`, { email, password, nickname, phoneNumber, notificationEnabled });
     return data;
+  },
+
+  /** GET /api/v1/auth/check-phone → 휴대폰 번호 중복 확인 */
+  checkPhone: async (phone: string): Promise<boolean> => {
+    const { data } = await api.get<{ status: number; data: { available: boolean } }>(`${AUTH_BASE}/check-phone`, { params: { phone } });
+    return data.data.available;
   },
 
   /**
@@ -57,6 +63,11 @@ export const authApi = {
   /** PATCH /api/v1/users/phone */
   savePhone: async (phone: string): Promise<void> => {
     await api.patch(`${USER_BASE}/phone`, { phone });
+  },
+
+  /** PATCH /api/v1/users/location — 활동 지역 좌표 + 반경 + 지역명 저장 */
+  saveLocation: async (latitude?: number, longitude?: number, activityRadius?: number, region?: string): Promise<void> => {
+    await api.patch(`${USER_BASE}/location`, { latitude, longitude, activityRadius, region });
   },
 
   /** POST /api/v1/auth/find-id */

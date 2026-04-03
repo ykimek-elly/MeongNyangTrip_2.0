@@ -1,7 +1,6 @@
 import React from 'react';
-import { Home, BotMessageSquare, User } from 'lucide-react';
+import { Home, BotMessageSquare, Map } from 'lucide-react';
 import {
-  MapNavOutlineIcon, MapNavFilledIcon,
   ChatBubbleOutlineIcon, ChatBubbleFilledIcon,
   UserCircleOutlineIcon, UserCircleFilledIcon,
 } from './CustomIcon';
@@ -33,7 +32,7 @@ const TABS: NavItem[] = [
   { id: 'home',          label: '홈',     icon: Home },
   { id: 'list',          label: '목록',   icon: ListIcon },
   { id: 'ai-walk-guide', label: 'AI산책', icon: BotMessageSquare },
-  { id: 'map',           label: '지도',   icon: MapNavOutlineIcon },
+  { id: 'map',           label: '지도',   icon: Map },
   { id: 'lounge',        label: '라운지', icon: ChatBubbleOutlineIcon },
   { id: 'mypage',        label: '마이',   icon: UserCircleOutlineIcon },
 ];

@@ -62,9 +62,13 @@ const MOCK_WALK_DATA = {
 export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
   const { isLoggedIn, getRepresentativePet, addSavedRoute } = useAppStore();
   const pet = getRepresentativePet();
+  const searchParams = new URLSearchParams(window.location.search);
+  const isFromKakao = searchParams.get('from') === 'kakao';
+
   const [isLoading, setIsLoading] = useState(false);
-  const [showRecommendation, setShowRecommendation] = useState(false);
+  const [showRecommendation, setShowRecommendation] = useState(isFromKakao);
   const [showPopup, setShowPopup] = useState(false);
+  const [showPastRecommendations, setShowPastRecommendations] = useState(false);
   const [selectedDogSize, setSelectedDogSize] = useState<string>(pet?.size || 'MEDIUM');
   const [selectedActivity, setSelectedActivity] = useState<string>(pet?.activity || 'NORMAL');
 
@@ -127,14 +131,13 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
       </header>
 
       <div className="px-5 py-6">
-        {!showRecommendation ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            className="space-y-6"
-          >
-            {/* Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+          className="space-y-6"
+        >
+          {/* Hero Section */}
             <div className="text-center mb-8 animate-fade-in-up">
               <motion.div
                 initial={{ scale: 0 }}
@@ -186,11 +189,88 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                     </p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700 mt-3 bg-white p-3 rounded-xl shadow-sm">
+                
+                <div className="text-sm text-gray-700 mt-3 bg-white p-4 rounded-xl shadow-sm">
                   등록된 정보를 바탕으로 {pet.name}에게 딱 맞는 산책 코스를 추천해 드릴게요!
-                </p>
+                  
+                  {/* 카톡 추천 알림 정보 UI */}
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-primary font-medium">
+                        <Sparkles size={16} />
+                        추천 알림 정보 확인
+                      </div>
+                      <button 
+                        onClick={() => setShowPastRecommendations(!showPastRecommendations)}
+                        className="text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors"
+                      >
+                        {showPastRecommendations ? '닫기' : '최근 7일 추천 보기'}
+                      </button>
+                    </div>
+
+                    {/* 오늘 날짜 추천 정보 */}
+                    <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
+                      <div className="font-bold text-gray-800 mb-2">
+                        {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} 맞춤 추천
+                      </div>
+                      
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div className="flex items-start gap-2">
+                          <span className="font-semibold text-primary min-w-[55px] mt-0.5">추천장소</span>
+                          <button 
+                            onClick={() => onNavigate('detail')}
+                            className="text-left font-medium underline decoration-primary/30 underline-offset-4 hover:text-primary transition-colors"
+                          >
+                            한강공원 산책로 (상세보기)
+                          </button>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-semibold text-primary min-w-[55px] mt-0.5">AI 소견</span>
+                          <p className="leading-relaxed bg-white/60 p-2 rounded-lg text-xs md:text-sm">
+                            {pet.name}의 요즘 활동량이 훌륭하네요! 오늘은 관절이 무리하지 않도록 딱딱한 아스팔트보다는
+                            흙바닥이 일부분 구성된 숲길이나 공원 산책을 권장합니다. 강한 자외선이 줄어드는 오후 시간대가 가장 최적기입니다.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 최근 7일 추천 보기 영역 */}
+                {showPastRecommendations && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-3 flex flex-col gap-2 overflow-hidden"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+                      const pastDate = new Date();
+                      pastDate.setDate(pastDate.getDate() - day);
+                      return (
+                        <div key={day} className="flex items-center justify-between bg-white/60 p-3 rounded-xl border border-primary/10 hover:bg-white transition-colors cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-sm">
+                              {pastDate.getDate()}일
+                            </div>
+                            <div>
+                              <div className="font-bold text-gray-800 text-sm">맞춤 추천 코스</div>
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                {pastDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                                <span>·</span>
+                                {day % 2 === 0 ? '맑음' : '구름많음'}
+                              </div>
+                            </div>
+                          </div>
+                          <button className="flex items-center gap-1 text-primary text-xs font-bold">
+                            다시보기
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                )}
               </div>
-            ) : (
+            ) : !showRecommendation && (
               <>
                 {/* Dog Size Selection */}
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
@@ -250,31 +330,49 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
             )}
 
             {/* Generate Button */}
-            <button
-              onClick={handleGenerateGuide}
-              disabled={isLoading}
-              className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-md hover:bg-primary/90 transition-spring hover:scale-[1.02] active:scale-[0.97] flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  AI 분석 중...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={20} />
-                  맞춤 산책 가이드 받기
-                </>
-              )}
-            </button>
+            {!showRecommendation && (
+              <button
+                onClick={handleGenerateGuide}
+                disabled={isLoading}
+                className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-md hover:bg-primary/90 transition-spring hover:scale-[1.02] active:scale-[0.97] flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    AI 분석 중...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    맞춤 산책 가이드 받기
+                  </>
+                )}
+              </button>
+            )}
           </motion.div>
-        ) : (
+
+        {showRecommendation && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
             className="space-y-4"
           >
+            {isFromKakao && (
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-3xl p-5 mb-6 shadow-sm">
+                <h3 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                  <Sparkles size={20} className="text-yellow-600" />
+                  카카오톡 단문 알림 피드백 🔔
+                </h3>
+                <div className="text-sm text-gray-800 leading-relaxed bg-white/60 rounded-xl p-4 shadow-sm border border-yellow-100">
+                  <strong className="block mb-2 text-primary">{pet?.name || '우리 아이'}의 건강한 하루를 위한 AI 종합 소견 (장문)</strong>
+                  요즘 활동량이 훌륭하네요! 오늘은 관절이 다치지 않도록 지나치게 딱딱한 아스팔트보다는
+                  흙바닥이 일부분 있는 숲길이나 공원 산책을 권장합니다. 오후 시간대가 가장 최적기예요.
+                  아래 추천 코스 상세 위치를 확인해보세요!
+                </div>
+              </div>
+            )}
+
             {/* Summary Card */}
             <div className="bg-gradient-to-br from-primary to-secondary rounded-3xl p-6 text-white shadow-md">
               <div className="flex items-start justify-between mb-4">
@@ -328,7 +426,14 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                         <span>{route.difficulty}</span>
                       </div>
                     </div>
-                    <MapPin className="text-primary" size={20} />
+                    {isFromKakao ? (
+                      <button className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors">
+                        <MapPin size={14} />
+                        위치확인
+                      </button>
+                    ) : (
+                      <MapPin className="text-primary" size={20} />
+                    )}
                   </div>
                 ))}
               </div>

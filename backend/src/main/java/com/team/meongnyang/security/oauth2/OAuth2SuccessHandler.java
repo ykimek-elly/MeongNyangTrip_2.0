@@ -40,6 +40,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String refreshToken = jwtUtil.generateRefreshToken(email);
         refreshTokenService.save(email, refreshToken);
 
+        String region       = user.getRegion() != null ? user.getRegion() : "";
+        Integer activityRadius = user.getActivityRadius() != null ? user.getActivityRadius() : 15;
+
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("token", accessToken)
                 .queryParam("refreshToken", refreshToken)
@@ -48,6 +51,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .queryParam("email", URLEncoder.encode(email, StandardCharsets.UTF_8))
                 .queryParam("profileImage", URLEncoder.encode(profileImage, StandardCharsets.UTF_8))
                 .queryParam("isNewUser", principal.isNewUser())
+                .queryParam("region", URLEncoder.encode(region, StandardCharsets.UTF_8))
+                .queryParam("activityRadius", activityRadius)
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);

@@ -56,6 +56,8 @@ export interface AuthResponseDto {
   nickname: string;
   profileImage?: string;
   role?: 'USER' | 'ADMIN';
+  region?: string;
+  activityRadius?: 5 | 15 | 30;
 }
 
 /**
@@ -74,7 +76,10 @@ export interface PetDto {
   petActivity: 'LOW' | 'NORMAL' | 'HIGH';
   personality?: string | null;
   preferredPlace?: string | null;
+  region?: string | null;
+  activityRadius?: number | null;
   isRepresentative: boolean;
+  notifyEnabled?: boolean | null;
 }
 
 /**
@@ -94,6 +99,7 @@ export interface PetRequest {
   preferredPlace?: string;
   region?: string;
   activityRadius?: number;
+  notifyEnabled?: boolean;
 }
 
 /**

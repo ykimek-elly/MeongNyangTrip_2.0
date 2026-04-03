@@ -91,6 +91,17 @@ function RootAdapter() {
 
   const currentPath = location.pathname.substring(1) || 'home';
 
+  /* 발표자료 postMessage 리스너 — 같은 오리진의 presentation에서 페이지 이동 명령 수신 */
+  React.useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== 'PRESENTATION_NAV') return;
+      const { page, params } = e.data;
+      if (page) handleNavigate(page, params);
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [isLoggedIn]);
+
   /* detail/:id, dm/:partner 경로도 숨김 처리 */
   const showHeader = !HIDDEN_HEADER_PAGES.includes(currentPath) && !currentPath.startsWith('detail') && !currentPath.startsWith('dm');
   const showBottomNav = !HIDDEN_NAV_PAGES.includes(currentPath) && !currentPath.startsWith('detail') && !currentPath.startsWith('dm');
@@ -142,6 +153,7 @@ function RootAdapter() {
         )}
 
         <main
+          id="main-scroll"
           ref={contentRef}
           className={`flex-1 flex flex-col overflow-x-hidden relative min-h-0 ${currentPath === 'map' || currentPath === 'list' ? 'overflow-hidden pt-0' : 'overflow-y-auto pt-2.5'}`}
           style={{ paddingBottom: showBottomNav ? 'calc(80px + env(safe-area-inset-bottom, 0px))' : '0px' }}

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@Table(name = "ai_response_logs")
 @Getter @Setter
 @Builder
 @NoArgsConstructor
@@ -17,7 +18,7 @@ public class AiResponseLog extends BaseEntity {
 
   private Long userId;
 
-  private Long dogId;
+  private Long petId;
 
   private String batchExecutionId;
 

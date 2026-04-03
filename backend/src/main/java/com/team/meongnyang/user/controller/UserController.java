@@ -4,6 +4,8 @@ import com.team.meongnyang.user.dto.ChangePasswordRequest;
 import com.team.meongnyang.user.dto.UpdateProfileRequest;
 import com.team.meongnyang.user.service.UserService;
 import jakarta.validation.Valid;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,5 +47,26 @@ public class UserController {
             @AuthenticationPrincipal UserDetails userDetails) {
         userService.deleteAccount(userDetails.getUsername());
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * PATCH /api/v1/users/location — 활동 지역 좌표 저장.
+     * 온보딩 완료 시 호출. latitude/longitude 미전달 시 서울 강남구 기본값 적용.
+     */
+    @PatchMapping("/location")
+    public ResponseEntity<Void> saveLocation(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody LocationRequest request) {
+        userService.saveLocation(userDetails.getUsername(), request.getLatitude(), request.getLongitude(), request.getActivityRadius(), request.getRegion());
+        return ResponseEntity.ok().build();
+    }
+
+    @Getter
+    @NoArgsConstructor
+    static class LocationRequest {
+        private Double latitude;
+        private Double longitude;
+        private Integer activityRadius;
+        private String region;
     }
 }

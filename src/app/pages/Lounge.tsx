@@ -555,7 +555,7 @@ function FeedView({
       className="pb-4"
     >
       {posts.map((post) => (
-        <article key={post.id} className="bg-white mb-4 border-b border-gray-100 last:border-0">
+        <article key={post.id} className="bg-white mb-4 border-b border-gray-100 last:border-0 overflow-visible">
           {/* 게시글 헤더 */}
           <div className="flex items-center justify-between p-3 relative">
             <div className="flex items-center gap-3">
@@ -584,7 +584,7 @@ function FeedView({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-3 top-12 z-20 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-[120px]"
+                    className="absolute right-3 top-12 z-[9999] bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-[120px]"
                   >
                     <button
                       className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -666,10 +666,10 @@ function FeedView({
             <AnimatePresence>
               {commentingPostId === post.id && (
                 <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="overflow-visible"
                 >
                   {post.commentList.slice(-3).map((c) => (
                     <div key={c.id} className="flex items-start justify-between mb-1 relative text-sm min-h-[24px]">
@@ -708,7 +708,7 @@ function FeedView({
                       </div>
 
                       {/* 댓글 ··· 버튼 — 본인 댓글만 표시 */}
-                      {editingComment?.commentId !== c.id && c.isOwner && (
+                      {editingComment?.commentId !== c.id && (c.isOwner || isAdmin) && (
                         <div className="relative flex-shrink-0">
                           <button
                             onClick={() => setCommentMenuId(commentMenuId === c.id ? null : c.id)}
@@ -719,7 +719,7 @@ function FeedView({
                           {commentMenuId === c.id && (
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setCommentMenuId(null)} />
-                              <div className="absolute right-0 top-6 z-20 bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                              <div className="absolute right-0 bottom-6 z-[9999] bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
                                 <button
                                   className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                                   onClick={() => {
@@ -1082,7 +1082,7 @@ style={{
                             <span className="text-gray-800 font-medium leading-snug break-all flex-1">{c.content}</span>
                           )}
                           {/* 본인 댓글만 ··· 버튼 표시 */}
-                          {editingComment?.commentId !== c.id && c.isOwner && (
+                          {editingComment?.commentId !== c.id && (c.isOwner || isAdmin) && (
                             <div className="relative flex-shrink-0">
                               <button
                                 onClick={() => setCommentMenuId(commentMenuId === c.id ? null : c.id)}
@@ -1093,7 +1093,7 @@ style={{
                               {commentMenuId === c.id && (
                                 <>
                                   <div className="fixed inset-0 z-10" onClick={() => setCommentMenuId(null)} />
-                                  <div className="absolute right-0 bottom-5 z-[100] bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
+                                  <div className="absolute right-0 bottom-6 z-[9999] bg-white shadow-xl border border-gray-100 rounded-lg overflow-hidden min-w-[70px]">
                                     <button
                                       className="w-full px-3 py-2 text-[11px] text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                                       onClick={() => {

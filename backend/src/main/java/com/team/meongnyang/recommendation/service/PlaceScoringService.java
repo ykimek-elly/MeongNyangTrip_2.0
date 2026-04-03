@@ -53,6 +53,14 @@ public class PlaceScoringService {
     private static final double QUALITY_MAX = 20.0;
     private static final double SENTIMENT_MAX = 15.0;
     private static final double CONTEXT_MAX = 20.0;
+    private static final String[] QUIET_INDOOR_KEYWORDS = {"실내", "카페", "조용", "휴식", "아늑", "차분", "편안", "라운지"};
+    private static final String[] ACTIVE_OUTDOOR_KEYWORDS = {"공원", "산책로", "운동장", "야외", "실외", "러닝", "잔디", "넓음", "트레킹"};
+    private static final String[] WIDE_SPACE_KEYWORDS = {"넓", "넓음", "광장", "잔디", "공원", "산책로", "운동장", "야외"};
+    private static final String[] CROWDED_KEYWORDS = {"붐빔", "혼잡", "페스티벌", "행사", "시장", "핫플", "웨이팅", "대기", "복잡"};
+    private static final String[] PET_FRIENDLY_KEYWORDS = {"반려견", "반려동물", "동반", "펫", "애견", "펫프렌들리"};
+    private static final String[] CONVENIENCE_KEYWORDS = {"주차", "휴식", "배변", "물", "테라스", "그늘", "벤치", "의자"};
+    private static final String[] SAFETY_COMFORT_KEYWORDS = {"넓", "쾌적", "조용", "안전", "청결", "편안"};
+    private static final String[] OUTDOOR_PLACE_KEYWORDS = {"실외", "야외", "공원", "산책로", "운동장", "테라스", "잔디"};
 
     private final DistanceCalculator distanceCalculator;
 
@@ -256,6 +264,8 @@ public class PlaceScoringService {
                 bonusResult.toBreakdown()
         );
         List<ScoreDetail> scoreDetails = flattenDetails(breakdowns);
+        List<String> appliedBoosts = extractAppliedBoosts(scoreDetails);
+        List<String> appliedPenalties = buildAppliedPenalties(place, pet, weather, diversityPenalty);
         Map<String, Double> sectionScores = buildSectionScores(
                 petResult.score(),
                 weatherResult.score(),
@@ -283,6 +293,8 @@ public class PlaceScoringService {
                 .sectionScores(sectionScores)
                 .breakdowns(breakdowns)
                 .scoreDetails(scoreDetails)
+                .appliedBoosts(appliedBoosts)
+                .appliedPenalties(appliedPenalties)
                 .summary(summary)
                 .reason(reason)
                 .build();
@@ -513,13 +525,13 @@ public class PlaceScoringService {
         String reason = null;
 
         if (directMatch && semanticMatch) {
-            score = 2.4;
+            score = 3.8;
             reason = "대표견 선호 장소와 직접 일치하고 장소 성격도 유사합니다.";
         } else if (directMatch) {
-            score = 2.0;
+            score = 3.0;
             reason = "대표견 선호 장소와 직접 일치하는 키워드가 감지되었습니다.";
         } else if (semanticMatch) {
-            score = 1.5;
+            score = 2.2;
             reason = "대표견 선호 장소와 장소 카테고리/태그/설명이 유사하게 매칭되었습니다.";
         }
 
@@ -543,8 +555,8 @@ public class PlaceScoringService {
         double penalty = 0.0;
         String searchable = searchablePlaceText(place); //
         boolean outdoor = isOutdoorPlace(place);
-        boolean crowded = hasAnyKeyword(searchable, "붐빔", "혼잡", "페스티벌", "행사", "시장", "핫플");
-        boolean activeOutdoor = hasAnyKeyword(searchable, "공원", "산책로", "운동장", "러닝", "잔디");
+        boolean crowded = hasAnyKeyword(searchable, CROWDED_KEYWORDS);
+        boolean activeOutdoor = hasAnyKeyword(searchable, ACTIVE_OUTDOOR_KEYWORDS);
 
         if (pet != null && pet.getPetAge() != null && pet.getPetAge() >= 10 && outdoor && activeOutdoor) {
             penalty += 2.5;
@@ -561,8 +573,61 @@ public class PlaceScoringService {
         if (pet != null && pet.getPetActivity() == Pet.PetActivity.LOW && activeOutdoor) {
             penalty += 1.0;
         }
+        penalty += personalizationMismatchPenalty(place, pet, searchable, crowded, activeOutdoor, outdoor);
 
         return round(clamp(penalty, 0.0, 8.0));
+    }
+
+    private double personalizationMismatchPenalty(
+            Place place,
+            Pet pet,
+            String searchable,
+            boolean crowded,
+            boolean activeOutdoor,
+            boolean outdoor
+    ) {
+        if (pet == null) {
+            return 0.0;
+        }
+
+        double penalty = 0.0;
+        boolean quietIndoor = hasAnyKeyword(searchable, QUIET_INDOOR_KEYWORDS);
+        boolean wideOutdoor = hasAnyKeyword(searchable, WIDE_SPACE_KEYWORDS);
+
+        if (pet.getPetActivity() == Pet.PetActivity.LOW && activeOutdoor && !quietIndoor) {
+            penalty += 1.5;
+        }
+        if (pet.getPetSize() == Pet.PetSize.LARGE && !outdoor && !wideOutdoor) {
+            penalty += 1.2;
+        }
+        if (isSensitivePet(pet) && (crowded || outdoor) && !quietIndoor) {
+            penalty += 1.5;
+        }
+
+        String preferredPlace = RecommendationTextUtils.normalizeTrimLower(pet.getPreferredPlace());
+        if (!preferredPlace.isBlank()) {
+            boolean directMatch = hasKeyword(searchable, preferredPlace);
+            boolean semanticMatch = matchesPreferredPlace(place, searchable, preferredPlace);
+            if (!directMatch && !semanticMatch) {
+                penalty += 1.0;
+            }
+        }
+
+        int personalizationSignals = 0;
+        if (!normalize(place.getOverview()).isBlank()) {
+            personalizationSignals++;
+        }
+        if (!normalize(place.getBlogPositiveTags()).isBlank()) {
+            personalizationSignals++;
+        }
+        if (!normalize(place.getTags()).isBlank()) {
+            personalizationSignals++;
+        }
+        if (personalizationSignals == 0) {
+            penalty += 0.8;
+        }
+
+        return penalty;
     }
 
     /**
@@ -584,12 +649,12 @@ public class PlaceScoringService {
         int age = pet.getPetAge();
         // 연령대에 따라 선호할 가능성이 높은 장소 특성을 반영
         if (age <= 2) {
-            double score = hasAnyKeyword(searchable, "운동장", "공원", "잔디", "산책로") ? 10.5 : 7.5;
+            double score = hasAnyKeyword(searchable, ACTIVE_OUTDOOR_KEYWORDS) ? 10.5 : 7.5;
             details.add(detail("반려동물 적합도", "나이", score, 12.0, "어린 반려견은 활동 가능한 공간에서 강점을 가집니다."));
             return score;
         }
         if (age >= 10) {
-            double score = hasAnyKeyword(searchable, "실내", "카페", "휴식", "조용") ? 10.0 : 6.5;
+            double score = hasAnyKeyword(searchable, QUIET_INDOOR_KEYWORDS) ? 10.0 : 6.5;
             details.add(detail("반려동물 적합도", "나이", score, 12.0, "노령견은 휴식 가능하고 자극이 적은 장소를 선호합니다."));
             return score;
         }
@@ -606,9 +671,9 @@ public class PlaceScoringService {
         }
         // 활동량에 맞는 공간 성격(활동형/휴식형)을 가점 요소로 반영
         double score = switch (pet.getPetActivity()) {
-            case HIGH -> hasAnyKeyword(searchable, "공원", "산책로", "운동장", "야외") ? 11.0 : 6.5;
+            case HIGH -> hasAnyKeyword(searchable, ACTIVE_OUTDOOR_KEYWORDS) ? 11.0 : 6.5;
             case NORMAL -> 8.5;
-            case LOW -> hasAnyKeyword(searchable, "실내", "카페", "휴식", "조용") ? 10.0 : 6.0;
+            case LOW -> hasAnyKeyword(searchable, QUIET_INDOOR_KEYWORDS) ? 10.0 : 6.0;
         };
         details.add(detail("반려동물 적합도", "활동량", score, 12.0, "활동량과 장소 성격의 궁합을 반영했습니다."));
         return score;
@@ -621,9 +686,9 @@ public class PlaceScoringService {
         }
 
         double score = switch (pet.getPetSize()) {
-            case LARGE -> hasAnyKeyword(searchable, "넓", "공원", "산책로", "운동장") ? 8.5 : 5.5;
+            case LARGE -> hasAnyKeyword(searchable, WIDE_SPACE_KEYWORDS) ? 8.5 : 5.5;
             case MEDIUM -> 7.0;
-            case SMALL -> hasAnyKeyword(searchable, "실내", "카페", "소형", "아늑") ? 8.0 : 6.5;
+            case SMALL -> hasAnyKeyword(searchable, concat(QUIET_INDOOR_KEYWORDS, "소형")) ? 8.0 : 6.5;
         };
         details.add(detail("반려동물 적합도", "크기", score, 10.0, "반려견 크기와 장소 규모/밀도를 반영했습니다."));
         return score;
@@ -637,13 +702,13 @@ public class PlaceScoringService {
         }
 
         double score = 8.0;
-        if ((personality.contains("활발") || personality.contains("에너지")) && hasAnyKeyword(searchable, "공원", "산책로", "운동장")) {
+        if ((personality.contains("활발") || personality.contains("에너지")) && hasAnyKeyword(searchable, ACTIVE_OUTDOOR_KEYWORDS)) {
             score += 1.5;
         }
-        if ((personality.contains("예민") || personality.contains("소심") || personality.contains("겁")) && hasAnyKeyword(searchable, "조용", "실내", "아늑")) {
+        if ((personality.contains("예민") || personality.contains("소심") || personality.contains("겁")) && hasAnyKeyword(searchable, concat(QUIET_INDOOR_KEYWORDS, "아늑"))) {
             score += 1.5;
         }
-        if ((personality.contains("사교") || personality.contains("친화")) && hasAnyKeyword(searchable, "카페", "라운지", "동반")) {
+        if ((personality.contains("사교") || personality.contains("친화")) && hasAnyKeyword(searchable, "카페", "라운지", "동반", "공원")) {
             score += 1.0;
         }
 
@@ -660,10 +725,10 @@ public class PlaceScoringService {
         }
 
         double score = 4.5;
-        if ((breed.contains("리트리버") || breed.contains("보더") || breed.contains("허스키")) && hasAnyKeyword(searchable, "공원", "산책로")) {
+        if ((breed.contains("리트리버") || breed.contains("보더") || breed.contains("허스키")) && hasAnyKeyword(searchable, ACTIVE_OUTDOOR_KEYWORDS)) {
             score += 1.0;
         }
-        if ((breed.contains("말티즈") || breed.contains("푸들") || breed.contains("포메")) && hasAnyKeyword(searchable, "실내", "카페")) {
+        if ((breed.contains("말티즈") || breed.contains("푸들") || breed.contains("포메")) && hasAnyKeyword(searchable, QUIET_INDOOR_KEYWORDS)) {
             score += 0.8;
         }
 
@@ -714,10 +779,10 @@ public class PlaceScoringService {
 
     private double scorePetFriendlyMetadata(Place place, String searchable, List<ScoreDetail> details) {
         double score = 0.0;
-        if (hasAnyKeyword(searchable, "반려견", "반려동물", "동반", "펫", "애견")) {
+        if (hasAnyKeyword(searchable, PET_FRIENDLY_KEYWORDS)) {
             score += 4.5;
         }
-        if (hasAnyKeyword(searchable, "주차", "휴식", "배변", "물", "테라스")) {
+        if (hasAnyKeyword(searchable, CONVENIENCE_KEYWORDS)) {
             score += 1.5;
         }
 
@@ -728,10 +793,10 @@ public class PlaceScoringService {
 
     private double scoreSafetyAndComfort(Place place, String searchable, List<ScoreDetail> details) {
         double score = 4.5;
-        if (hasAnyKeyword(searchable, "넓", "쾌적", "조용", "안전")) {
+        if (hasAnyKeyword(searchable, SAFETY_COMFORT_KEYWORDS)) {
             score += 1.5;
         }
-        if (hasAnyKeyword(searchable, "혼잡", "붐빔", "행사장")) {
+        if (hasAnyKeyword(searchable, concat(CROWDED_KEYWORDS, "행사장"))) {
             score -= 1.0;
         }
 
@@ -743,18 +808,37 @@ public class PlaceScoringService {
     private double scorePlaceQuality(Place place, List<ScoreDetail> details) {
         double rating = place.getRating() == null ? 0.0 : place.getRating();
         int reviewCount = place.getReviewCount() == null ? 0 : place.getReviewCount();
+        double aiRating = place.getAiRating() == null ? 0.0 : place.getAiRating();
+        int blogCount = place.getBlogCount() == null ? 0 : place.getBlogCount();
 
-        double score = Math.min(2.5, rating * 0.5);
-        if (reviewCount >= 100) {
-            score += 1.5;
-        } else if (reviewCount >= 30) {
-            score += 1.0;
-        } else if (reviewCount > 0) {
-            score += 0.5;
+        double ratingSignal = 0.0;
+        if (reviewCount > 0 && rating > 0.0) {
+            ratingSignal = Math.min(2.5, rating * 0.5);
+        } else if (aiRating > 0.0) {
+            ratingSignal = clamp(aiRating * 0.45, 0.8, 2.2);
+        } else if (blogCount >= 200) {
+            ratingSignal = 1.0;
         }
 
+        double reliabilitySignal = 0.0;
+        if (reviewCount >= 100) {
+            reliabilitySignal = 1.5;
+        } else if (reviewCount >= 30) {
+            reliabilitySignal = 1.0;
+        } else if (reviewCount > 0) {
+            reliabilitySignal = 0.5;
+        } else if (blogCount >= 1000) {
+            reliabilitySignal = 1.4;
+        } else if (blogCount >= 200) {
+            reliabilitySignal = 1.0;
+        } else if (blogCount >= 30) {
+            reliabilitySignal = 0.6;
+        }
+
+        double score = clamp(ratingSignal + reliabilitySignal, 0.0, 4.0);
+
         score = clamp(score, 0.0, 4.0);
-        details.add(detail("장소 환경 적합도", "품질 지표", score, 4.0, "평점과 리뷰 수를 보조 지표로 사용했습니다."));
+        details.add(detail("장소 환경 적합도", "품질 지표", score, 4.0, "공개 평점이 없으면 AI 평점과 블로그 표본 수로 보정했습니다."));
         return score;
     }
 
@@ -801,6 +885,8 @@ public class PlaceScoringService {
                 .sectionScores(buildSectionScores(breakdowns))
                 .breakdowns(breakdowns)
                 .scoreDetails(flattenDetails(breakdowns))
+                .appliedBoosts(List.of())
+                .appliedPenalties(List.of())
                 .summary(buildSummary(place, breakdowns, penaltyScore))
                 .reason(buildReason(place, null, breakdowns, penaltyScore))
                 .build();
@@ -1208,6 +1294,87 @@ public class PlaceScoringService {
                 .toList();
     }
 
+    private List<String> extractAppliedBoosts(List<ScoreDetail> scoreDetails) {
+        if (scoreDetails == null || scoreDetails.isEmpty()) {
+            return List.of();
+        }
+
+        return scoreDetails.stream()
+                .filter(detail -> detail.getScore() > 0.0)
+                .filter(detail -> detail.getScore() >= Math.max(1.0, detail.getMaxScore() * 0.45))
+                .sorted(Comparator
+                        .comparingDouble((ScoreDetail detail) -> detail.getScore() / Math.max(detail.getMaxScore(), 1.0))
+                        .reversed()
+                        .thenComparing(ScoreDetail::getScore, Comparator.reverseOrder()))
+                .limit(3)
+                .map(detail -> "%s +%.1f".formatted(detail.getItem(), round(detail.getScore())))
+                .toList();
+    }
+
+    private List<String> buildAppliedPenalties(Place place, Pet pet, WeatherContext weather, double diversityPenalty) {
+        List<String> penalties = new ArrayList<>();
+        String searchable = searchablePlaceText(place);
+        boolean outdoor = isOutdoorPlace(place);
+        boolean crowded = hasAnyKeyword(searchable, CROWDED_KEYWORDS);
+        boolean activeOutdoor = hasAnyKeyword(searchable, ACTIVE_OUTDOOR_KEYWORDS);
+        boolean quietIndoor = hasAnyKeyword(searchable, QUIET_INDOOR_KEYWORDS);
+        boolean wideOutdoor = hasAnyKeyword(searchable, WIDE_SPACE_KEYWORDS);
+
+        if (pet != null && pet.getPetAge() != null && pet.getPetAge() >= 10 && outdoor && activeOutdoor) {
+            penalties.add("노령 반려동물 야외활동 -2.5");
+        }
+        if (weather != null && weather.isRaining() && outdoor) {
+            penalties.add("비 오는 날 야외 -2.0");
+        }
+        if (weather != null && weather.isWindy() && outdoor) {
+            penalties.add("강풍 야외 -1.0");
+        }
+        if (pet != null && isSensitivePet(pet) && crowded) {
+            penalties.add("예민 성향과 혼잡 장소 -1.5");
+        }
+        if (pet != null && pet.getPetActivity() == Pet.PetActivity.LOW && activeOutdoor) {
+            penalties.add("저활동 성향과 활동형 장소 -1.0");
+        }
+        if (pet != null && pet.getPetActivity() == Pet.PetActivity.LOW && activeOutdoor && !quietIndoor) {
+            penalties.add("저활동 맞춤도 부족 -1.5");
+        }
+        if (pet != null && pet.getPetSize() == Pet.PetSize.LARGE && !outdoor && !wideOutdoor) {
+            penalties.add("대형견 대비 공간 협소 추정 -1.2");
+        }
+        if (pet != null && isSensitivePet(pet) && (crowded || outdoor) && !quietIndoor) {
+            penalties.add("예민 성향 대비 안정성 부족 -1.5");
+        }
+        if (pet != null) {
+            String preferredPlace = RecommendationTextUtils.normalizeTrimLower(pet.getPreferredPlace());
+            if (!preferredPlace.isBlank()) {
+                boolean directMatch = hasKeyword(searchable, preferredPlace);
+                boolean semanticMatch = matchesPreferredPlace(place, searchable, preferredPlace);
+                if (!directMatch && !semanticMatch) {
+                    penalties.add("선호 장소와 비매칭 -1.0");
+                }
+            }
+        }
+
+        int personalizationSignals = 0;
+        if (!normalize(place.getOverview()).isBlank()) {
+            personalizationSignals++;
+        }
+        if (!normalize(place.getBlogPositiveTags()).isBlank()) {
+            personalizationSignals++;
+        }
+        if (!normalize(place.getTags()).isBlank()) {
+            personalizationSignals++;
+        }
+        if (personalizationSignals == 0) {
+            penalties.add("개인화 신호 부족 -0.8");
+        }
+        if (diversityPenalty > 0.0) {
+            penalties.add("최근 추천 중복 방지 -%.1f".formatted(round(diversityPenalty)));
+        }
+
+        return penalties.stream().limit(4).toList();
+    }
+
     /**
      * 점수가 높은 상위 섹션들을 중심으로 사용자에게 보여줄 요약 문장을 생성합니다.
      *
@@ -1317,37 +1484,43 @@ public class PlaceScoringService {
 
     private boolean isIndoorPlace(Place place) {
         String searchable = searchablePlaceText(place);
-        return hasAnyKeyword(searchable, "실내", "카페", "전시", "박물관", "라운지")
+        return hasAnyKeyword(searchable, concat(QUIET_INDOOR_KEYWORDS, "전시", "박물관"))
                 || ("DINING".equalsIgnoreCase(place.getCategory()) && !hasAnyKeyword(searchable, "야외", "실외"));
     }
 
     private boolean isOutdoorPlace(Place place) {
         String searchable = searchablePlaceText(place);
-        return hasAnyKeyword(searchable, "실외", "야외", "공원", "산책로", "운동장", "테라스");
+        return hasAnyKeyword(searchable, OUTDOOR_PLACE_KEYWORDS);
     }
 
     private boolean matchesPreferredPlace(Place place, String searchable, String preferredPlace) {
         if (preferredPlace.contains("실내카페")) {
             return "DINING".equalsIgnoreCase(place.getCategory())
-                    && hasAnyKeyword(searchable, "실내", "카페", "실내가능", "라운지", "휴식", "동반");
+                    && hasAnyKeyword(searchable, concat(QUIET_INDOOR_KEYWORDS, "실내가능", "동반"));
         }
         if (preferredPlace.contains("공원")) {
             return "PLACE".equalsIgnoreCase(place.getCategory())
-                    && hasAnyKeyword(searchable, "공원", "야외", "실외", "산책로", "잔디", "테라스");
+                    && hasAnyKeyword(searchable, concat(OUTDOOR_PLACE_KEYWORDS, "넓음"));
         }
         if (preferredPlace.contains("넓은 야외")) {
             return "PLACE".equalsIgnoreCase(place.getCategory())
-                    && hasAnyKeyword(searchable, "넓", "야외", "실외", "공원", "산책로", "운동장", "잔디");
+                    && hasAnyKeyword(searchable, WIDE_SPACE_KEYWORDS);
         }
         return false;
     }
 
     private boolean hasRichDescription(Place place) {
-        return place.getDescription() != null && place.getDescription().trim().length() >= 40;
+        String description = normalize(place.getDescription());
+        String overview = normalize(place.getOverview());
+        return description.length() >= 40 || overview.length() >= 60;
     }
 
     private boolean hasRichTags(Place place) {
-        return place.getTags() != null && place.getTags().split(",").length >= 3;
+        String tags = normalize(place.getTags());
+        String positiveTags = normalize(place.getBlogPositiveTags());
+        int tagCount = tags.isBlank() ? 0 : tags.split(",").length;
+        int positiveTagCount = positiveTags.isBlank() ? 0 : positiveTags.split(",").length;
+        return tagCount >= 3 || positiveTagCount >= 2;
     }
 
     private boolean isSensitivePet(Pet pet) {
@@ -1387,8 +1560,16 @@ public class PlaceScoringService {
                         RecommendationTextUtils.normalizeTrimLower(place.getCategory()),
                         RecommendationTextUtils.normalizeTrimLower(place.getTitle()),
                         RecommendationTextUtils.normalizeTrimLower(place.getDescription()),
-                        RecommendationTextUtils.normalizeTrimLower(place.getTags())
+                        RecommendationTextUtils.normalizeTrimLower(place.getOverview()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getTags()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getBlogPositiveTags()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getBlogNegativeTags()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getPetPolicy()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getPetFacility()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getChkPetInside()),
+                        RecommendationTextUtils.normalizeTrimLower(place.getAccomCountPet())
                 ).stream()
+                .filter(text -> !text.isBlank())
                 .reduce((a, b) -> a + " " + b)
                 .orElse("");
     }
@@ -1437,6 +1618,13 @@ public class PlaceScoringService {
             }
         }
         return false;
+    }
+
+    private String[] concat(String[] keywords, String... extraKeywords) {
+        String[] result = new String[keywords.length + extraKeywords.length];
+        System.arraycopy(keywords, 0, result, 0, keywords.length);
+        System.arraycopy(extraKeywords, 0, result, keywords.length, extraKeywords.length);
+        return result;
     }
 
     /**

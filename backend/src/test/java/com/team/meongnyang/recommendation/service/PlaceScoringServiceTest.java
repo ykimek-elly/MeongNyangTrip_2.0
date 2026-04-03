@@ -64,6 +64,59 @@ class PlaceScoringServiceTest {
     }
 
     @Test
+    @DisplayName("description과 tags가 비어도 overview와 블로그 신호를 반영한다")
+    void scorePlaces_usesOverviewAndBlogSignalsWhenDescriptionAndTagsAreBlank() {
+        User user = User.builder()
+                .userId(1L)
+                .email("user@example.com")
+                .password("encoded-password")
+                .nickname("tester")
+                .latitude(37.5665)
+                .longitude(126.9780)
+                .build();
+
+        when(distanceCalculator.calculateDistanceKm(anyDouble(), anyDouble(), anyDouble(), anyDouble())).thenReturn(1.0);
+
+        Place enrichedPlace = Place.builder()
+                .id(1L)
+                .title("Signal Rich Place")
+                .address("서울")
+                .latitude(37.27)
+                .longitude(127.01)
+                .category("PLACE")
+                .overview("반려견과 산책하기 좋고 조용한 공원으로 넓은 잔디와 산책로가 잘 정비되어 있습니다.")
+                .blogPositiveTags("산책,조용,넓음")
+                .aiRating(3.8)
+                .blogCount(1200)
+                .isVerified(true)
+                .build();
+
+        Place sparsePlace = Place.builder()
+                .id(2L)
+                .title("Sparse Place")
+                .address("서울")
+                .latitude(37.27)
+                .longitude(127.01)
+                .category("PLACE")
+                .aiRating(2.2)
+                .blogCount(1)
+                .isVerified(true)
+                .build();
+
+        List<ScoredPlace> rankedPlaces = placeScoringService.scorePlaces(
+                List.of(sparsePlace, enrichedPlace),
+                user,
+                null,
+                null
+        );
+
+        assertThat(rankedPlaces).hasSize(2);
+        assertThat(rankedPlaces.get(0).getPlace().getId()).isEqualTo(1L);
+        assertThat(rankedPlaces.get(0).getEnvironmentFitScore()).isGreaterThan(rankedPlaces.get(1).getEnvironmentFitScore());
+        assertThat(rankedPlaces.get(0).getBonusScore()).isGreaterThan(rankedPlaces.get(1).getBonusScore());
+    }
+
+    @Test
     @DisplayName("후보가 적으면 다양성 페널티를 완화한다")
     void scorePlaces_relaxesDiversityPenaltyWhenCandidatesAreFew() {
         when(distanceCalculator.calculateDistanceKm(anyDouble(), anyDouble(), anyDouble(), anyDouble())).thenReturn(1.0);
@@ -217,6 +270,8 @@ class PlaceScoringServiceTest {
         assertThat(rankedPlaces).hasSize(2);
         assertThat(rankedPlaces.get(0).getPlace().getId()).isEqualTo(1L);
         assertThat(rankedPlaces.get(0).getWeatherFitScore()).isGreaterThan(rankedPlaces.get(1).getWeatherFitScore());
+        assertThat(rankedPlaces.get(0).getAppliedBoosts()).isNotEmpty();
+        assertThat(rankedPlaces.get(1).getAppliedPenalties()).isNotEmpty();
     }
 
     @Test

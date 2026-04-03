@@ -28,6 +28,8 @@ public class ScoredPlace {
     private Map<String, Double> sectionScores;
     private List<ScoreBreakdown> breakdowns;
     private List<ScoreDetail> scoreDetails;
+    private List<String> appliedBoosts;
+    private List<String> appliedPenalties;
     private String summary;
     private String reason;
 }

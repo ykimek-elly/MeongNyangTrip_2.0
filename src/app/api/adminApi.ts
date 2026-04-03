@@ -42,14 +42,14 @@ export const adminApi = {
   },
 
   // ── 파이프라인 V3 메인 ────────────────────────────────────────────────────
-  /** STEP 1 — KTO + KCISA 공공데이터 동시 수집 (raw 임시 저장, 검증 전) */
-  runCollectBatch: () => api.post('/admin/batch/collect'),
+  /** STEP 1 — KTO 장소 데이터 수집 */
+  runCollectBatch: () => api.post('/admin/batch/places'),
 
-  /** STEP 2 — 소스간 중복 제거 (제목 유사도 ≥ 90% + 좌표 50m 이내 → 하나만 유지) */
-  runDedupBatch: () => api.post('/admin/batch/dedup'),
+  /** STEP 2 — KCISA 문화시설 데이터 수집 */
+  runDedupBatch: () => api.post('/admin/batch/culture'),
 
-  /** STEP 3 — 카카오 + 네이버 교차검증 → 유사도 기준 ACTIVE/PENDING/REJECTED 분류 */
-  runVerifyBatch: () => api.post('/admin/batch/verify'),
+  /** STEP 3 — 교차검증 + 보강 + 상태 반영 */
+  runVerifyBatch: () => api.post('/admin/batch/enrich'),
 
   /** STEP 4 — Gemini Vision 이미지 적합성 검증 (부적합 → imageUrl null화) */
   runValidateImagesBatch: () => api.post('/admin/batch/validate-images'),

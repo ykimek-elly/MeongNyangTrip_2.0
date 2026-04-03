@@ -19,4 +19,11 @@
   "phoneNumber" : "",
   "notificationEnabled" : true,
   "signedUpAt" : "2026-04-02T17:13:21"
+}, {
+  "userId" : 590,
+  "email" : "test1@test.com",
+  "nickname" : "qqq",
+  "phoneNumber" : "",
+  "notificationEnabled" : true,
+  "signedUpAt" : "2026-04-03T14:38:49"
 } ]

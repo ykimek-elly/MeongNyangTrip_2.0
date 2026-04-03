@@ -14,22 +14,32 @@ export function OAuthCallback() {
   const login = useAppStore(state => state.login);
 
   useEffect(() => {
-    const token        = searchParams.get('token');
-    const refreshToken = searchParams.get('refreshToken');
-    const nickname     = searchParams.get('nickname');
-    const email        = searchParams.get('email');
-    const userId       = searchParams.get('userId');
-    const profileImage = searchParams.get('profileImage');
-    const region       = searchParams.get('region');
-    const activityRadius = searchParams.get('activityRadius');
+    const params = Object.fromEntries(searchParams.entries());
+    const { 
+      token, 
+      refreshToken, 
+      nickname, 
+      email, 
+      userId, 
+      profileImage, 
+      region, 
+      activityRadius, 
+      isNewUser: isNewUserStr 
+    } = params;
 
-    if (token) {
+    if (!token) {
+      console.error('OAuth 인증 실패: 토큰이 없습니다.');
+      navigate('/login?error=auth_failed', { replace: true });
+      return;
+    }
+
+    try {
       localStorage.setItem('accessToken', token);
       if (refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
       }
 
-      const isNewUser = searchParams.get('isNewUser') === 'true';
+      const isNewUser = isNewUserStr === 'true';
       const payload = JSON.parse(atob(token.split('.')[1]));
       const isAdmin = payload.role === 'ADMIN' || payload.role === 'ROLE_ADMIN';
       login(
@@ -46,13 +56,15 @@ export function OAuthCallback() {
       if (isNewUser) {
         navigate('/onboarding', { replace: true });
       } else {
+        // 기존 사용자는 온보딩 단계를 스킵함
         useAppStore.getState().completeOnboarding();
         navigate('/', { replace: true });
       }
-    } else {
-      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('OAuth 인증 처리 중 오류 발생:', err);
+      navigate('/login?error=process_failed', { replace: true });
     }
-  }, []);
+  }, [searchParams, navigate, login]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">

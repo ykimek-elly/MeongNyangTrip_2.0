@@ -50,6 +50,7 @@ public class AuthService {
                 .notificationEnabled(request.getNotificationEnabled() != null ? request.getNotificationEnabled() : true)
                 .build();
 
+        @SuppressWarnings("null")
         User saved = userRepository.save(user);
         signupExportService.export(saved);
 

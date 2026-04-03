@@ -47,6 +47,4 @@ public class PetRequestDto {
     private String region;
 
     private Integer activityRadius;
-
-    private Boolean notifyEnabled;
 }

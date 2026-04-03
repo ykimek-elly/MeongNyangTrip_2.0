@@ -79,7 +79,6 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
   const [atmospheres, setAtmospheres]     = useState<string[]>(
     initialData?.preferredPlace ? initialData.preferredPlace.split(',').map(s => s.trim()).filter(Boolean) : []
   );
-  const [notifyEnabled, setNotifyEnabled] = useState(initialData?.notifyEnabled ?? true);
 
   const showRepresentativeToggle = !isEdit && !!hasExistingPets;
 
@@ -101,7 +100,6 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
       isRepresentative: setAsRepresentative,
       personality: personality || undefined,
       preferredPlace: atmospheres.length > 0 ? atmospheres.join(',') : undefined,
-      notifyEnabled,
     });
   };
 
@@ -438,28 +436,7 @@ export function PetProfileForm({ initialData, hasExistingPets, onSubmit, onClose
                   </div>
                 </div>
 
-                {/* ⑤ 알림 수신 */}
-                <div
-                  onClick={() => setNotifyEnabled(prev => !prev)}
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border-2 cursor-pointer transition-spring ${
-                    notifyEnabled ? 'border-primary bg-primary/5' : 'border-gray-100 bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${notifyEnabled ? 'bg-primary text-white' : 'bg-gray-200 text-gray-400'}`}>
-                      {notifyEnabled ? <Bell size={18} /> : <BellOff size={18} />}
-                    </div>
-                    <div>
-                      <div className={`text-sm font-bold ${notifyEnabled ? 'text-primary' : 'text-gray-500'}`}>
-                        맞춤 알림 {notifyEnabled ? '수신 동의' : '수신 안 함'}
-                      </div>
-                      <div className="text-[11px] text-gray-400">날씨·장소·이벤트 알림</div>
-                    </div>
-                  </div>
-                  <div className={`w-11 h-6 rounded-full transition-spring relative ${notifyEnabled ? 'bg-primary' : 'bg-gray-300'}`}>
-                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-spring ${notifyEnabled ? 'left-5' : 'left-0.5'}`} />
-                  </div>
-                </div>
+
 
                 {/* 등록/수정 버튼 */}
                 <button

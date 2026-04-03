@@ -19,7 +19,6 @@ const toPetRequest = (pet: PetInfo): PetRequest => ({
   preferredPlace: pet.preferredPlace,
   region: pet.region,
   activityRadius: pet.activityRadius,
-  notifyEnabled: pet.notifyEnabled,
 });
 
 /**
@@ -57,7 +56,6 @@ export interface PetInfo {
   region?: string;                      // 지역 선택 (시도 + 시군구, 알림 서비스용)
   activityRadius?: 5 | 15 | 30;        // 활동 반경 (km)
   preferredCategories?: ('PLACE' | 'STAY' | 'DINING')[];  // 선호 카테고리
-  notifyEnabled?: boolean;              // 맞춤 알림 수신 동의
 }
 
 export interface SavedRoute {
@@ -176,7 +174,6 @@ export const useAppStore = create<AppState>()(
                 region: p.region ?? undefined,
                 activityRadius: (p.activityRadius ?? undefined) as 5 | 15 | 30 | undefined,
                 isRepresentative: p.isRepresentative,
-                notifyEnabled: p.notifyEnabled ?? true,
               }))
             }))
             .catch(() => {});

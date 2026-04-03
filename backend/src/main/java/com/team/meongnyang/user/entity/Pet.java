@@ -83,10 +83,6 @@ public class Pet extends BaseEntity {
     @Builder.Default
     private Boolean isRepresentative = false;
 
-    @Column(name = "notify_enabled", nullable = false)
-    @Builder.Default
-    private Boolean notifyEnabled = true;
-
     public enum PetType {
         강아지, 고양이
     }
@@ -106,7 +102,7 @@ public class Pet extends BaseEntity {
     public void update(String petName, PetType petType, String petBreed, PetGender petGender,
                        PetSize petSize, Integer petAge, BigDecimal petWeight,
                        PetActivity petActivity, String personality, String preferredPlace,
-                       String region, Integer activityRadius, Boolean notifyEnabled) {
+                       String region, Integer activityRadius) {
         this.petName = petName;
         this.petType = petType;
         this.petBreed = petBreed;
@@ -119,7 +115,6 @@ public class Pet extends BaseEntity {
         this.preferredPlace = preferredPlace;
         this.region = region;
         this.activityRadius = activityRadius;
-        this.notifyEnabled = notifyEnabled != null ? notifyEnabled : true;
     }
 
     public void setRepresentative(boolean isRepresentative) {

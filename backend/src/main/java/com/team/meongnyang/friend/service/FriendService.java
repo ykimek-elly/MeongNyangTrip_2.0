@@ -1,5 +1,7 @@
 package com.team.meongnyang.friend.service;
 
+import com.team.meongnyang.exception.BusinessException;
+import com.team.meongnyang.exception.ErrorCode;
 import com.team.meongnyang.friend.dto.FriendDto;
 import com.team.meongnyang.friend.dto.ShareRequest;
 import com.team.meongnyang.friend.entity.Friend;
@@ -26,7 +28,7 @@ public class FriendService {
 
     @Transactional(readOnly = true)
     public List<FriendDto> getFriends(String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         return friendRepository.findByUser(user).stream()
                 .map(friend -> convertToDto(friend.getFriendUser(), true))
                 .collect(Collectors.toList());
@@ -34,7 +36,7 @@ public class FriendService {
 
     @Transactional(readOnly = true)
     public List<FriendDto> getSuggestedFriends(String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         List<User> allUsers = userRepository.findAll();
         return allUsers.stream()
                 .filter(u -> !u.getUserId().equals(user.getUserId()))
@@ -46,31 +48,39 @@ public class FriendService {
 
     @Transactional
     public void addFriend(String email, Long friendUserId) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        User friendUser = userRepository.findById(friendUserId).orElseThrow(() -> new RuntimeException("Friend user not found"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        
+        @SuppressWarnings("null")
+        User friendUser = userRepository.findById(friendUserId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "Friend user not found"));
         
         if (!friendRepository.existsByUserAndFriendUser(user, friendUser)) {
-            friendRepository.save(Friend.builder()
+            @SuppressWarnings("null")
+            Friend saved = Friend.builder()
                     .user(user)
                     .friendUser(friendUser)
-                    .build());
+                    .build();
+            friendRepository.save(saved);
         }
     }
 
     @Transactional
     public void sharePost(String email, ShareRequest request) {
-        User sender = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        User sender = userRepository.findByEmail(email).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         
         for (String friendIdStr : request.getFriendIds()) {
             Long friendId = Long.parseLong(friendIdStr);
-            User receiver = userRepository.findById(friendId).orElseThrow(() -> new RuntimeException("Receiver not found"));
             
-            shareRecordRepository.save(ShareRecord.builder()
+            @SuppressWarnings("null")
+            User receiver = userRepository.findById(friendId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "Receiver not found"));
+            
+            @SuppressWarnings("null")
+            ShareRecord record = ShareRecord.builder()
                     .postId(request.getPostId())
                     .sender(sender)
                     .receiver(receiver)
                     .message(request.getMessage())
-                    .build());
+                    .build();
+            shareRecordRepository.save(record);
         }
     }
 

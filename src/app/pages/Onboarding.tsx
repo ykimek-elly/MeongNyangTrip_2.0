@@ -35,6 +35,21 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
 
   // 닉네임 (소셜 로그인 대응, 미입력시 자동생성)
   const [nickname, setNickname] = useState(username || '');
+  const [nicknameError, setNicknameError] = useState('');
+
+  const validateNickname = (val: string) => {
+    if (!val) {
+      setNicknameError('');
+      return true;
+    }
+    const regex = /^[a-zA-Z0-9가-힣ㄱ-ㅎㅏ-ㅣ_]{2,20}$/;
+    if (!regex.test(val)) {
+      setNicknameError('2~20자의 한글, 영문, 숫자, 언더바(_)만 사용 가능합니다.');
+      return false;
+    }
+    setNicknameError('');
+    return true;
+  };
 
   // 활동 지역
   const [sido, setSido] = useState('');
@@ -77,7 +92,8 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
     : null;
 
   const isRegionValid = !!sido;
-  const canProceed = isRegionValid && isPhoneChecked && agreeKakao;
+  const isNicknameValid = !nickname || !nicknameError; // Empty OR no error
+  const canProceed = isRegionValid && isPhoneChecked && agreeKakao && isNicknameValid;
 
   const handlePetSubmit = (petData: PetInfo) => {
     addPet(petData);
@@ -91,12 +107,15 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
       finalNickname = `멍냥이_${Math.floor(Math.random() * 9000) + 1000}`;
     }
 
-    if (finalNickname !== username) {
+    if (finalNickname !== (username || '')) {
       try {
         await authApi.updateProfile(finalNickname);
         updateProfile({ username: finalNickname });
-      } catch (err) {
+      } catch (err: any) {
         console.error('닉네임 저장 실패:', err);
+        const serverMsg = err.response?.data?.message || '이미 사용 중인 닉네임입니다.';
+        setNicknameError(serverMsg);
+        return; // API 실패 시 더 이상 진행하지 않음
       }
     }
 
@@ -195,10 +214,17 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                 <input
                   type="text"
                   value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
+                  onChange={(e) => {
+                    setNickname(e.target.value);
+                    validateNickname(e.target.value);
+                  }}
                   placeholder="사용할 닉네임을 입력하세요 (미입력시 자동 생성)"
-                  className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none transition-spring text-sm focus:border-primary mb-5"
+                  className={`w-full px-4 py-2.5 bg-white border rounded-xl outline-none transition-spring text-sm mb-1 ${
+                    nicknameError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-primary'
+                  }`}
                 />
+                {nicknameError && <p className="text-xs text-destructive mb-4 ml-1">{nicknameError}</p>}
+                {!nicknameError && <p className="text-[11px] text-gray-400 mb-4 ml-1">특수문자 제외 2~20자 입력</p>}
 
                 <div className="flex items-center gap-2 mb-3">
                   <Phone size={16} className="text-primary" />
@@ -392,7 +418,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
                   </div>
                 )}
 
-                {pet?.notifyEnabled && pet.region && (
+                {pet.region && (
                   <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1.5 rounded-full mx-auto mb-4">
                     <Bell size={12} />
                     {pet.region} 지역 맞춤 알림 설정 완료

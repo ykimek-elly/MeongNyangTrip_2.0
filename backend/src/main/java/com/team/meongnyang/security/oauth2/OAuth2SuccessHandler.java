@@ -53,6 +53,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .queryParam("isNewUser", principal.isNewUser())
                 .queryParam("region", URLEncoder.encode(region, StandardCharsets.UTF_8))
                 .queryParam("activityRadius", activityRadius)
+                .queryParam("phoneNumber", user.getPhoneNumber() != null ? user.getPhoneNumber() : "")
+                .queryParam("notificationEnabled", user.isNotificationEnabled())
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);

@@ -64,7 +64,8 @@ public class AuthController {
                 user.getUserId(), user.getEmail(),
                 user.getNickname(), user.getProfileImage(),
                 user.getRole().name(),
-                user.getRegion(), user.getActivityRadius()
+                user.getRegion(), user.getActivityRadius(),
+                user.getPhoneNumber(), user.isNotificationEnabled()
         ));
     }
 

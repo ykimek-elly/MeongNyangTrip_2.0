@@ -49,7 +49,7 @@ public class PetService {
                 .preferredPlace(request.getPreferredPlace())
                 .region(request.getRegion())
                 .activityRadius(request.getActivityRadius())
-                .isRepresentative(hasNoPets) // 첫 번째 반려동물은 자동 대표 설정
+                .isRepresentative(hasNoPets)
                 .build();
 
         @SuppressWarnings("null")

@@ -15,4 +15,6 @@ public class AuthResponse {
     private String role;            // "USER" | "ADMIN"
     private String region;
     private Integer activityRadius;
+    private String phoneNumber;     // 신규 추가
+    private boolean notificationEnabled; // 신규 추가
 }

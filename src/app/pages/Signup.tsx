@@ -31,7 +31,11 @@ export function Signup({ onNavigate }: SignupProps) {
     try {
       const res = await authApi.signup(email, password, nickname);
       localStorage.setItem('accessToken', res.token);
-      login(res.nickname, res.email, res.userId, res.profileImage);
+      localStorage.setItem('refreshToken', res.refreshToken);
+      login(res.nickname, res.email, res.userId, res.profileImage,
+        res.role === 'ADMIN', false,
+        res.region, res.activityRadius,
+        res.phoneNumber, res.notificationEnabled);
       onNavigate('onboarding');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;

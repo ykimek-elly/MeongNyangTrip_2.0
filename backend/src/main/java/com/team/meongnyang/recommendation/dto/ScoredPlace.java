@@ -7,6 +7,10 @@ import lombok.Getter;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 점수 계산이 완료된 장소 정보를 담는 객체.
+ * 장소와 섹션별 점수, 총점, 설명용 상세 근거를 함께 보관한다.
+ */
 @Getter
 @Builder
 public class ScoredPlace {
@@ -14,15 +18,11 @@ public class ScoredPlace {
     private Place place;
     private double totalScore;
 
-    private double dogFitScore;
-    private double weatherScore;
-    private double placeEnvScore;
-    private double distanceScore;
-    /**
-     * Legacy field name kept for compatibility.
-     * Internally this now represents the "부가 요소" score.
-     */
-    private double historyScore;
+    private double personalFitScore;
+    private double weatherFitScore;
+    private double environmentFitScore;
+    private double mobilityFitScore;
+    private double bonusScore;
     private double penaltyScore;
 
     private Map<String, Double> sectionScores;

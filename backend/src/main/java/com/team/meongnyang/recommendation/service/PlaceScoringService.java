@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.service;
 import com.team.meongnyang.recommendation.dto.ScoreBreakdown;
 import com.team.meongnyang.recommendation.dto.ScoreDetail;
 import com.team.meongnyang.recommendation.dto.ScoredPlace;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import com.team.meongnyang.recommendation.log.service.AiLogService;
 import com.team.meongnyang.recommendation.util.RecommendationTextUtils;
 import com.team.meongnyang.place.entity.Place;
@@ -23,11 +24,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 1차 필터를 통과한 후보 장소를 사용자 상황에 맞는 추천 순위로 재정렬하는 점수 계산기이다.
+ * 후보 장소를 점수화하여 추천 순위를 계산하는 서비스
+ * 반려동물 동반 가능 여부, 펫 편의시설, 장소 신뢰도, 블로그 반응, 태그/카테고리 적합도를 기준으로
+ * 장소별 총점을 산정하고 내림차순으로 정렬한다.
  *
- * <p>반려동물 적합도, 날씨 적합도, 장소 환경, 이동 편의성, 보너스 요소와 페널티를 조합해
- * 각 장소의 설명 가능한 점수를 만든다. 파이프라인 흐름에서는 후보 장소 수집 다음 단계에서 호출되며,
- * 계산 결과는 프롬프트 생성과 최종 추천 순위 설명에 직접 사용된다.
+ * 현재 엔티티 기반 점수 체계는 총 100점 만점으로 구성되며,
+ * 펫 출입/정책 적합도 30점, 펫 편의시설 적합도 15점,
+ * 장소 품질/신뢰도 20점, 블로그 감성 시그널 15점,
+ * 태그/카테고리 적합도 20점을 합산한 뒤 감점을 반영한다.
+ *
+ * 추가로 최근 추천 이력에 따른 다양성 패널티를 적용해
+ * 동일 장소가 반복 추천되지 않도록 보정한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -35,15 +42,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PlaceScoringService {
 
-    /**
-     * 장소 점수 계산에 사용되는 상수들
-     * - 펫 : 50.0
-     * - 날씨 : 20.0
-     * - 환경 : 15.0
-     * - 이동성 : 10.0
-     * - 보너스 : 5.0
-     * - 총합 : 100.0
-     */
     private static final double PET_MAX = 50.0;
     private static final double WEATHER_MAX = 20.0;
     private static final double ENVIRONMENT_MAX = 15.0;
@@ -58,12 +56,18 @@ public class PlaceScoringService {
 
     private final DistanceCalculator distanceCalculator;
 
+    /**
+     * 후보 장소 목록을 점수화하여 추천 순위를 반환한다.
+     * 내부적으로 scorePlaces를 호출하는 진입 메서드이다.
+     */
     public List<ScoredPlace> scorePlace(List<Place> candidates, User user, Pet pet, WeatherContext weather) {
         return scorePlaces(candidates, user, pet, weather);
     }
 
     /**
-     * 사용자 좌표가 따로 주어지지 않은 경우 기본 좌표를 기준으로 후보 장소 점수를 계산한다.
+     * 사용자 좌표를 기준으로 후보 장소 전체 점수를 계산한다.
+     * 사용자 위도/경도를 읽어 거리 계산에 반영하고,
+     * 최종적으로 총점 내림차순으로 정렬된 장소 목록을 반환한다.
      *
      * @param candidates 1차 필터를 통과한 후보 장소 목록
      * @param user 추천 대상 사용자 정보
@@ -84,10 +88,8 @@ public class PlaceScoringService {
     }
 
     /**
-     * 후보 장소 전체를 순회하며 세부 점수를 계산하고 최종 추천 순위로 정렬한다.
-     *
- * <p>파이프라인 흐름에서 후보 장소 수집 이후 호출되며,
-     * 반환된 결과는 프롬프트의 Top 후보와 추천 근거 문장을 만드는 입력으로 사용된다.
+     * 후보 장소 전체를 순회하며 엔티티 기반 점수 계산과 다양성 패널티를 함께 반영한다.
+     * 추천 이력이 있는 장소는 감점하고, 후보 수가 적으면 패널티를 완화하거나 무시한다.
      *
      * @param candidates 1차 필터를 통과한 후보 장소 목록
      * @param user 추천 대상 사용자 정보
@@ -108,24 +110,31 @@ public class PlaceScoringService {
     ) {
         // 1. 후보가 없으면 즉시 종료
         if (candidates == null || candidates.isEmpty()) {
-            log.warn("[장소 점수] 점수 계산 대상 후보가 없습니다.");
+            log.warn("[장소 점수] 후보 없음 userId={}, petId={}, batchExecutionId={}",
+                    RecommendationLogContext.userId(),
+                    RecommendationLogContext.petId(),
+                    RecommendationLogContext.batchExecutionId());
             return List.of();
         }
 
         // 2. 최근 추천 이력 기반 다양성 패널티를 반영해 재점수화
         Map<Long, AiLogService.RecommendationDiversityPenalty> safeDiversityPenalties =
                 diversityPenalties == null ? Map.of() : diversityPenalties;
-        List<ScoredPlace> rankedPlaces = candidates.stream()
-                .filter(this::passesPlaceRuleGate)
-                .map(place -> scorePlaceEntityDriven(
-                        place,
-                        resolveDiversityPenalty(place, safeDiversityPenalties, candidates.size())
-                ))
-                .sorted(Comparator.comparingDouble(ScoredPlace::getTotalScore).reversed())
-                .toList();
+        List<ScoredPlace> rankedPlaces = rankPlaces(
+                candidates,
+                user,
+                pet,
+                weather,
+                userLat,
+                userLng,
+                safeDiversityPenalties
+        );
 
         // 3. 최종 정렬 결과를 로그로 남김
-        log.info("[장소 점수] 다양성 반영 상위 점수 결과 count={}, topPlaces={}",
+        log.info("[장소 점수] 상위 결과 userId={}, petId={}, batchExecutionId={}, count={}, topPlaces={}",
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
                 rankedPlaces.size(),
                 rankedPlaces.stream()
                         .limit(3)
@@ -144,17 +153,27 @@ public class PlaceScoringService {
     ) {
         // 장소가 없으면 빈 리스트를 반환합니다.
         if (candidates == null || candidates.isEmpty()) {
-            log.warn("[장소 점수] 점수 계산 대상 후보가 없습니다.");
+            log.warn("[장소 점수] 후보 없음 userId={}, petId={}, batchExecutionId={}",
+                    RecommendationLogContext.userId(),
+                    RecommendationLogContext.petId(),
+                    RecommendationLogContext.batchExecutionId());
             return List.of();
         }
 
         // 후보 장소별 설명 가능한 점수를 계산한 뒤 총점 내림차순으로 정렬
-        List<ScoredPlace> rankedPlaces = candidates.stream()
-                .filter(this::passesPlaceRuleGate)
-                .map(place -> scorePlaceEntityDriven(place, 0.0))
-                .sorted(Comparator.comparingDouble(ScoredPlace::getTotalScore).reversed())
-                .toList();
-        log.info("[장소 점수] 상위 점수 결과 count={}, topPlaces={}",
+        List<ScoredPlace> rankedPlaces = rankPlaces(
+                candidates,
+                user,
+                pet,
+                weather,
+                userLat,
+                userLng,
+                Map.of()
+        );
+        log.info("[장소 점수] 상위 결과 userId={}, petId={}, batchExecutionId={}, count={}, topPlaces={}",
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
                 rankedPlaces.size(),
                 rankedPlaces.stream()
                         .limit(3)
@@ -163,8 +182,35 @@ public class PlaceScoringService {
         return rankedPlaces;
     }
 
+    private List<ScoredPlace> rankPlaces(
+            List<Place> candidates,
+            User user,
+            Pet pet,
+            WeatherContext weather,
+            double userLat,
+            double userLng,
+            Map<Long, AiLogService.RecommendationDiversityPenalty> diversityPenalties
+    ) {
+        return candidates.stream()
+                .filter(this::passesPlaceRuleGate)
+                .map(place -> scoreSinglePlace(
+                        place,
+                        user,
+                        pet,
+                        weather,
+                        userLat,
+                        userLng,
+                        resolveDiversityPenalty(place, diversityPenalties, candidates.size())
+                ))
+                .sorted(Comparator.comparingDouble(ScoredPlace::getTotalScore).reversed())
+                .toList();
+    }
+
     /**
-     * 단일 장소의 세부 점수와 설명 문장을 계산해 최종 점수 객체로 변환한다.
+     * 단일 장소에 대해 상세 점수와 추천 이유를 계산한다.
+     * 반려동물 적합도 50점, 날씨 적합도 20점, 장소 환경 15점,
+     * 이동 편의성 10점, 부가 요소 5점을 합산하고
+     * 조합 리스크 감점을 반영해 최종 점수를 만든다.
      *
      * @param place 점수를 계산할 후보 장소
      * @param user 추천 대상 사용자 정보
@@ -222,26 +268,17 @@ public class PlaceScoringService {
         String summary = buildSummary(place, breakdowns, penaltyScore);
         String reason = buildReason(place, weather, breakdowns, penaltyScore);
 
-        log.info("[장소 점수] 장소={}, 총점={}, 반려동물={}, 날씨={}, 환경={}, 이동={}, 부가={}, 감점={}",
-                place.getTitle(),
-                totalScore,
-                petResult.score(),
-                weatherResult.score(),
-                environmentResult.score(),
-                mobilityResult.score(),
-                bonusResult.score(),
-                penaltyScore);
         logDebugScoreBreakdown(place, totalScore, penaltyScore, breakdowns);
 
         // 6. 최종 점수 결과 객체 반환
         return ScoredPlace.builder()
                 .place(place)
                 .totalScore(totalScore)
-                .dogFitScore(petResult.score())
-                .weatherScore(weatherResult.score())
-                .placeEnvScore(environmentResult.score())
-                .distanceScore(mobilityResult.score())
-                .historyScore(bonusResult.score())
+                .personalFitScore(petResult.score())
+                .weatherFitScore(weatherResult.score())
+                .environmentFitScore(environmentResult.score())
+                .mobilityFitScore(mobilityResult.score())
+                .bonusScore(bonusResult.score())
                 .penaltyScore(penaltyScore)
                 .sectionScores(sectionScores)
                 .breakdowns(breakdowns)
@@ -251,16 +288,16 @@ public class PlaceScoringService {
                 .build();
     }
 
-    public ScoredPlace scoreSinglePlace(
-            Place place,
-            User user,
-            Pet pet,
-            WeatherContext weather,
-            double userLat,
-            double userLng
-    ) {
-        return scoreSinglePlace(place, user, pet, weather, userLat, userLng, 0.0);
-    }
+//    public ScoredPlace scoreSinglePlace(
+//            Place place,
+//            User user,
+//            Pet pet,
+//            WeatherContext weather,
+//            double userLat,
+//            double userLng
+//    ) {
+//        return scoreSinglePlace(place, user, pet, weather, userLat, userLng, 0.0);
+//    }
 
     private double resolveDiversityPenalty(
             Place place,
@@ -291,15 +328,14 @@ public class PlaceScoringService {
             return 0.0;
         }
 
-        log.info("[DIVERSITY PENALTY] placeId={}, penalty={}, reason={}",
-                place.getId(),
-                -adjustedPenalty,
-                reason);
         return adjustedPenalty;
     }
 
     /**
-     * 장소에 반려동물이 적합한지 점수를 계산합니다.
+     * 반려동물 적합도 점수를 계산한다.
+     * 나이 12점, 활동량 12점, 크기 10점, 성향 10점, 품종 6점으로 구성되며
+     * 총 최대 50점까지 반영된다.
+     *
      * @param place 장소
      * @param pet 반려동물
      * @return 반려동물 적합도 점수 결과
@@ -330,7 +366,10 @@ public class PlaceScoringService {
 
 
     /**
-     * 장소에 날씨가 적합한지 점수를 계산합니다.
+     * 날씨 적합도 점수를 계산한다.
+     * 산책 등급 8점, 강수 4.5점, 기온 4.5점, 바람 3점으로 구성되며
+     * 실내/실외 장소 특성과 현재 날씨 조건의 궁합을 반영한다.
+     *
      * @param place 장소
      * @param weather 날씨 정보
      * @return 날씨 적합도 점수 결과
@@ -359,7 +398,10 @@ public class PlaceScoringService {
     }
 
     /**
-     * 장소에 환경이 적합한지 점수를 계산합니다.
+     * 장소 환경 적합도 점수를 계산한다.
+     * 반려동물 동반 친화성 6점, 안전/쾌적성 5점, 품질 지표 4점으로 구성되며
+     * 총 최대 15점까지 반영된다.
+     *
      * @param place 장소
      * @param pet 반려동물
      * @return 환경 적합도 점수 결과
@@ -379,7 +421,10 @@ public class PlaceScoringService {
     }
 
     /**
-     * 장소에 이동 편의성이 적합한지 점수를 계산합니다.
+     * 거리 및 이동 편의성 점수를 계산한다.
+     * 사용자와 장소 간 거리 기준으로 최대 10점까지 부여하며,
+     * 가까운 장소일수록 더 높은 점수를 받는다.
+     *
      * @param place 장소
      * @param user 사용자
      * @param userLat 사용자 위도
@@ -412,9 +457,10 @@ public class PlaceScoringService {
     }
 
     /**
-     * 장소에 부가 요소가 적합한지 점수를 계산합니다.
+     * 부가 요소 점수를 계산한다.
+     * 대표견 선호 장소 일치, 검증 여부, 설명 품질, 태그 품질 등을 반영하며
+     * 총 최대 5점까지 가산한다.
      *
-     * 본 점수 외에 추천 설명을 강화할 수 있는 보조 요소를 가산점으로 반영합니다.
      * @param place 장소
      * @param pet 반려동물
      * @return 부가 요소 점수 결과
@@ -428,10 +474,6 @@ public class PlaceScoringService {
         if (preferredPlaceScore > 0.0) {
             // 선호 장소와 장소 성격이 비슷하면 비슷한 점수 구간에서 조금 더 앞서도록 가산점을 부여합니다.
             score += preferredPlaceScore;
-            log.info("[장소 점수] 선호 장소 반영 place={}, preferredPlace={}, bonus={}",
-                    place.getTitle(),
-                    pet == null ? null : pet.getPreferredPlace(),
-                    round(preferredPlaceScore));
         }
         if (Boolean.TRUE.equals(place.getIsVerified())) {
             score += 1.2;
@@ -488,8 +530,9 @@ public class PlaceScoringService {
     }
 
     /**
-     * 개별 항목 점수만으로 반영하기 어려운 조합 리스크를 감점으로 처리합니다.
-     * 예: 노령견 + 활동적인 실외 장소, 비 오는 날 + 야외 장소
+     * 조합 리스크에 따른 감점을 계산한다.
+     * 비 오는 날 야외 장소, 노령견과 활동형 야외 장소 조합,
+     * 예민한 반려견과 혼잡 장소 조합 등을 감점 요소로 반영한다.
      *
      * @param place 장소
      * @param pet 반려동물
@@ -523,7 +566,7 @@ public class PlaceScoringService {
     }
 
     /**
-     * 점수를 정규화합니다. 최소 0, 최대 TOTAL_MAX 사이로 클램핑하고 소수점 1자리까지 반올림합니다.
+     * 원시 점수를 0점 이상 100점 이하 범위로 보정하고 소수점 한 자리로 반올림한다.
      *
      * @param rawScore 정규화할 점수
      * @return 정규화된 점수
@@ -715,6 +758,12 @@ public class PlaceScoringService {
         return score;
     }
 
+    /**
+     * 엔티티 필드 기반으로 실제 추천 점수를 계산한다.
+     * 펫 출입/정책 적합도 30점, 펫 편의시설 적합도 15점,
+     * 장소 품질/신뢰도 20점, 블로그 감성 시그널 15점,
+     * 태그/카테고리 적합도 20점을 합산하고 감점을 차감한다.
+     */
     private ScoredPlace scorePlaceEntityDriven(Place place, double diversityPenalty) {
         SectionResult policyResult = scorePolicySuitability(place);
         SectionResult facilityResult = scorePetFacility(place);
@@ -743,11 +792,11 @@ public class PlaceScoringService {
         return ScoredPlace.builder()
                 .place(place)
                 .totalScore(totalScore)
-                .dogFitScore(policyResult.score())
-                .weatherScore(facilityResult.score())
-                .placeEnvScore(qualityResult.score())
-                .distanceScore(sentimentResult.score())
-                .historyScore(contextResult.score())
+                .personalFitScore(policyResult.score())
+                .weatherFitScore(facilityResult.score())
+                .environmentFitScore(qualityResult.score())
+                .mobilityFitScore(sentimentResult.score())
+                .bonusScore(contextResult.score())
                 .penaltyScore(penaltyScore)
                 .sectionScores(buildSectionScores(breakdowns))
                 .breakdowns(breakdowns)
@@ -757,6 +806,10 @@ public class PlaceScoringService {
                 .build();
     }
 
+    /**
+     * 장소가 추천 대상 조건을 만족하는지 검증한다.
+     * 반려동물 출입 불가, 운영 종료, 숙소인데 반려동물 수용 불가 같은 경우 제외한다.
+     */
     private boolean passesPlaceRuleGate(Place place) {
         String combined = searchablePlaceEntityText(place);
         if (containsAny(combined,
@@ -773,6 +826,12 @@ public class PlaceScoringService {
         return true;
     }
 
+    /**
+     * 펫 출입 및 정책 적합도를 계산한다.
+     * 실내 동반 가능성 12점, 정책 명확성 8점,
+     * 제약 수준 6점, 카테고리 적합성 4점으로 구성되며
+     * 총 최대 30점까지 반영된다.
+     */
     private SectionResult scorePolicySuitability(Place place) {
         List<ScoreDetail> details = new ArrayList<>();
         String inside = normalize(place.getChkPetInside());
@@ -831,6 +890,11 @@ public class PlaceScoringService {
         );
     }
 
+    /**
+     * 펫 편의시설 적합도를 계산한다.
+     * 기본 시설 9점, 이용 편의 4점, 안전/쾌적성 2점으로 구성되며
+     * 총 최대 15점까지 반영된다.
+     */
     private SectionResult scorePetFacility(Place place) {
         List<ScoreDetail> details = new ArrayList<>();
         String facility = normalize(place.getPetFacility());
@@ -866,6 +930,12 @@ public class PlaceScoringService {
         );
     }
 
+    /**
+     * 장소 품질 및 신뢰도 점수를 계산한다.
+     * 공개 평점 8점, 리뷰 표본 신뢰도 5점,
+     * AI 보조 평점 3점, 블로그 표본 신뢰도 4점으로 구성되며
+     * 총 최대 20점까지 반영된다.
+     */
     private SectionResult scorePlaceTrustQuality(Place place) {
         List<ScoreDetail> details = new ArrayList<>();
         double rating = place.getRating() == null ? 0.0 : place.getRating();
@@ -913,6 +983,11 @@ public class PlaceScoringService {
         );
     }
 
+    /**
+     * 블로그 감성 시그널 점수를 계산한다.
+     * 긍정 태그 가점과 부정 태그 감점을 함께 반영하며
+     * 총 최대 15점 범위에서 실제 체감 품질을 점수화한다.
+     */
     private SectionResult scoreBlogSignals(Place place) {
         List<ScoreDetail> details = new ArrayList<>();
         String positive = normalize(place.getBlogPositiveTags());
@@ -945,6 +1020,12 @@ public class PlaceScoringService {
         );
     }
 
+    /**
+     * 태그 및 카테고리 적합도를 계산한다.
+     * 카테고리 기본점 4점, 태그 적합도 6점,
+     * 숙소 특화 보정 5점, 데이터 완성도 5점으로 구성되며
+     * 총 최대 20점까지 반영된다.
+     */
     private SectionResult scoreContextFit(Place place) {
         List<ScoreDetail> details = new ArrayList<>();
         String tags = normalize(place.getTags());
@@ -1004,6 +1085,10 @@ public class PlaceScoringService {
         );
     }
 
+    /**
+     * 장소 데이터 자체의 제약 조건에 따른 감점을 계산한다.
+     * 실내 불가, 크기 제한, 추가 요금, 혼잡/소음/청결 불량 등의 부정 신호를 반영한다.
+     */
     private double applyPlaceDataPenalty(Place place) {
         String policy = normalize(place.getPetPolicy());
         String negative = normalize(place.getBlogNegativeTags());
@@ -1114,9 +1199,8 @@ public class PlaceScoringService {
     }
 
     /**
-     * breakdowns List를  ScoreDetail List로 변환
-     * @param breakdowns
-     * @return
+     * 점수 Breakdown 목록을 ScoreDetail 목록으로 평탄화한다.
+     * 로그, 응답, 설명 생성용 세부 점수 구조를 만들 때 사용한다.
      */
     private List<ScoreDetail> flattenDetails(List<ScoreBreakdown> breakdowns) {
         return breakdowns.stream()
@@ -1184,6 +1268,10 @@ public class PlaceScoringService {
         );
     }
 
+    /**
+     * 상위 점수 섹션을 기반으로 추천 요약 문장을 생성한다.
+     * 강점이 높은 항목 위주로 요약하고 감점이 있으면 함께 표시한다.
+     */
     private String buildSummary(Place place, List<ScoreBreakdown> breakdowns, double penaltyScore) {
         String topSummary = breakdowns.stream()
                 .sorted(Comparator.comparingDouble(ScoreBreakdown::getScore).reversed())
@@ -1267,11 +1355,19 @@ public class PlaceScoringService {
         return personality.contains("예민") || personality.contains("소심") || personality.contains("겁");
     }
 
+    /**
+     * 사용자와 장소 간 거리값을 부드럽게 점수화한다.
+     * 거리가 가까울수록 높은 점수를 부여하며 최대 10점까지 반영한다.
+     */
     private double smoothDistanceScore(double distanceKm) {
         double score = 10.0 / (1.0 + (distanceKm / 3.0));
         return round(clamp(score, 1.0, MOBILITY_MAX));
     }
 
+    /**
+     * 점수 세부 항목 객체를 생성한다.
+     * 섹션명, 항목명, 점수, 최대 점수, 이유를 함께 저장한다.
+     */
     private ScoreDetail detail(String section, String item, double score, double maxScore, String reason) {
         return ScoreDetail.builder()
                 .section(section)
@@ -1308,6 +1404,9 @@ public class PlaceScoringService {
         return !normalizedKeyword.isBlank() && text.contains(normalizedKeyword);
     }
 
+    /**
+     * 사용자 위도를 검증 후 반환한다.
+     */
     private double requireUserLatitude(User user) {
         if (user == null) {
             throw new IllegalArgumentException("user must not be null");
@@ -1315,6 +1414,9 @@ public class PlaceScoringService {
         return user.getLatitude();
     }
 
+    /**
+     * 사용자 경도를 검증 후 반환한다.
+     */
     private double requireUserLongitude(User user) {
         if (user == null) {
             throw new IllegalArgumentException("user must not be null");
@@ -1338,7 +1440,8 @@ public class PlaceScoringService {
     }
 
     /**
-     * 유틸
+     * 점수 섹션별 계산 결과를 나타내는 내부 객체
+     * 섹션명, 점수, 최대 점수, 요약, 세부 항목 목록을 함께 가진다.
      */
     private double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(value, max));

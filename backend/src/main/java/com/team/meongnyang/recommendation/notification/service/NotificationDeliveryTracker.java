@@ -3,6 +3,7 @@ package com.team.meongnyang.recommendation.notification.service;
 import com.team.meongnyang.recommendation.notification.client.NcloudClient;
 import com.team.meongnyang.recommendation.notification.config.NcloudSensProperties;
 import com.team.meongnyang.recommendation.notification.dto.NotificationDeliveryResult;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,7 +19,9 @@ public class NotificationDeliveryTracker {
 
     public NotificationDeliveryResult trackByRequestId(String requestId) {
         if (!StringUtils.hasText(requestId)) {
-            log.warn("[카카오 알림톡] requestId가 없어 최종 결과 추적을 건너뜁니다.");
+            log.warn("[알림 전송] 전달 추적 건너뜀 batchExecutionId={}, reason={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    "requestId 없음");
             return NotificationDeliveryResult.failure("INVALID_REQUEST_ID", "requestId가 비어 있습니다.");
         }
 
@@ -41,10 +44,10 @@ public class NotificationDeliveryTracker {
             attempt++;
         }
 
-        log.warn("[카카오 알림톡] 최종 메시지 상태가 아직 확정되지 않았습니다. requestId={}, requestStatusCode={}, requestStatusDesc={}, messageId={}",
+        log.warn("[알림 전송] 최종 상태 미확정 batchExecutionId={}, requestId={}, requestStatusCode={}, messageId={}",
+                RecommendationLogContext.batchExecutionId(),
                 latestResult.getRequestId(),
                 latestResult.getRequestStatusCode(),
-                latestResult.getRequestStatusDesc(),
                 latestResult.getMessageId());
         return latestResult;
     }
@@ -63,7 +66,8 @@ public class NotificationDeliveryTracker {
     }
 
     private void logAttempt(String requestId, int attempt, NotificationDeliveryResult result) {
-        log.info("[카카오 알림톡] 전달 상태 조회 requestId={}, attempt={}, messageId={}, requestStatusCode={}, messageStatusCode={}, messageStatusDesc={}",
+        log.info("[알림 전송] 전달 상태 조회 batchExecutionId={}, requestId={}, attempt={}, messageId={}, requestStatusCode={}, messageStatusCode={}, messageStatusDesc={}",
+                RecommendationLogContext.batchExecutionId(),
                 requestId,
                 attempt,
                 result.getMessageId(),

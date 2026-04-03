@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * 정기 알림 배치 스케줄러다.
  *
- * <p>스케줄은 여러 번 실행될 수 있고, 실제 발송 가능 여부는 정책 서비스가 최종 판단한다.
+ * 스케줄은 여러 번 실행될 수 있고, 실제 발송 가능 여부는 정책 서비스가 최종 판단한다.
  */
 @Slf4j
 @Component
@@ -23,9 +23,9 @@ public class NotificationScheduler {
      */
     @Scheduled(cron = "${batch.notification-cron}", zone = "Asia/Seoul")
     public void runDailyNotificationBatch() {
-        log.info("[NotificationScheduler] 추천 알림 배치를 시작합니다.");
+        log.info("[추천 배치] 스케줄 실행 시작");
         notificationBatchService.runDailyNotificationBatch();
-        log.info("[NotificationScheduler] 추천 알림 배치를 종료합니다.");
+        log.info("[추천 배치] 스케줄 실행 종료");
     }
 
     /**
@@ -33,8 +33,8 @@ public class NotificationScheduler {
      */
     @Scheduled(cron = "${batch.weather-preload-cron}", zone = "Asia/Seoul")
     public void runWeatherPreloadBatch() {
-        log.info("[NotificationScheduler] 날씨 선적재 배치를 시작합니다.");
+        log.info("[날씨 조회] 선적재 배치 시작");
         weatherBatchService.runWeatherPreloadBatch();
-        log.info("[NotificationScheduler] 날씨 선적재 배치를 종료합니다.");
+        log.info("[날씨 조회] 선적재 배치 종료");
     }
 }

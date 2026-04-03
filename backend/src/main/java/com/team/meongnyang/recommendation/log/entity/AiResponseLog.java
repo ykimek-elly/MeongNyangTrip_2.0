@@ -4,6 +4,10 @@ import com.team.meongnyang.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * AI 추천 요청 및 응답 결과를 기록하는 로그 엔티티
+ * 프롬프트, 추천 결과, 응답 내용, 성능 정보 등을 저장하여 추적 및 분석에 활용된다.
+ */
 @Entity
 @Getter @Setter
 @Builder

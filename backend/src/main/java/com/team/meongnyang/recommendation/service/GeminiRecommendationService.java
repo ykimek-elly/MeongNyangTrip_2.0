@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PreDestroy;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -15,12 +16,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+/**
+ * Gemini를 호출해 추천 문장을 생성하는 서비스
+ * AI 응답 생성, 타임아웃 제어, 재시도 처리, fallback 응답 반환을 담당한다.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class GeminiRecommendationService {
-  public static final String MODEL_NAME = "gemini-2.5-flash-lite";
   private static final String FALLBACK_MESSAGE =
           "현재 조건을 바탕으로 추천을 준비했어요. 오늘은 날씨와 반려견 상태를 고려해 무리 없는 가까운 장소부터 가볍게 둘러보는 것을 추천드려요.";
 
@@ -36,12 +40,17 @@ public class GeminiRecommendationService {
   @Value("${recommendation.gemini.retry.backoff-ms:250}")
   private long geminiRetryBackoffMs;
 
+  /**
+   * 주어진 응답이 fallback 문장인지 확인한다.
+   */
   public boolean isFallbackResponse(String response) {
     return createFallbackMessage().equals(response);
   }
 
+  /**
+   * 프롬프트를 기반으로 추천 문장을 생성한다.
+   */
   public String generateRecommendation(String prompt) {
-    log.info("[Gemini] 추천 문장 생성 시작 promptLength={}", prompt == null ? 0 : prompt.length());
     for (int attempt = 1; attempt <= Math.max(geminiMaxAttempts, 1); attempt++) {
       try {
         Future<String> future = geminiCallExecutor.submit(() -> chatClient.prompt()
@@ -51,23 +60,44 @@ public class GeminiRecommendationService {
 
         String content = future.get(geminiTimeoutMs, TimeUnit.MILLISECONDS);
         if (content == null || content.isBlank()) {
-          log.warn("[Gemini] 빈 응답으로 fallback 사용 attempt={}", attempt);
+          log.warn("[AI 호출] 빈 응답 fallback userId={}, petId={}, batchExecutionId={}, attempt={}",
+                  RecommendationLogContext.userId(),
+                  RecommendationLogContext.petId(),
+                  RecommendationLogContext.batchExecutionId(),
+                  attempt);
           return createFallbackMessage();
         }
-
-        log.info("[Gemini] 추천 문장 생성 완료 responseLength={}, attempt={}", content.length(), attempt);
         return content;
       } catch (TimeoutException e) {
-        log.warn("[Gemini] timeout 발생 attempt={}, timeoutMs={}", attempt, geminiTimeoutMs);
+        log.warn("[AI 호출] timeout 재시도 userId={}, petId={}, batchExecutionId={}, attempt={}, timeoutMs={}",
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
+                attempt,
+                geminiTimeoutMs);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        log.warn("[Gemini] interrupted 발생 attempt={}", attempt);
+        log.warn("[AI 호출] 인터럽트 fallback userId={}, petId={}, batchExecutionId={}, attempt={}",
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
+                attempt);
         return createFallbackMessage();
       } catch (ExecutionException e) {
         Throwable cause = e.getCause() == null ? e : e.getCause();
-        log.warn("[Gemini] 실행 예외 발생 attempt={}, errorType={}", attempt, cause.getClass().getSimpleName());
+        log.warn("[AI 호출] 예외 재시도 userId={}, petId={}, batchExecutionId={}, attempt={}, errorType={}",
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
+                attempt,
+                cause.getClass().getSimpleName());
       } catch (Exception e) {
-        log.warn("[Gemini] 예외 발생 attempt={}, errorType={}", attempt, e.getClass().getSimpleName());
+        log.warn("[AI 호출] 예외 재시도 userId={}, petId={}, batchExecutionId={}, attempt={}, errorType={}",
+                RecommendationLogContext.userId(),
+                RecommendationLogContext.petId(),
+                RecommendationLogContext.batchExecutionId(),
+                attempt,
+                e.getClass().getSimpleName());
       }
 
       if (attempt < Math.max(geminiMaxAttempts, 1)) {
@@ -75,10 +105,17 @@ public class GeminiRecommendationService {
       }
     }
 
-    log.warn("[Gemini] 최대 재시도 초과로 fallback 사용 maxAttempts={}", geminiMaxAttempts);
+    log.warn("[AI 호출] 최대 재시도 초과 fallback userId={}, petId={}, batchExecutionId={}, maxAttempts={}",
+            RecommendationLogContext.userId(),
+            RecommendationLogContext.petId(),
+            RecommendationLogContext.batchExecutionId(),
+            geminiMaxAttempts);
     return createFallbackMessage();
   }
 
+  /**
+   * AI 호출 실패 시 사용할 기본 안내 문장을 반환한다.
+   */
   private String createFallbackMessage() {
     return FALLBACK_MESSAGE;
   }
@@ -94,6 +131,9 @@ public class GeminiRecommendationService {
     }
   }
 
+  /**
+   * 서비스 종료 시 AI 호출용 실행기를 정리한다.
+   */
   @PreDestroy
   void shutdownExecutor() {
     geminiCallExecutor.close();

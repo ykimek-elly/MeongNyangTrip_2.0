@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * 추천 생성 과정에서 사용된 프롬프트와 AI 응답을 추적 가능한 형태로 저장하는 로그 서비스이다.
  *
- * <p>파이프라인 마지막 단계에서 캐시 적중 여부, fallback 사용 여부, 응답 지연 시간과 함께
+ * 파이프라인 마지막 단계에서 캐시 적중 여부, fallback 사용 여부, 응답 지연 시간과 함께
  * AI 결과를 영속화한다. 저장된 로그는 추천 품질 분석, 장애 추적, 운영 모니터링에 활용된다.
  */
 @Service
@@ -57,14 +57,6 @@ public class AiLogService {
   ) {
     String batchExecutionId = MDC.get("batchExecutionId");
 
-    log.info("[AI 로그 저장] 저장 시작 batchExecutionId={}, userId={}, petId={}, fallbackUsed={}, cacheHit={}, latencyMs={}",
-            batchExecutionId,
-            user.getUserId(),
-            pet.getPetId(),
-            fallbackUsed,
-            cacheHit,
-            latencyMs);
-
     AiResponseLog aiResponseLog = AiResponseLog.builder()
             .userId(user.getUserId())
             .dogId(pet.getPetId())
@@ -80,14 +72,7 @@ public class AiLogService {
             .latencyMs(latencyMs)
             .build();
 
-    AiResponseLog savedLog = repository.save(aiResponseLog);
-    log.info("[AI 로그 저장] 저장 완료 logId={}, batchExecutionId={}, userId={}, petId={}, fallbackUsed={}, cacheHit={}",
-            savedLog.getId(),
-            batchExecutionId,
-            user.getUserId(),
-            pet.getPetId(),
-            fallbackUsed,
-            cacheHit);
+    repository.save(aiResponseLog);
   }
 
   public Map<Long, RecommendationDiversityPenalty> getRecentRecommendedPlacePenalties(Long userId) {

@@ -63,7 +63,7 @@ public class WeatherBatchService {
    *   중복 또는 예외로 인한 스킵 개수
    */
   public void runWeatherPreloadBatch() {
-    log.info("[배치] 날씨 정보 미리 로드 배치 실행 시작");
+    log.info("[날씨 조회] 선적재 배치 시작");
     // 배치 시작 로그 및 실행 시간 측정 시작
     long startTime = System.currentTimeMillis();
     // preload 성공 개수
@@ -81,7 +81,7 @@ public class WeatherBatchService {
 
       // 좌표 정보가 없으면 스킵
       if (sigunguMap == null || sigunguMap.isEmpty()) {
-        log.warn("지역 좌표 정보가 없습니다. sido={}", sido);
+        log.warn("[날씨 조회] 지역 좌표 없음 sido={}", sido);
         skipped++;
         continue;
       }
@@ -100,10 +100,6 @@ public class WeatherBatchService {
         String gridKey = point.getNx() + ":" + point.getNy();
         // 이미 처리된 격자라면 스킵
         if (!processedGridKeys.add(gridKey)) {
-          log.info(
-                  "중복 격자 스킵. sido={}, sigungu={}, nx={}, ny={}",
-                  sido, sigungu, point.getNx(), point.getNy()
-          );
           skipped++;
           continue;
         }
@@ -111,10 +107,6 @@ public class WeatherBatchService {
         weatherCacheService.getOrLoadWeather(point.getNx(), point.getNy());
         // preload 성공 카운트 증가
         totalPreloaded++;
-        log.info(
-                "날씨 preload 완료. sido={}, sigungu={}, nx={}, ny={}",
-                sido, sigungu, point.getNx(), point.getNy()
-        );
       }
     }
 
@@ -122,7 +114,7 @@ public class WeatherBatchService {
     long endTime = System.currentTimeMillis();
     long executionTime = endTime - startTime;
     // 최종 통계 로그
-    log.info("[배치] 날씨 정보 미리 로드 배치 실행 완료. 실행 시간: {}ms, 총 미리 로드된 날씨 정보 수: {}, 총 스킵된 격자 수: {}",
+    log.info("[날씨 조회] 선적재 배치 종료 elapsedMs={}, loadedCount={}, skippedCount={}",
             executionTime, totalPreloaded, skipped);
   }
 }

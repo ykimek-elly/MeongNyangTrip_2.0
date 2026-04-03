@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 /**
  * 하루 단위 추천 결과와 발송 마커를 관리한다.
  *
- * <p>배치 발송 후 앱 조회에서도 같은 결과를 재사용할 수 있도록
+ * 배치 발송 후 앱 조회에서도 같은 결과를 재사용할 수 있도록
  * 추천 payload와 sent marker를 함께 저장한다.
  */
 @Service
@@ -60,8 +60,11 @@ public class DailyRecommendationCacheService {
 
         redisTemplate.opsForValue().set(key, payload, recommendationCachePolicy.ttlUntilTomorrow(now));
         markSent(userId, now);
-        log.info("[DailyRecommendationCache] CACHE SAVE key={}, ttlHours={}",
-                key,
+        log.info("[캐시] 일일 추천 저장 userId={}, petId={}, batchExecutionId={}, placeId={}, ttlHours={}",
+                userId,
+                result == null ? null : result.getPetId(),
+                batchExecutionId,
+                result == null || result.getPlace() == null ? null : result.getPlace().getId(),
                 recommendationCachePolicy.ttlUntilTomorrow(now).toHours());
     }
 
@@ -86,15 +89,11 @@ public class DailyRecommendationCacheService {
         String key = buildKey(userId, formatDateKey(date));
         Object cached = redisTemplate.opsForValue().get(key);
         if (cached == null) {
-            log.info("[DailyRecommendationCache] CACHE MISS key={}", key);
             return null;
         }
 
         DailyRecommendationCachePayload payload =
                 objectMapper.convertValue(cached, DailyRecommendationCachePayload.class);
-        log.info("[DailyRecommendationCache] CACHE HIT key={}, placeId={}",
-                key,
-                payload.getPlace() == null ? null : payload.getPlace().getId());
         return payload.toNotificationResult();
     }
 

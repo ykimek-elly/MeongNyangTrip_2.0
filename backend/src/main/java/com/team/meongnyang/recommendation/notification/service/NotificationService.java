@@ -5,6 +5,7 @@ import com.team.meongnyang.recommendation.notification.client.NcloudClient;
 import com.team.meongnyang.recommendation.notification.dto.NotificationDeliveryResult;
 import com.team.meongnyang.recommendation.notification.dto.NotificationRequest;
 import com.team.meongnyang.recommendation.notification.dto.NotificationResponse;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import com.team.meongnyang.user.entity.Pet;
 import com.team.meongnyang.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -29,28 +30,35 @@ public class NotificationService {
             NotificationRequest request = notificationMessageBuilder.buildRequest(user, pet, place, comment, weatherType);
             NotificationRequest.Message payload = request.getMessages().get(0);
 
-            log.info("[KakaoNotification] send attempt userId={}, phone={}, placeId={}, weatherType={}, templateCode={}, templateParameter={}, buttonIncluded={}",
+            log.info("[알림 전송] 요청 시작 userId={}, petId={}, batchExecutionId={}, placeId={}, weatherType={}, templateCode={}, buttonIncluded={}",
                     user.getUserId(),
-                    payload.getTo(),
+                    pet == null ? null : pet.getPetId(),
+                    RecommendationLogContext.batchExecutionId(),
                     place != null ? place.getId() : null,
                     weatherType,
                     request.getTemplateCode(),
-                    payload.getTemplateParameter(),
                     payload.getButtons() != null && !payload.getButtons().isEmpty());
-
-            log.info("[KakaoNotification] contentPreview={}",
-                    payload.getContent() == null ? null : payload.getContent().replace("\r", "\\r").replace("\n", "\\n"));
 
             NotificationResponse response = ncloudClient.send(request);
 
-            log.info("[KakaoNotification] request result success={}, requestId={}, statusCode={}",
-                    response.isSuccess(),
+            log.info("[알림 전송] 요청 완료 userId={}, petId={}, batchExecutionId={}, placeId={}, requestId={}, success={}, statusCode={}",
+                    user.getUserId(),
+                    pet == null ? null : pet.getPetId(),
+                    RecommendationLogContext.batchExecutionId(),
+                    place != null ? place.getId() : null,
                     response.getRequestId(),
+                    response.isSuccess(),
                     response.getStatusCode());
 
             return applyFinalDeliveryStatus(response);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("[KakaoNotification] request build failed userId={}, reason={}", user.getUserId(), e.getMessage(), e);
+            log.warn("[알림 전송] 요청 생성 실패 userId={}, petId={}, batchExecutionId={}, placeId={}, reason={}",
+                    user.getUserId(),
+                    pet == null ? null : pet.getPetId(),
+                    RecommendationLogContext.batchExecutionId(),
+                    place != null ? place.getId() : null,
+                    e.getMessage(),
+                    e);
             return NotificationResponse.failure("INVALID_REQUEST", e.getMessage());
         }
     }
@@ -61,16 +69,18 @@ public class NotificationService {
         }
 
         if (response.getRequestId() == null || response.getRequestId().isBlank()) {
-            log.warn("[KakaoNotification] requestId missing, skip delivery tracking");
+            log.warn("[알림 전송] 전달 추적 건너뜀 batchExecutionId={}, reason={}",
+                    RecommendationLogContext.batchExecutionId(),
+                    "requestId 없음");
             return NotificationResponse.failure("DELIVERY_TRACKING_UNAVAILABLE", "requestId missing");
         }
 
         NotificationDeliveryResult deliveryResult = notificationDeliveryTracker.trackByRequestId(response.getRequestId());
-        log.info("[KakaoNotification] delivery result requestId={}, messageId={}, requestStatusCode={}, requestStatusDesc={}, messageStatusCode={}, messageStatusDesc={}",
+        log.info("[알림 전송] 전달 결과 batchExecutionId={}, requestId={}, messageId={}, requestStatusCode={}, messageStatusCode={}, messageStatusDesc={}",
+                RecommendationLogContext.batchExecutionId(),
                 deliveryResult.getRequestId(),
                 deliveryResult.getMessageId(),
                 deliveryResult.getRequestStatusCode(),
-                deliveryResult.getRequestStatusDesc(),
                 deliveryResult.getMessageStatusCode(),
                 deliveryResult.getMessageStatusDesc());
 
@@ -82,7 +92,8 @@ public class NotificationService {
         }
 
         if (!deliveryResult.hasFinalMessageStatus()) {
-            log.warn("[KakaoNotification] final delivery status is still pending requestId={}, messageId={}",
+            log.warn("[알림 전송] 최종 상태 미확정 batchExecutionId={}, requestId={}, messageId={}",
+                    RecommendationLogContext.batchExecutionId(),
                     deliveryResult.getRequestId(),
                     deliveryResult.getMessageId());
             return NotificationResponse.failure("DELIVERY_PENDING", "final message status missing");

@@ -3,6 +3,7 @@ package com.team.meongnyang.security.oauth2;
 import com.team.meongnyang.user.entity.User;
 import com.team.meongnyang.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
@@ -70,14 +72,27 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .orElseGet(() -> userRepository.findByEmail(finalEmail)
                         .orElseGet(() -> {
                             isNew[0] = true;
-                            return userRepository.save(User.builder()
+                            User newUser = User.builder()
                                     .email(finalEmail)
                                     .password("")
                                     .nickname(finalNickname)
                                     .profileImage(finalProfileImage)
                                     .provider(provider)
                                     .providerId(providerId)
-                                    .build());
+                                    .build();
+                            log.info("[CustomOAuth2UserService] social signup before save provider={}, email={}, latitude={}, longitude={}",
+                                    provider,
+                                    finalEmail,
+                                    newUser.getLatitude(),
+                                    newUser.getLongitude());
+                            User savedUser = userRepository.save(newUser);
+                            log.info("[CustomOAuth2UserService] social signup after save userId={}, provider={}, email={}, latitude={}, longitude={}",
+                                    savedUser.getUserId(),
+                                    provider,
+                                    savedUser.getEmail(),
+                                    savedUser.getLatitude(),
+                                    savedUser.getLongitude());
+                            return savedUser;
                         }));
 
         return new OAuth2UserPrincipal(user, attributes, isNew[0]);

@@ -21,6 +21,10 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * 추천 결과 설명 생성을 위한 근거 컨텍스트를 구성하는 서비스
+ * 사용자, 반려동물, 날씨, 장소 점수 정보를 기반으로 AI 입력용 문맥 데이터를 생성한다.
+ */
 @Service
 @Slf4j
 @Transactional(readOnly = true)
@@ -32,6 +36,9 @@ public class RecommendationEvidenceContextService {
   private static final int MAX_OVERVIEW_LENGTH = 100;
   private static final int MAX_SNAPSHOT_LENGTH = 1200;
 
+  /**
+   * 추천에 필요한 전체 컨텍스트를 생성한다.
+   */
   public RecommendationEvidenceContext buildContext(
           User user,
           Pet pet,
@@ -75,10 +82,6 @@ public class RecommendationEvidenceContextService {
             MAX_SNAPSHOT_LENGTH
     );
 
-    log.info("[추천 컨텍스트] 생성 완료 snapshotLength={}, rankedCount={}",
-            contextSnapshot.length(),
-            rankedPlaces == null ? 0 : rankedPlaces.size());
-
     return RecommendationEvidenceContext.builder()
             .userProfileSection(userProfileSection)
             .petProfileSection(petProfileSection)
@@ -90,6 +93,9 @@ public class RecommendationEvidenceContextService {
             .build();
   }
 
+  /**
+   * 사용자 정보를 기반으로 컨텍스트를 구성한다.
+   */
   private String buildUserProfileSection(User user) {
     if (user == null) {
       return "- 사용자 정보 없음";
@@ -104,6 +110,9 @@ public class RecommendationEvidenceContextService {
     ).trim();
   }
 
+  /**
+   * 반려동물 정보를 기반으로 컨텍스트를 구성한다.
+   */
   private String buildPetProfileSection(Pet pet) {
     if (pet == null) {
       return "- 반려동물 정보 없음";
@@ -128,6 +137,9 @@ public class RecommendationEvidenceContextService {
     ).trim();
   }
 
+  /**
+   * 날씨 정보를 기반으로 컨텍스트를 구성한다.
+   */
   private String buildWeatherSection(WeatherContext weather) {
     if (weather == null) {
       return "- 날씨 정보 없음";
@@ -170,6 +182,9 @@ public class RecommendationEvidenceContextService {
     ).trim();
   }
 
+  /**
+   * 추천 결정 요약 정보를 생성한다.
+   */
   private String buildRecommendationDecisionSummary(WeatherContext weather, List<ScoredPlace> rankedPlaces) {
     String weatherPriority = describeWeatherDecision(weather);
     String scorePriority = rankedPlaces == null || rankedPlaces.isEmpty()
@@ -184,6 +199,9 @@ public class RecommendationEvidenceContextService {
             """.formatted(weatherPriority, scorePriority).trim();
   }
 
+  /**
+   * 상위 추천 장소에 대한 근거 정보를 구성한다.
+   */
   private String buildTopPlaceEvidenceSection(List<ScoredPlace> rankedPlaces) {
     if (rankedPlaces == null || rankedPlaces.isEmpty()) {
       return "- 정렬된 추천 장소 없음";
@@ -200,11 +218,11 @@ public class RecommendationEvidenceContextService {
       sb.append(rank).append("위 ").append(RecommendationTextUtils.defaultIfBlank(place.getTitle(), "장소 정보 없음")).append("\n")
               .append("   - 카테고리: ").append(RecommendationTextUtils.defaultIfBlank(place.getCategory(), "알 수 없음")).append("\n")
               .append("   - 총점: ").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getTotalScore())).append("\n")
-              .append("   - 점수 구성: 반려동물=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getDogFitScore()))
-              .append(", 날씨=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getWeatherScore()))
-              .append(", 환경=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getPlaceEnvScore()))
-              .append(", 거리=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getDistanceScore()))
-              .append(", 가산=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getHistoryScore()))
+              .append("   - 점수 구성: 개인화=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getPersonalFitScore()))
+              .append(", 날씨=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getWeatherFitScore()))
+              .append(", 환경=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getEnvironmentFitScore()))
+              .append(", 이동성=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getMobilityFitScore()))
+              .append(", 보너스=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getBonusScore()))
               .append(", 감점=").append(RecommendationNumberUtils.roundOneDecimal(scoredPlace.getPenaltyScore())).append("\n")
               .append("   - 메타데이터: ").append(buildMetadataLine(place)).append("\n")
               .append("   - 강점: ").append(joinOrFallback(strengths, "없음")).append("\n")
@@ -221,6 +239,9 @@ public class RecommendationEvidenceContextService {
     return sb.toString().trim();
   }
 
+  /**
+   * 추가 가이드라인 정보를 구성한다.
+   */
   private String buildSupplementalGuidelineSection() {
     return "- 추가 지침 없음";
   }
@@ -349,10 +370,10 @@ public class RecommendationEvidenceContextService {
 
   private String topScoreFocus(ScoredPlace topPlace) {
     List<String> focus = new ArrayList<>();
-    focus.add(scoreFocusLabel("반려동물 적합도", topPlace.getDogFitScore()));
-    focus.add(scoreFocusLabel("날씨 적합도", topPlace.getWeatherScore()));
-    focus.add(scoreFocusLabel("환경 점수", topPlace.getPlaceEnvScore()));
-    focus.add(scoreFocusLabel("거리 편의", topPlace.getDistanceScore()));
+    focus.add(scoreFocusLabel("개인화 적합도", topPlace.getPersonalFitScore()));
+    focus.add(scoreFocusLabel("날씨 적합도", topPlace.getWeatherFitScore()));
+    focus.add(scoreFocusLabel("환경 점수", topPlace.getEnvironmentFitScore()));
+    focus.add(scoreFocusLabel("이동성 점수", topPlace.getMobilityFitScore()));
 
     return focus.stream()
             .sorted(Comparator.comparingDouble(this::parseScore).reversed())

@@ -2,6 +2,7 @@ package com.team.meongnyang.recommendation.service;
 
 import com.team.meongnyang.exception.BusinessException;
 import com.team.meongnyang.exception.ErrorCode;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import com.team.meongnyang.security.oauth2.OAuth2UserPrincipal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -43,8 +44,9 @@ public class RecommendationAuthenticationService {
       return email;
     }
 
-    log.warn("[RecommendationAuthenticationService] 지원하지 않는 principal 타입입니다. type={}",
-            principal == null ? "null" : principal.getClass().getName());
+    log.warn("[추천 파이프라인] 인증 principal 타입 미지원 type={}, batchExecutionId={}",
+            principal == null ? "null" : principal.getClass().getName(),
+            RecommendationLogContext.batchExecutionId());
     throw unauthorized();
   }
 
@@ -54,7 +56,8 @@ public class RecommendationAuthenticationService {
    * @return 401 Unauthorized 비즈니스 예외
    */
   private BusinessException unauthorized() {
-    log.warn("[RecommendationAuthenticationService] 인증되지 않은 요청입니다.");
+    log.warn("[추천 파이프라인] 인증되지 않은 요청 batchExecutionId={}",
+            RecommendationLogContext.batchExecutionId());
     return new BusinessException(ErrorCode.UNAUTHORIZED);
   }
 }

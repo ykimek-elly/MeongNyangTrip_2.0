@@ -1,6 +1,7 @@
 package com.team.meongnyang.recommendation.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.team.meongnyang.recommendation.log.RecommendationLogContext;
 import com.team.meongnyang.recommendation.weather.dto.WeatherContext;
 import com.team.meongnyang.recommendation.weather.service.WeatherService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * 정규화된 날씨 정보를 Redis에 저장하고 재사용한다.
  *
- * <p>같은 격자 좌표에 대한 동시 요청이 몰릴 때 중복 API 호출이 발생하지 않도록
+ * 같은 격자 좌표에 대한 동시 요청이 몰릴 때 중복 API 호출이 발생하지 않도록
  * 키 단위 메모리 락을 함께 사용한다.
  */
 @Service
@@ -56,15 +57,18 @@ public class WeatherCacheService {
                 }
 
                 WeatherContext weatherContext = weatherService.getWeather(nx, ny);
-                log.info("[WeatherCache] CACHE MISS key={}, walkLevel={}, precipitationType={}",
-                        key,
+                log.info("[캐시] 날씨 저장 nx={}, ny={}, userId={}, petId={}, batchExecutionId={}, walkLevel={}, precipitationType={}",
+                        nx,
+                        ny,
+                        RecommendationLogContext.userId(),
+                        RecommendationLogContext.petId(),
+                        RecommendationLogContext.batchExecutionId(),
                         weatherContext.getWalkLevel(),
                         weatherContext.getPrecipitationType());
 
                 if (!"ERROR".equalsIgnoreCase(weatherContext.getWalkLevel())) {
                     Duration ttl = recommendationCachePolicy.weatherTtl(weatherContext);
                     redisTemplate.opsForValue().set(key, weatherContext, ttl);
-                    log.info("[WeatherCache] CACHE SAVE key={}, ttlMinutes={}", key, ttl.toMinutes());
                 }
 
                 return weatherContext;
@@ -98,10 +102,6 @@ public class WeatherCacheService {
         }
 
         WeatherContext weatherContext = objectMapper.convertValue(cached, WeatherContext.class);
-        log.info("[WeatherCache] CACHE HIT key={}, walkLevel={}, precipitationType={}",
-                key,
-                weatherContext.getWalkLevel(),
-                weatherContext.getPrecipitationType());
         return weatherContext;
     }
 }

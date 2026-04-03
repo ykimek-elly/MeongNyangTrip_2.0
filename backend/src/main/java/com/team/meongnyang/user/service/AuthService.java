@@ -10,14 +10,12 @@ import com.team.meongnyang.user.dto.SignupRequest;
 import com.team.meongnyang.user.entity.User;
 import com.team.meongnyang.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -52,18 +50,8 @@ public class AuthService {
                 .notificationEnabled(request.getNotificationEnabled() != null ? request.getNotificationEnabled() : true)
                 .build();
 
-        log.info("[AuthService] signup before save email={}, nickname={}, latitude={}, longitude={}",
-                request.getEmail(),
-                request.getNickname(),
-                user.getLatitude(),
-                user.getLongitude());
-
+        @SuppressWarnings("null")
         User saved = userRepository.save(user);
-        log.info("[AuthService] signup after save userId={}, email={}, latitude={}, longitude={}",
-                saved.getUserId(),
-                saved.getEmail(),
-                saved.getLatitude(),
-                saved.getLongitude());
         signupExportService.export(saved);
 
         String accessToken  = jwtUtil.generateToken(saved.getEmail(), saved.getRole().name());

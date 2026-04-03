@@ -79,7 +79,6 @@ export interface PetDto {
   region?: string | null;
   activityRadius?: number | null;
   isRepresentative: boolean;
-  notifyEnabled?: boolean | null;
 }
 
 /**
@@ -99,7 +98,6 @@ export interface PetRequest {
   preferredPlace?: string;
   region?: string;
   activityRadius?: number;
-  notifyEnabled?: boolean;
 }
 
 /**

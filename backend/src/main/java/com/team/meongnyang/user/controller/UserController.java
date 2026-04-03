@@ -61,6 +61,17 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * PATCH /api/v1/users/phone — 휴대폰 번호 업데이트.
+     */
+    @PatchMapping("/phone")
+    public ResponseEntity<Void> updatePhone(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody PhoneRequest request) {
+        userService.updatePhoneNumber(userDetails.getUsername(), request.getPhoneNumber());
+        return ResponseEntity.ok().build();
+    }
+
     @Getter
     @NoArgsConstructor
     static class LocationRequest {
@@ -68,5 +79,11 @@ public class UserController {
         private Double longitude;
         private Integer activityRadius;
         private String region;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    static class PhoneRequest {
+        private String phoneNumber;
     }
 }

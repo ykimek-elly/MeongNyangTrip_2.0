@@ -254,7 +254,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
   // 현장 인증 제출
   const handleCheckinSubmit = async () => {
     // 선택된 DB 장소 있으면 그걸 우선 사용, 없으면 현재 위치 주소
-    const finalName = selectedNearbyPlace?.name || locationName;
+    const finalName = selectedNearbyPlace?.title || locationName;
     const finalLat = selectedNearbyPlace?.latitude ?? latitude;
     const finalLng = selectedNearbyPlace?.longitude ?? longitude;
     if (!finalName || finalLat === null || finalLng === null) return;
@@ -541,7 +541,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                                 <MapPin size={13} className={selectedNearbyPlace?.id === place.id ? 'text-white' : 'text-gray-500'} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-gray-900 truncate">{place.name}</div>
+                                <div className="text-sm font-bold text-gray-900 truncate">{place.title}</div>
                                 <div className="text-xs text-gray-400 truncate">{place.address}</div>
                               </div>
                               {selectedNearbyPlace?.id === place.id && (
@@ -552,7 +552,7 @@ export function VisitCheckIn({ onNavigate }: VisitCheckInProps) {
                         </div>
                         {selectedNearbyPlace && (
                           <div className="mt-2 text-xs text-primary font-bold text-center">
-                            ✓ "{selectedNearbyPlace.name}" 선택됨
+                            ✓ "{selectedNearbyPlace.title}" 선택됨
                           </div>
                         )}
                         {!selectedNearbyPlace && (

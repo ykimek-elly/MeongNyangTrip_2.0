@@ -1,5 +1,7 @@
 package com.team.meongnyang.user.service;
 
+import com.team.meongnyang.exception.BusinessException;
+import com.team.meongnyang.exception.ErrorCode;
 import com.team.meongnyang.user.dto.ChangePasswordRequest;
 import com.team.meongnyang.user.dto.UpdateProfileRequest;
 import com.team.meongnyang.user.entity.User;
@@ -27,7 +29,7 @@ public class UserService {
 
         String newNickname = request.getNickname().trim();
         if (!user.getNickname().equals(newNickname) && userRepository.existsByNickname(newNickname)) {
-            throw new RuntimeException("이미 사용 중인 닉네임입니다.");
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
 
         user.updateNickname(newNickname);
@@ -39,11 +41,11 @@ public class UserService {
         User user = getByEmail(email);
 
         if (user.getPassword() == null) {
-            throw new RuntimeException("소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다.");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다.");
         }
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new RuntimeException("현재 비밀번호가 올바르지 않습니다.");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "현재 비밀번호가 올바르지 않습니다.");
         }
 
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
@@ -69,8 +71,15 @@ public class UserService {
         user.updateLocation(lat, lng, radius, region);
     }
 
+    /** 휴대폰 번호 업데이트 */
+    @Transactional
+    public void updatePhoneNumber(String email, String phoneNumber) {
+        User user = getByEmail(email);
+        user.updatePhoneNumber(phoneNumber);
+    }
+
     private User getByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 }

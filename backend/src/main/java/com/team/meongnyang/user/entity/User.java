@@ -165,4 +165,9 @@ public class User extends BaseEntity {
         if (activityRadius != null) this.activityRadius = activityRadius;
         if (region != null && !region.isBlank()) this.region = region;
     }
+
+    /** 휴대폰 번호를 업데이트한다. */
+    public void updatePhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
 }

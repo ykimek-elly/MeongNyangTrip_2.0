@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { walkGuideApi, WalkGuideResponse } from '../api/walkGuideApi';
@@ -23,52 +23,40 @@ import {
   Dog,
   Cat,
   Droplets,
+  Star,
+  ExternalLink,
 } from 'lucide-react';
 
 interface AIWalkGuideProps {
   onNavigate: (page: string) => void;
 }
 
-const WEATHER_CONDITIONS = [
-  { id: 'sunny', label: '맑음', icon: Sun, color: 'text-orange-400', bg: 'bg-orange-50' },
-  { id: 'cloudy', label: '흐림', icon: Cloud, color: 'text-gray-400', bg: 'bg-gray-50' },
-  { id: 'rainy', label: '비', icon: CloudRain, color: 'text-blue-400', bg: 'bg-blue-50' },
-  { id: 'windy', label: '바람', icon: Wind, color: 'text-cyan-400', bg: 'bg-cyan-50' },
-];
-
-const MOCK_WALK_DATA = {
-  summary: "오늘은 산책하기 아주 좋은 날씨예요!",
-  temperature: 23,
-  weather: 'sunny',
-  bestTime: "16:00 - 18:00",
-  duration: "30분",
-  routes: [
-    { id: 1, name: "한강공원 산책로", distance: "2.3km", difficulty: "쉬움", type: "공원" },
-    { id: 2, name: "올림픽공원 둘레길", distance: "3.5km", difficulty: "보통", type: "공원" },
-    { id: 3, name: "서울숲 반려동물 구역", distance: "1.8km", difficulty: "쉬움", type: "숲" },
-  ],
-  tips: [
-    "현재 기온이 적당해요. 물은 꼭 챙겨주세요!",
-    "오후에는 그늘진 곳을 추천해요.",
-    "발바닥 화상 주의! 아스팔트 온도를 확인하세요.",
-    "15분마다 물을 마시게 해주세요.",
-  ],
-  emergency: [
-    { name: "24시 동물병원", distance: "500m", phone: "02-1234-5678" },
-    { name: "반려동물 응급센터", distance: "1.2km", phone: "02-8765-4321" },
-  ]
+const WEATHER_MAPPING: Record<string, { icon: any, color: string, label: string }> = {
+  'SUNNY': { icon: Sun, color: 'text-orange-400', label: '맑음' },
+  'CLOUDY': { icon: Cloud, color: 'text-gray-400', label: '흐림' },
+  'RAINY': { icon: CloudRain, color: 'text-blue-400', label: '비' },
+  'SNOWY': { icon: Droplets, color: 'text-blue-300', label: '눈' }, // Droplets as placeholder for snow
 };
 
-export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
-  const { isLoggedIn, getRepresentativePet, addSavedRoute } = useAppStore();
-  const pet = getRepresentativePet();
-  const searchParams = new URLSearchParams(window.location.search);
-  const isFromKakao = searchParams.get('from') === 'kakao';
+const DEFAULT_TIPS = [
+  "현재 기온이 적당해요. 물은 꼭 챙겨주세요!",
+  "오후에는 그늘진 곳을 추천해요.",
+  "발바닥 화상 주의! 아스팔트 온도를 확인하세요.",
+  "15분마다 물을 마시게 해주세요.",
+];
 
+const DEFAULT_EMERGENCY = [
+  { name: "24시 동물병원", distance: "500m", phone: "02-1234-5678" },
+  { name: "반려동물 응급센터", distance: "1.2km", phone: "02-8765-4321" },
+];
+
+export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
+  const { isLoggedIn, getRepresentativePet, addSavedRoute, userLocation } = useAppStore();
+  const pet = getRepresentativePet();
+  
   const [isLoading, setIsLoading] = useState(false);
-  const [showRecommendation, setShowRecommendation] = useState(isFromKakao);
+  const [showRecommendation, setShowRecommendation] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [showPastRecommendations, setShowPastRecommendations] = useState(false);
   const [selectedDogSize, setSelectedDogSize] = useState<string>(pet?.size || 'MEDIUM');
   const [selectedActivity, setSelectedActivity] = useState<string>(pet?.activity || 'NORMAL');
 
@@ -80,18 +68,18 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
       const result = await walkGuideApi.generate({
         petSize: (selectedDogSize as 'SMALL' | 'MEDIUM' | 'LARGE'),
         activityLevel: (selectedActivity as 'LOW' | 'NORMAL' | 'HIGH'),
+        lat: userLocation?.lat ?? undefined,
+        lng: userLocation?.lng ?? undefined,
       });
       setGuideData(result);
-    } catch {
-      // API 미연동 / mock 모드 → 기존 mock 데이터 사용
-      setGuideData(MOCK_WALK_DATA as WalkGuideResponse);
+      setShowRecommendation(true);
+    } catch (err) {
+      console.error('AI 가이드 생성 실패:', err);
+      alert('AI 산책 가이드를 생성하는 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
-      setShowRecommendation(true);
     }
   };
-
-  const recommendation = guideData ?? MOCK_WALK_DATA as WalkGuideResponse;
 
   const handleSaveRoute = () => {
     if (!isLoggedIn) {
@@ -100,28 +88,28 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
       return;
     }
     
-    addSavedRoute({
-      id: Date.now().toString(),
-      date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
-      weather: recommendation.weather,
-      temperature: recommendation.temperature,
-      bestTime: recommendation.bestTime,
-      routes: recommendation.routes.map(r => ({ name: r.name, distance: r.distance, type: r.type }))
-    });
+    if (guideData) {
+      addSavedRoute({
+        id: Date.now().toString(),
+        date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
+        weather: guideData.weatherType.toLowerCase() as any,
+        temperature: 20, // Real API doesn't provide temp yet, using default
+        bestTime: "지금",
+        routes: [{ name: guideData.place.title, distance: "추천 장소", type: guideData.place.category }]
+      });
 
-    setShowPopup(true);
-    setTimeout(() => {
-      setShowPopup(false);
-    }, 3000);
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 3000);
+    }
   };
 
-  const currentWeather = WEATHER_CONDITIONS.find(w => w.id === recommendation.weather);
+  const weatherInfo = guideData ? (WEATHER_MAPPING[guideData.weatherType] || WEATHER_MAPPING['SUNNY']) : WEATHER_MAPPING['SUNNY'];
 
   return (
-    <div className="bg-gradient-to-b from-primary/5 to-white pb-6">
+    <div className="bg-gradient-to-b from-primary/5 to-white pb-6 min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 h-14 flex items-center">
-        <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-800 hover:bg-gray-100 rounded-full transition-spring hover:scale-[1.1] active:scale-[0.9]">
+        <button onClick={() => onNavigate('home')} className="p-2 -ml-2 text-gray-800 hover:bg-gray-100 rounded-full transition-shadow">
           <ArrowLeft size={22} />
         </button>
         <div className="flex items-center gap-2 ml-2">
@@ -131,22 +119,16 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
       </header>
 
       <div className="px-5 py-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="space-y-6"
-        >
-          {/* Hero Section */}
-            <div className="text-center mb-8 animate-fade-in-up">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.15 }}
-                className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4"
-              >
+        {!showRecommendation ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="text-primary" size={40} />
-              </motion.div>
+              </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {isLoggedIn && pet ? (
                   <>{pet.name}의 오늘의 산책,<br />AI가 알려드릴게요!</>
@@ -154,328 +136,164 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
                   <>오늘의 산책,<br />AI가 알려드릴게요!</>
                 )}
               </h2>
-              <p className="text-gray-500">날씨, 시간, 우리 아이 컨디션을 고려한<br />맞춤형 산책 가이드를 받아보세요.</p>
+              <p className="text-gray-500">날씨, 우리 아이 컨디션을 고려한<br />맞춤형 산책 가이드를 받아보세요.</p>
             </div>
 
-            {/* Current Weather — Double-Bezel */}
-            <div className="p-1 bg-primary/5 rounded-[1.6rem] ring-1 ring-primary/10 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            <div className="bg-white rounded-[1.25rem] p-5">
-              <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <Sun className="text-orange-400" size={20} />
-                현재 날씨
-              </h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-4xl font-bold text-gray-900">{recommendation.temperature}°C</div>
-                  <div className="text-sm text-gray-500 mt-1">맑음, 산책하기 좋은 날씨</div>
-                </div>
-                <Sun className="text-orange-400 fill-orange-100" size={64} />
-              </div>
-            </div>
-            </div>
-
-            {isLoggedIn && pet ? (
-              <div className="bg-primary/5 border border-primary/20 rounded-3xl p-5 mb-6">
-                {/* Pet Info (Members) */}
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-xl shadow-sm border border-primary/10">
-                    {pet.type === '강아지' ? <Dog size={20} className="text-primary" /> : <Cat size={20} className="text-primary" />}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{pet.name}</h3>
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      {pet.breed} · {pet.age}살 · {pet.size === 'SMALL' ? '소형견' : pet.size === 'MEDIUM' ? '중형견' : '대형견'} · 
-                      활동량 {pet.activity === 'LOW' ? '적음' : pet.activity === 'NORMAL' ? '보통' : '많음'}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="text-sm text-gray-700 mt-3 bg-white p-4 rounded-xl shadow-sm">
-                  등록된 정보를 바탕으로 {pet.name}에게 딱 맞는 산책 코스를 추천해 드릴게요!
-                  
-                  {/* 카톡 추천 알림 정보 UI */}
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-primary font-medium">
-                        <Sparkles size={16} />
-                        추천 알림 정보 확인
-                      </div>
-                      <button 
-                        onClick={() => setShowPastRecommendations(!showPastRecommendations)}
-                        className="text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors"
-                      >
-                        {showPastRecommendations ? '닫기' : '최근 7일 추천 보기'}
-                      </button>
-                    </div>
-
-                    {/* 오늘 날짜 추천 정보 */}
-                    <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
-                      <div className="font-bold text-gray-800 mb-2">
-                        {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} 맞춤 추천
-                      </div>
-                      
-                      <div className="space-y-2 text-sm text-gray-700">
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold text-primary min-w-[55px] mt-0.5">추천장소</span>
-                          <button 
-                            onClick={() => onNavigate('detail')}
-                            className="text-left font-medium underline decoration-primary/30 underline-offset-4 hover:text-primary transition-colors"
-                          >
-                            한강공원 산책로 (상세보기)
-                          </button>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold text-primary min-w-[55px] mt-0.5">AI 소견</span>
-                          <p className="leading-relaxed bg-white/60 p-2 rounded-lg text-xs md:text-sm">
-                            {pet.name}의 요즘 활동량이 훌륭하네요! 오늘은 관절이 무리하지 않도록 딱딱한 아스팔트보다는
-                            흙바닥이 일부분 구성된 숲길이나 공원 산책을 권장합니다. 강한 자외선이 줄어드는 오후 시간대가 가장 최적기입니다.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 최근 7일 추천 보기 영역 */}
-                {showPastRecommendations && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="mt-3 flex flex-col gap-2 overflow-hidden"
+            {/* Selection UI */}
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+              <h3 className="font-bold text-gray-800 mb-3">우리 아이 크기</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {['SMALL', 'MEDIUM', 'LARGE'].map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedDogSize(size)}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      selectedDogSize === size
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-gray-100 text-gray-600'
+                    }`}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7].map((day) => {
-                      const pastDate = new Date();
-                      pastDate.setDate(pastDate.getDate() - day);
-                      return (
-                        <div key={day} className="flex items-center justify-between bg-white/60 p-3 rounded-xl border border-primary/10 hover:bg-white transition-colors cursor-pointer">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-sm">
-                              {pastDate.getDate()}일
-                            </div>
-                            <div>
-                              <div className="font-bold text-gray-800 text-sm">맞춤 추천 코스</div>
-                              <div className="text-xs text-gray-500 flex items-center gap-1">
-                                {pastDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
-                                <span>·</span>
-                                {day % 2 === 0 ? '맑음' : '구름많음'}
-                              </div>
-                            </div>
-                          </div>
-                          <button className="flex items-center gap-1 text-primary text-xs font-bold">
-                            다시보기
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </motion.div>
-                )}
+                    <div className="font-bold text-sm">
+                      {size === 'SMALL' ? '소형견' : size === 'MEDIUM' ? '중형견' : '대형견'}
+                    </div>
+                  </button>
+                ))}
               </div>
-            ) : !showRecommendation && (
-              <>
-                {/* Dog Size Selection */}
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-                  <h3 className="font-bold text-gray-800 mb-3">우리 아이 크기</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['SMALL', 'MEDIUM', 'LARGE'].map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => setSelectedDogSize(size)}
-                        className={`p-3 rounded-xl border-2 transition-spring hover:scale-[1.04] active:scale-[0.95] ${
-                          selectedDogSize === size
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-gray-100 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="font-bold text-sm">
-                          {size === 'SMALL' ? '소형견' : size === 'MEDIUM' ? '중형견' : '대형견'}
-                        </div>
-                        <div className="text-xs mt-1 opacity-60">
-                          {size === 'SMALL' ? '~10kg' : size === 'MEDIUM' ? '10~25kg' : '25kg~'}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            </div>
 
-                {/* Activity Level */}
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-                  <h3 className="font-bold text-gray-800 mb-3">활동량</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'LOW',    label: '적음', Icon: Minus },
-                      { id: 'NORMAL', label: '보통', Icon: Activity },
-                      { id: 'HIGH',   label: '많음', Icon: Zap },
-                    ].map((activity) => {
-                      const isActive = selectedActivity === activity.id;
-                      return (
-                        <button
-                          key={activity.id}
-                          onClick={() => setSelectedActivity(activity.id)}
-                          className={`p-3 rounded-xl border-2 transition-spring hover:scale-[1.04] active:scale-[0.95] ${
-                            isActive ? 'border-primary bg-primary/5' : 'border-gray-100 hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex justify-center mb-1">
-                            <activity.Icon size={24} className={isActive ? 'text-primary' : 'text-gray-400'} strokeWidth={isActive ? 2.5 : 2} />
-                          </div>
-                          <div className={`font-bold text-sm ${isActive ? 'text-primary' : 'text-gray-600'}`}>
-                            {activity.label}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+              <h3 className="font-bold text-gray-800 mb-3">활동량</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'LOW', label: '적음', Icon: Minus },
+                  { id: 'NORMAL', label: '보통', Icon: Activity },
+                  { id: 'HIGH', label: '많음', Icon: Zap },
+                ].map((activity) => (
+                  <button
+                    key={activity.id}
+                    onClick={() => setSelectedActivity(activity.id)}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      selectedActivity === activity.id ? 'border-primary bg-primary/5' : 'border-gray-100'
+                    }`}
+                  >
+                    <div className="flex justify-center mb-1">
+                      <activity.Icon size={24} className={selectedActivity === activity.id ? 'text-primary' : 'text-gray-400'} />
+                    </div>
+                    <div className="font-bold text-sm text-center">{activity.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {/* Generate Button */}
-            {!showRecommendation && (
-              <button
-                onClick={handleGenerateGuide}
-                disabled={isLoading}
-                className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-md hover:bg-primary/90 transition-spring hover:scale-[1.02] active:scale-[0.97] flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    AI 분석 중...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={20} />
-                    맞춤 산책 가이드 받기
-                  </>
-                )}
-              </button>
-            )}
+            <button
+              onClick={handleGenerateGuide}
+              disabled={isLoading}
+              className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-md flex items-center justify-center gap-2 hover:bg-primary/90 disabled:bg-gray-300"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Sparkles size={20} />
+              )}
+              {isLoading ? 'AI 분석 중...' : '맞춤 산책 가이드 받기'}
+            </button>
           </motion.div>
-
-        {showRecommendation && (
+        ) : (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            className="space-y-4"
+            className="space-y-6"
           >
-            {isFromKakao && (
-              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-3xl p-5 mb-6 shadow-sm">
-                <h3 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                  <Sparkles size={20} className="text-yellow-600" />
-                  카카오톡 단문 알림 피드백 🔔
-                </h3>
-                <div className="text-sm text-gray-800 leading-relaxed bg-white/60 rounded-xl p-4 shadow-sm border border-yellow-100">
-                  <strong className="block mb-2 text-primary">{pet?.name || '우리 아이'}의 건강한 하루를 위한 AI 종합 소견 (장문)</strong>
-                  요즘 활동량이 훌륭하네요! 오늘은 관절이 다치지 않도록 지나치게 딱딱한 아스팔트보다는
-                  흙바닥이 일부분 있는 숲길이나 공원 산책을 권장합니다. 오후 시간대가 가장 최적기예요.
-                  아래 추천 코스 상세 위치를 확인해보세요!
+            {/* Weather & AI Summary */}
+            <div className="bg-gradient-to-br from-primary to-secondary rounded-3xl p-6 text-white shadow-lg">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                  {weatherInfo && <weatherInfo.icon size={28} />}
+                </div>
+                <div>
+                  <div className="text-xs opacity-90">오늘의 산책 지수</div>
+                  <div className="text-lg font-bold">{guideData?.weatherWalkLevel}</div>
+                </div>
+              </div>
+              <p className="text-sm leading-relaxed opacity-95 bg-black/10 p-3 rounded-2xl border border-white/10">
+                {guideData?.weatherSummary}
+              </p>
+            </div>
+
+            {/* Detailed Recommendation Text */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+               <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+               <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                 <Sparkles className="text-primary" size={18} />
+                 AI 산책 커스텀 가이드
+               </h3>
+               <p className="text-gray-700 leading-relaxed text-[15px] whitespace-pre-wrap">
+                 {guideData?.recommendationDescription}
+               </p>
+            </div>
+
+            {/* Recommended Place Card */}
+            {guideData?.place && (
+              <div className="space-y-3">
+                <h3 className="font-bold text-gray-800 px-1">추천 장소</h3>
+                <div 
+                  className="bg-white rounded-3xl overflow-hidden shadow-md border border-gray-100 group"
+                  onClick={() => onNavigate(`place-${guideData.place.id}`)}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <img 
+                      src={guideData.place.imageUrl || 'https://via.placeholder.com/400x200?text=No+Image'} 
+                      alt={guideData.place.title}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 text-primary">
+                      <Star size={12} className="fill-primary" />
+                      {guideData.place.aiRating.toFixed(1)}
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold mb-1 inline-block">
+                          {guideData.place.category}
+                        </span>
+                        <h4 className="font-bold text-lg text-gray-900">{guideData.place.title}</h4>
+                      </div>
+                      <ExternalLink size={18} className="text-gray-400" />
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                      <MapPin size={12} />
+                      {guideData.place.address}
+                    </div>
+                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                      {guideData.place.overview || "설명이 없습니다."}
+                    </p>
+                    
+                    {guideData.place.blogPositiveTags && (
+                      <div className="flex flex-wrap gap-1.5 mt-4">
+                        {guideData.place.blogPositiveTags.split(',').map(tag => (
+                          <span key={tag} className="text-[11px] text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg font-medium">
+                            #{tag.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Summary Card */}
-            <div className="bg-gradient-to-br from-primary to-secondary rounded-3xl p-6 text-white shadow-md">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    {currentWeather && <currentWeather.icon size={24} />}
-                    <span className="text-sm opacity-90">오늘의 추천</span>
-                  </div>
-                  <h3 className="text-xl font-bold leading-tight">{recommendation.summary}</h3>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold">{recommendation.temperature}°</div>
-                  <div className="text-xs opacity-80">완벽해요!</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-                  <Clock size={16} className="mb-1" />
-                  <div className="text-xs opacity-80">최적 시간</div>
-                  <div className="font-bold">{recommendation.bestTime}</div>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-                  <Zap size={16} className="mb-1" />
-                  <div className="text-xs opacity-80">추천 시간</div>
-                  <div className="font-bold">{recommendation.duration}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recommended Routes — Double-Bezel */}
-            <div className="p-1 bg-primary/5 rounded-[1.6rem] ring-1 ring-primary/10 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-            <div className="bg-white rounded-[1.25rem] p-5">
-              <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <Navigation className="text-primary" size={20} />
-                추천 산책로
-              </h3>
-              <div className="space-y-3">
-                {recommendation.routes.map((route, idx) => (
-                  <div
-                    key={route.name}
-                    className={`flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-primary/5 transition-spring hover:scale-[1.01] active:scale-[0.98] cursor-pointer ${idx < 5 ? 'animate-fade-in-up' : ''}`}
-                    style={idx < 5 ? { animationDelay: `${0.2 + idx * 0.07}s` } : undefined}
-                  >
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900">{route.name}</div>
-                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full">{route.type}</span>
-                        <span>{route.distance}</span>
-                        <span>·</span>
-                        <span>{route.difficulty}</span>
-                      </div>
-                    </div>
-                    {isFromKakao ? (
-                      <button className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors">
-                        <MapPin size={14} />
-                        위치확인
-                      </button>
-                    ) : (
-                      <MapPin className="text-primary" size={20} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            </div>
-
-            {/* Tips */}
+            {/* Tips Section */}
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <Heart className="text-primary" size={20} />
-                산책 꿀팁
+                오늘의 산책 팁
               </h3>
               <div className="space-y-2">
-                {recommendation.tips.map((tip, idx) => (
-                  <div key={idx} className={`flex items-start gap-2 text-sm text-gray-600 leading-relaxed ${idx < 6 ? 'animate-fade-in-up' : ''}`} style={idx < 6 ? { animationDelay: `${0.25 + idx * 0.07}s` } : undefined}>
+                {DEFAULT_TIPS.map((tip, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-sm text-gray-600 leading-relaxed">
                     <span className="text-primary mt-0.5">•</span>
                     <span>{tip}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Emergency Contacts */}
-            <div className="bg-red-50 rounded-3xl p-5 border border-red-100">
-              <h3 className="font-bold text-red-600 mb-3 flex items-center gap-2">
-                <AlertTriangle size={20} />
-                응급 연락처
-              </h3>
-              <div className="space-y-2">
-                {recommendation.emergency?.map((contact, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl">
-                    <div>
-                      <div className="font-bold text-gray-900 text-sm">{contact.name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{contact.distance} 거리</div>
-                    </div>
-                    <a
-                      href={`tel:${contact.phone}`}
-                      className="flex items-center gap-1 text-primary font-bold text-sm"
-                    >
-                      <Phone size={14} />
-                      {contact.phone}
-                    </a>
                   </div>
                 ))}
               </div>
@@ -485,15 +303,15 @@ export function AIWalkGuide({ onNavigate }: AIWalkGuideProps) {
             <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 onClick={() => setShowRecommendation(false)}
-                className="py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-spring hover:scale-[1.02] active:scale-[0.97]"
+                className="py-4 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition-all"
               >
-                다시 설정
+                조건 변경
               </button>
               <button
                 onClick={handleSaveRoute}
-                className="py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-spring hover:scale-[1.02] active:scale-[0.97] relative"
+                className="py-4 bg-primary text-white font-bold rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all"
               >
-                추천 경로 저장
+                추천 장소 저장
               </button>
             </div>
           </motion.div>

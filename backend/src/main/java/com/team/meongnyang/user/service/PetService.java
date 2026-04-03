@@ -29,6 +29,7 @@ public class PetService {
 
     @Transactional
     public PetResponseDto addPet(Long userId, PetRequestDto request) {
+        @SuppressWarnings("null")
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
@@ -51,7 +52,9 @@ public class PetService {
                 .isRepresentative(hasNoPets) // 첫 번째 반려동물은 자동 대표 설정
                 .build();
 
-        return PetResponseDto.from(petRepository.save(pet));
+        @SuppressWarnings("null")
+        Pet savedPet = petRepository.save(pet);
+        return PetResponseDto.from(savedPet);
     }
 
     @Transactional
@@ -94,6 +97,7 @@ public class PetService {
     }
 
     private Pet findOwnedPet(Long petId, Long userId) {
+        @SuppressWarnings("null")
         Pet pet = petRepository.findById(petId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 반려동물입니다."));
         if (!pet.getUser().getUserId().equals(userId)) {

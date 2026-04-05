@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -61,6 +62,8 @@ public class PlaceScoringService {
     private static final String[] CONVENIENCE_KEYWORDS = {"주차", "휴식", "배변", "물", "테라스", "그늘", "벤치", "의자"};
     private static final String[] SAFETY_COMFORT_KEYWORDS = {"넓", "쾌적", "조용", "안전", "청결", "편안"};
     private static final String[] OUTDOOR_PLACE_KEYWORDS = {"실외", "야외", "공원", "산책로", "운동장", "테라스", "잔디"};
+    private static final Set<String> PREFERRED_NATURE_HINTS = Set.of("자연", "숲", "녹지", "공원", "산책", "산책로", "자연공간");
+    private static final Set<String> PREFERRED_ACTIVITY_HINTS = Set.of("운동장", "활동", "광장", "야외", "러닝", "트랙");
 
     private final DistanceCalculator distanceCalculator;
 
@@ -514,13 +517,13 @@ public class PlaceScoringService {
             return 0.0;
         }
 
-        String preferredPlace = RecommendationTextUtils.normalizeTrimLower(pet.getPreferredPlace());
-        if (preferredPlace.isBlank()) {
+        String preferredPlaceRaw = RecommendationTextUtils.normalizeTrimLower(pet.getPreferredPlace());
+        if (preferredPlaceRaw.isBlank()) {
             return 0.0;
         }
 
-        boolean directMatch = hasKeyword(searchable, preferredPlace);
-        boolean semanticMatch = matchesPreferredPlace(place, searchable, preferredPlace);
+        boolean directMatch = hasDirectPreferredPlaceMatch(searchable, preferredPlaceRaw);
+        boolean semanticMatch = matchesPreferredPlace(place, searchable, preferredPlaceRaw);
         double score = 0.0;
         String reason = null;
 
@@ -1347,7 +1350,7 @@ public class PlaceScoringService {
         if (pet != null) {
             String preferredPlace = RecommendationTextUtils.normalizeTrimLower(pet.getPreferredPlace());
             if (!preferredPlace.isBlank()) {
-                boolean directMatch = hasKeyword(searchable, preferredPlace);
+                boolean directMatch = hasDirectPreferredPlaceMatch(searchable, preferredPlace);
                 boolean semanticMatch = matchesPreferredPlace(place, searchable, preferredPlace);
                 if (!directMatch && !semanticMatch) {
                     penalties.add("선호 장소와 비매칭 -1.0");
@@ -1493,18 +1496,88 @@ public class PlaceScoringService {
         return hasAnyKeyword(searchable, OUTDOOR_PLACE_KEYWORDS);
     }
 
-    private boolean matchesPreferredPlace(Place place, String searchable, String preferredPlace) {
+    private boolean matchesPreferredPlace(Place place, String searchable, String preferredPlaceRaw) {
+        for (String preferredPlace : tokenizePreferredPlaces(preferredPlaceRaw)) {
+            if (matchesSinglePreferredPlace(place, searchable, preferredPlace)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasDirectPreferredPlaceMatch(String searchable, String preferredPlaceRaw) {
+        for (String token : tokenizePreferredPlaces(preferredPlaceRaw)) {
+            if (hasKeyword(searchable, token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<String> tokenizePreferredPlaces(String preferredPlaceRaw) {
+        String normalized = RecommendationTextUtils.normalizeTrimLower(preferredPlaceRaw);
+        if (normalized.isBlank()) {
+            return List.of();
+        }
+
+        List<String> tokens = new ArrayList<>();
+        tokens.add(normalized);
+
+        for (String commaSplit : normalized.split(",")) {
+            String commaToken = RecommendationTextUtils.normalizeTrimLower(commaSplit);
+            if (!commaToken.isBlank()) {
+                tokens.add(commaToken);
+            }
+            for (String slashSplit : commaSplit.split("/")) {
+                String slashToken = RecommendationTextUtils.normalizeTrimLower(slashSplit);
+                if (!slashToken.isBlank()) {
+                    tokens.add(slashToken);
+                }
+            }
+        }
+
+        return tokens.stream().distinct().toList();
+    }
+
+    private boolean matchesSinglePreferredPlace(Place place, String searchable, String preferredPlace) {
         if (preferredPlace.contains("실내카페")) {
             return "DINING".equalsIgnoreCase(place.getCategory())
                     && hasAnyKeyword(searchable, concat(QUIET_INDOOR_KEYWORDS, "실내가능", "동반"));
         }
         if (preferredPlace.contains("공원")) {
             return "PLACE".equalsIgnoreCase(place.getCategory())
-                    && hasAnyKeyword(searchable, concat(OUTDOOR_PLACE_KEYWORDS, "넓음"));
+                    && hasAnyKeyword(searchable, concat(OUTDOOR_PLACE_KEYWORDS, "넓음", "녹지"));
         }
         if (preferredPlace.contains("넓은 야외")) {
             return "PLACE".equalsIgnoreCase(place.getCategory())
                     && hasAnyKeyword(searchable, WIDE_SPACE_KEYWORDS);
+        }
+        if (containsAnyFragment(preferredPlace, PREFERRED_NATURE_HINTS)) {
+            return "PLACE".equalsIgnoreCase(place.getCategory())
+                    && hasAnyKeyword(searchable, concat(
+                    OUTDOOR_PLACE_KEYWORDS,
+                    "자연", "숲", "녹지", "산책", "산책로", "수목", "생태", "둘레길"
+            ));
+        }
+        if (containsAnyFragment(preferredPlace, PREFERRED_ACTIVITY_HINTS)) {
+            return "PLACE".equalsIgnoreCase(place.getCategory())
+                    && hasAnyKeyword(searchable, concat(
+                    WIDE_SPACE_KEYWORDS,
+                    "공원", "산책로", "운동장", "야외", "실외", "러닝", "잔디", "넓음", "트레킹",
+                    "광장", "개방", "트랙"
+            ));
+        }
+        return false;
+    }
+
+    private boolean containsAnyFragment(String text, Set<String> fragments) {
+        if (text == null || text.isBlank() || fragments == null || fragments.isEmpty()) {
+            return false;
+        }
+        for (String fragment : fragments) {
+            if (text.contains(fragment)) {
+                return true;
+            }
         }
         return false;
     }

@@ -230,6 +230,13 @@ const UTILITY_JOBS: BatchJob[] = [
     icon: Wrench,
     run: adminApi.runAiRatingAllBatch,
   },
+  {
+    id: 'recommendation-notification-test',
+    label: '추천 스케줄러 테스트',
+    desc: '추천 알림 스케줄러 수동 진입점 실행 · 배포 전 동작 확인용',
+    icon: Bell,
+    run: adminApi.runRecommendationNotificationTestBatch,
+  },
 ];
 
 function BatchJobCard({

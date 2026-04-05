@@ -492,7 +492,8 @@ public class RecommendationEvidenceContextService {
 
     String normalized = penalty.toLowerCase(Locale.ROOT);
     if (normalized.contains("선호 장소")) {
-      return "선호 장소와 완전히 같지는 않지만 다른 강점이 이를 상쇄함";
+      // 추천 설명은 판정이 아니라 근거 정리이므로 선호 비매칭 문구는 노출하지 않는다.
+      return "";
     }
     if (normalized.contains("비")) {
       return "강수 상황에서는 체류 방식에 약간의 제약이 생길 수 있음";

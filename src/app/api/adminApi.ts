@@ -64,6 +64,9 @@ export const adminApi = {
   /** 전체 AI 별점 강제 재계산 (blogCount 포함) */
   runAiRatingAllBatch: () => api.post('/admin/batch/recalculate-ai-rating-all'),
 
+  /** 추천 알림 스케줄러 수동 테스트 진입점 */
+  runRecommendationNotificationTestBatch: () => api.get('/admin/batch/recommendation-notification/test'),
+
   // ── 장소 전체 관리 ────────────────────────────────────────────────────────
   /** 전체 ACTIVE 장소 조회 — 관리자 수정용 */
   getAllActivePlaces: () =>
